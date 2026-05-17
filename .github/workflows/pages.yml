@@ -48,13 +48,29 @@ jobs:
           cp -r measurement/dist/* _site/measurement/
 
           # Authorized reuse: Anssi Zander gave permission to copy these demos.
-          # Copy the upstream WebGL2 Bohmian double-slit demo into the deployed site,
-          # then restore the Q-Ontic wrapper page with attribution.
           git clone --depth 1 https://github.com/anssiZander/BohmianDoubleSlit.git /tmp/BohmianDoubleSlit
           rm -rf _site/bohmian-double-slit-webgl
           mkdir -p _site/bohmian-double-slit-webgl
           cp -r /tmp/BohmianDoubleSlit/* _site/bohmian-double-slit-webgl/
           cp bohmian-double-slit-webgl/index.html _site/bohmian-double-slit-webgl/index.html
+
+          git clone --depth 1 https://github.com/anssiZander/BohmianTunneling.git /tmp/BohmianTunneling
+          rm -rf _site/bohmian-tunneling
+          mkdir -p _site/bohmian-tunneling
+          cp -r /tmp/BohmianTunneling/* _site/bohmian-tunneling/
+          cp bohmian-tunneling/index.html _site/bohmian-tunneling/index.html
+
+          git clone --depth 1 https://github.com/anssiZander/Bohmian-Free-Packet.git /tmp/Bohmian-Free-Packet
+          rm -rf _site/bohmian-free-packet-2d
+          mkdir -p _site/bohmian-free-packet-2d
+          cp -r /tmp/Bohmian-Free-Packet/* _site/bohmian-free-packet-2d/
+          cp bohmian-free-packet-2d/index.html _site/bohmian-free-packet-2d/index.html
+
+          git clone --depth 1 https://github.com/anssiZander/Bohmian-Free-3D.git /tmp/Bohmian-Free-3D
+          rm -rf _site/bohmian-free-particle-box-3d
+          mkdir -p _site/bohmian-free-particle-box-3d
+          cp -r /tmp/Bohmian-Free-3D/* _site/bohmian-free-particle-box-3d/
+          cp bohmian-free-particle-box-3d/index.html _site/bohmian-free-particle-box-3d/index.html
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
