@@ -12,33 +12,30 @@ if (!extFloatRT) {
 }
 
 const params = {
-  simScale: 0.5,
-  stepsPerFrame: 30,
+  simScale: .5,
+  stepsPerFrame: 20,
 
   hbar: 6.0,
   mass: 1.0,
-  p0: 1.5,
+  p0: 4.5,
   dt: 0.02,
 
-  packetX: 0.4,
-  packetY: 0.50,
-  packetSigma: 25.0,
+  packetX: 0.3,
+  packetY: 0.3,
+  packetSigma: 30.0,
 
-  barrierX: 0.55,
-  barrierThick: 20.0,
-  slitWidth: 25.0,
-  slitSep: 60.0,
-  V0: 50.0,
+  barrierY: 0.55,
+  barrierThick: 50.0,
+  V0: 5.0,
 
-  absorbPx: 50.0,
-  absorbStrength: 2.0,
-  particleKillMargin: 1.0,
+  absorbPx: 40.0,
+  absorbStrength: 3.,
+  particleKillMargin: 12.0,
 
-  nParticles: 500,
+  nParticles: 400,
   rhoMin: 1e-6,
   velClamp: 160.0,
   guidingMode: 1,
-  guidingChoice: 1,
   spinSign: 1,
   spinMagnitude: 0.5,
 
@@ -47,13 +44,13 @@ const params = {
   showPhase: 1,
 
   showParticles: 1,
-  dotSize: 10.0,
+  dotSize: 7.0,
   dotSigma: 0.28,
   dotGain: 1.,
 
   showTrail: 1,
   trailHalfLife: 100.0,
-  trailVisGain: 1.,
+  trailVisGain: .8,
   trailVisGamma: 1,
   trailStampGain: 0.55,
   trailWidth: 5.0,
@@ -92,17 +89,30 @@ const PALETTE_COMPLEMENTS = [
 
 const GUIDING_MODE_NAMES = [
   "Schrodinger",
-  "Pauli spin-1/2"
-];
-const GUIDING_CHOICE_NAMES = [
-  "Schrodinger",
-  "Pauli Up",
-  "Pauli Down"
+  "Pauli spin"
 ];
 
+const BARRIER_V0_MAX = 12.0;
+
 let paused = false;
-let frameRecordingActive = false;
-let simulationReady = false;
+const RECORDING_CONFIG = {
+  fps: 60,
+  videoBitsPerSecond: 14_000_000,
+  chunkMs: 1000,
+};
+const recordingState = {
+  recorder: null,
+  stream: null,
+  videoTrack: null,
+  manualFrames: false,
+  chunks: [],
+  startedAt: 0,
+  mimeType: "",
+  finalizing: false,
+  lastUrl: null,
+  pendingBlob: null,
+  pendingFileName: "",
+};
 
 const controls = document.getElementById("controls");
 const statsEl = document.getElementById("stats");
@@ -199,43 +209,6 @@ function addCycleButton(key, label, values, onChange = null) {
   controls.appendChild(row);
 }
 
-function addChoiceButtons(key, label, values, onChange = null) {
-  const row = document.createElement("div");
-  row.className = "row";
-
-  const lab = document.createElement("label");
-  lab.textContent = label;
-
-  const group = document.createElement("div");
-  group.className = "button-group";
-
-  const buttons = values.map((value, index) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.textContent = value;
-    btn.addEventListener("click", () => {
-      if ((params[key] | 0) === index) return;
-      params[key] = index;
-      sync();
-      if (onChange) onChange(index);
-    });
-    group.appendChild(btn);
-    return btn;
-  });
-
-  function sync() {
-    const selected = params[key] | 0;
-    buttons.forEach((btn, index) => {
-      btn.classList.toggle("is-active", index === selected);
-    });
-  }
-
-  sync();
-  row.appendChild(lab);
-  row.appendChild(group);
-  controls.appendChild(row);
-}
-
 function addSectionHeader(label) {
   const header = document.createElement("div");
   header.style.marginTop = "12px";
@@ -250,47 +223,291 @@ function addSectionHeader(label) {
 }
 
 addSectionHeader("Performance");
-addSlider("simScale", "sim scale", 0.3, 1.0, 0.1, () => rebuildSimulation());
+addSlider("simScale", "sim scale", 0.25, 1.0, 0.05, () => rebuildSimulation());
 addSlider("stepsPerFrame", "Steps/frame", 1, 100, 1);
 
 addSectionHeader("Physical Parameters");
-addSlider("p0", "Momentum p", 0.5, 8.0, 0.1);
-addSlider("dt", "dt", 0.01, 0.03, 0.01);
-addSlider("packetSigma", "packet sigma", 8.0, 80.0, 1.0);
-addSlider("slitWidth", "slit width", 6.0, 40.0, 1.0);
-addSlider("slitSep", "slit separation", 18.0, 140.0, 1.0);
+addSlider("p0", "momentum p", 0.5, 8.0, 0.1, () => resetAll());
+addSlider("dt", "dt", 0.01, 0.04, 0.001);
+//addSlider("packetX", "packet start x", 0.05, 0.95, 0.01, () => resetAll());
+//addSlider("packetY", "packet start y", 0.05, 0.95, 0.01, () => resetAll());
+addSlider("packetSigma", "packet sigma", 8.0, 80.0, 1.0, () => resetAll());
+addSlider("V0", "barrier V0", 0.0, BARRIER_V0_MAX, 0.1, () => resetAll());
+addSlider("barrierThick", "barrier thickness", 4.0, 150.0, 1.0, () => resetAll());
 addSlider("absorbPx", "absorb boundary", 0.0, 60.0, 1.0);
-addSlider("nParticles", "particle count", 1, 3000, 10, () => rebuildParticles());
 addSlider("spinMagnitude", "spin |s|", 0.0, 2.0, 0.5);
-addChoiceButtons("guidingChoice", "guiding law", GUIDING_CHOICE_NAMES, (choice) => {
-  params.guidingMode = choice === 0 ? 0 : 1;
-  params.spinSign = choice === 2 ? -1 : 1;
-  resetAll();
-});
+{
+  const row = document.createElement("div");
+  row.className = "row";
+
+  const lab = document.createElement("label");
+  lab.textContent = "guiding law";
+
+  const group = document.createElement("div");
+  group.className = "toggle-group";
+
+  const btnSchrodinger = document.createElement("button");
+  btnSchrodinger.textContent = "Schrodinger";
+  btnSchrodinger.addEventListener("click", () => {
+    params.guidingMode = 0;
+    params.spinSign = 1;
+    updateToggleButtons();
+    resetAll();
+  });
+
+  const btnPauliUp = document.createElement("button");
+  btnPauliUp.textContent = "Pauli Up";
+  btnPauliUp.addEventListener("click", () => {
+    params.guidingMode = 1;
+    params.spinSign = 1;
+    updateToggleButtons();
+    resetAll();
+  });
+
+  const btnPauliDown = document.createElement("button");
+  btnPauliDown.textContent = "Pauli Down";
+  btnPauliDown.addEventListener("click", () => {
+    params.guidingMode = 1;
+    params.spinSign = -1;
+    updateToggleButtons();
+    resetAll();
+  });
+
+  group.appendChild(btnSchrodinger);
+  group.appendChild(btnPauliUp);
+  group.appendChild(btnPauliDown);
+
+  function updateToggleButtons() {
+    btnSchrodinger.classList.toggle("selected", params.guidingMode === 0);
+    btnPauliUp.classList.toggle("selected", params.guidingMode === 1 && params.spinSign > 0);
+    btnPauliDown.classList.toggle("selected", params.guidingMode === 1 && params.spinSign < 0);
+  }
+  updateToggleButtons();
+
+  const val = document.createElement("div");
+  val.className = "val";
+  val.textContent = "";
+
+  row.appendChild(lab);
+  row.appendChild(group);
+  row.appendChild(val);
+  controls.appendChild(row);
+}
 
 addSectionHeader("Visual Parameters");
 addToggleInt("showPhase", "show phase");
 addToggleInt("showParticles", "show particles");
+addSlider("nParticles", "particle count", 1, 3000, 1, () => rebuildParticles());
 addSlider("dotSize", "particle size", 2.0, 16.0, 0.5);
 addSlider("dotGain", "particle brightness", 0.1, 3.0, 0.1);
 
 addToggleInt("showTrail", "draw trails");
-addSlider("trailHalfLife", "trail half-life", 1.0, 150.0, 1.0);
+addSlider("trailHalfLife", "trail half-life", 1.0, 100.0, 1.0);
 //addSlider("trailVisGain", "trail gain", 0.1, 1.0, 0.1);
 //addSlider("trailVisGamma", "trail gamma", 0.4, 2.0, 0.05);
-addSlider("trailWidth", "trail width (px)", 0.5, 10.0, 0.1);
+addSlider("trailWidth", "trail width (px)", 1, 9.0, 1);
 
 //addSlider("visGain", "wave gain", 0.5, 20.0, 0.5);
 //addSlider("visGamma", "wave gamma", 0.3, 2.0, 0.05);
 
 document.getElementById("reset").onclick = () => resetAll();
-document.getElementById("pause").onclick = (e) => {
+const pauseButton = document.getElementById("pause");
+const recordButton = document.getElementById("record");
+
+function syncPauseButton() {
+  pauseButton.textContent = paused ? "Resume" : "Pause";
+}
+
+function togglePause() {
   paused = !paused;
-  e.target.textContent = paused ? "Resume" : "Pause";
-};
+  syncPauseButton();
+}
+
+function canRecordCanvas() {
+  return typeof MediaRecorder !== "undefined" && typeof canvas.captureStream === "function" && !!chooseRecordingMimeType();
+}
+
+function isRecording() {
+  return recordingState.recorder?.state === "recording";
+}
+
+function chooseRecordingMimeType() {
+  const candidates = [
+    "video/mp4;codecs=avc1.42E01E",
+    "video/mp4;codecs=avc1.640028",
+    "video/mp4;codecs=h264",
+    "video/mp4",
+  ];
+  return candidates.find(type => MediaRecorder.isTypeSupported?.(type)) || "";
+}
+
+function recordingFileName(startedAt = recordingState.startedAt) {
+  const stamp = new Date(startedAt || Date.now()).toISOString().replace(/[:.]/g, "-");
+  return `bohmian-tunneling-${stamp}.mp4`;
+}
+
+function syncRecordingButton() {
+  const recording = isRecording();
+  const supported = canRecordCanvas();
+  recordButton.textContent = recording ? "Stop Recording" : (recordingState.finalizing ? "Saving Recording..." : "Start Recording");
+  recordButton.classList.toggle("recording", recording);
+  recordButton.disabled = recordingState.finalizing || (!recordingState.pendingBlob && !supported);
+  recordButton.title = recordingState.pendingBlob
+    ? "Download the most recent MP4 recording."
+    : (supported ? "Records the WebGL canvas only; DOM controls are excluded." : "MP4 canvas recording is not supported by this browser.");
+}
+
+function toggleRecording() {
+  if (recordingState.pendingBlob && !isRecording()) downloadPendingRecording(true);
+  else if (isRecording()) stopRecording();
+  else startRecording();
+}
+
+function startRecording() {
+  if (!canRecordCanvas()) {
+    alert("MP4 canvas recording is not supported by this browser.");
+    syncRecordingButton();
+    return;
+  }
+  clearPendingRecording();
+
+  const mimeType = chooseRecordingMimeType();
+  const options = {
+    mimeType,
+    videoBitsPerSecond: RECORDING_CONFIG.videoBitsPerSecond,
+  };
+
+  let stream, recorder, videoTrack, manualFrames = false;
+  try {
+    stream = canvas.captureStream(0);
+    videoTrack = stream.getVideoTracks()[0];
+    manualFrames = typeof videoTrack?.requestFrame === "function";
+    if (!manualFrames) {
+      stream.getTracks().forEach(track => track.stop());
+      stream = canvas.captureStream(RECORDING_CONFIG.fps);
+      videoTrack = stream.getVideoTracks()[0];
+    }
+    recorder = new MediaRecorder(stream, options);
+  } catch (error) {
+    stream?.getTracks().forEach(track => track.stop());
+    alert(`Could not start MP4 recording: ${error.message}`);
+    syncRecordingButton();
+    return;
+  }
+
+  recordingState.recorder = recorder;
+  recordingState.stream = stream;
+  recordingState.videoTrack = videoTrack;
+  recordingState.manualFrames = manualFrames;
+  recordingState.chunks = [];
+  recordingState.startedAt = Date.now();
+  recordingState.mimeType = recorder.mimeType || mimeType;
+  recordingState.finalizing = false;
+
+  recorder.ondataavailable = event => {
+    if (event.data && event.data.size > 0) recordingState.chunks.push(event.data);
+  };
+  recorder.onerror = event => {
+    console.error("Recording error:", event.error || event);
+    stopRecording();
+  };
+  recorder.onstop = finishRecordingDownload;
+  recorder.start(RECORDING_CONFIG.chunkMs);
+  requestRecordingFrame();
+  syncRecordingButton();
+}
+
+function stopRecording() {
+  const recorder = recordingState.recorder;
+  if (!recorder || recorder.state === "inactive") return;
+  recordingState.finalizing = true;
+  syncRecordingButton();
+  try {
+    recorder.requestData();
+  } catch (error) {
+    console.warn("Could not flush recording data:", error);
+  }
+  recorder.stop();
+}
+
+function finishRecordingDownload() {
+  recordingState.stream?.getTracks().forEach(track => track.stop());
+  recordingState.stream = null;
+  recordingState.videoTrack = null;
+  recordingState.manualFrames = false;
+  const chunks = recordingState.chunks;
+  recordingState.chunks = [];
+
+  if (!chunks.length) {
+    recordingState.recorder = null;
+    recordingState.finalizing = false;
+    alert("No recording data was produced.");
+    syncRecordingButton();
+    return;
+  }
+
+  recordingState.pendingBlob = new Blob(chunks, { type: recordingState.mimeType || "video/mp4" });
+  recordingState.pendingFileName = recordingFileName();
+  recordingState.recorder = null;
+  recordingState.finalizing = false;
+  downloadPendingRecording(true);
+  syncRecordingButton();
+}
+
+function requestRecordingFrame() {
+  if (!isRecording() || !recordingState.manualFrames) return;
+  recordingState.videoTrack?.requestFrame?.();
+}
+
+function requestRecordingFrameAfterRender() {
+  if (!isRecording() || !recordingState.manualFrames) return;
+  gl.flush();
+  requestRecordingFrame();
+}
+
+function clearPendingRecording() {
+  if (recordingState.lastUrl) {
+    URL.revokeObjectURL(recordingState.lastUrl);
+    recordingState.lastUrl = null;
+  }
+  recordingState.pendingBlob = null;
+  recordingState.pendingFileName = "";
+}
+
+function downloadPendingRecording(clearAfterClick) {
+  if (!recordingState.pendingBlob) return;
+  if (!recordingState.lastUrl) {
+    recordingState.lastUrl = URL.createObjectURL(recordingState.pendingBlob);
+  }
+  const url = recordingState.lastUrl;
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = recordingState.pendingFileName || recordingFileName();
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  if (clearAfterClick) {
+    recordingState.pendingBlob = null;
+    recordingState.pendingFileName = "";
+    syncRecordingButton();
+    setTimeout(() => {
+      if (recordingState.lastUrl === url) {
+        URL.revokeObjectURL(recordingState.lastUrl);
+        recordingState.lastUrl = null;
+      }
+      syncRecordingButton();
+    }, 1000);
+  }
+}
+
+pauseButton.onclick = togglePause;
+recordButton.onclick = toggleRecording;
+syncPauseButton();
+syncRecordingButton();
+
 window.addEventListener("keydown", (e) => {
   if (e.key.toLowerCase() === "r") resetAll();
-  if (e.key === " ") paused = !paused;
+  if (e.key === " ") togglePause();
 });
 
 const uiBody = document.getElementById("uibody");
@@ -496,10 +713,8 @@ function buildPrograms() {
     uDT: u(progWaveInit, "uDT"),
     uPacketPosFrac: u(progWaveInit, "uPacketPosFrac"),
     uPacketSigmaPx: u(progWaveInit, "uPacketSigmaPx"),
-    uBarrierXFrac: u(progWaveInit, "uBarrierXFrac"),
+    uBarrierYFrac: u(progWaveInit, "uBarrierYFrac"),
     uBarrierThickPx: u(progWaveInit, "uBarrierThickPx"),
-    uSlitWidthPx: u(progWaveInit, "uSlitWidthPx"),
-    uSlitSepPx: u(progWaveInit, "uSlitSepPx"),
     uV0: u(progWaveInit, "uV0"),
     uAbsorbPx: u(progWaveInit, "uAbsorbPx"),
     uAbsorbStrength: u(progWaveInit, "uAbsorbStrength"),
@@ -510,12 +725,9 @@ function buildPrograms() {
     uSimRes: u(progWaveStep, "uSimRes"),
     uHBAR: u(progWaveStep, "uHBAR"),
     uMass: u(progWaveStep, "uMass"),
-    uP0: u(progWaveStep, "uP0"),
     uDT: u(progWaveStep, "uDT"),
-    uBarrierXFrac: u(progWaveStep, "uBarrierXFrac"),
+    uBarrierYFrac: u(progWaveStep, "uBarrierYFrac"),
     uBarrierThickPx: u(progWaveStep, "uBarrierThickPx"),
-    uSlitWidthPx: u(progWaveStep, "uSlitWidthPx"),
-    uSlitSepPx: u(progWaveStep, "uSlitSepPx"),
     uV0: u(progWaveStep, "uV0"),
     uAbsorbPx: u(progWaveStep, "uAbsorbPx"),
     uAbsorbStrength: u(progWaveStep, "uAbsorbStrength"),
@@ -527,12 +739,10 @@ function buildPrograms() {
     uVisGain: u(progWaveRender, "uVisGain"),
     uVisGamma: u(progWaveRender, "uVisGamma"),
     uShowPhase: u(progWaveRender, "uShowPhase"),
-    uBarrierXFrac: u(progWaveRender, "uBarrierXFrac"),
+    uBarrierYFrac: u(progWaveRender, "uBarrierYFrac"),
     uBarrierThickPx: u(progWaveRender, "uBarrierThickPx"),
-    uSlitWidthPx: u(progWaveRender, "uSlitWidthPx"),
-    uSlitSepPx: u(progWaveRender, "uSlitSepPx"),
-    uV0: u(progWaveRender, "uV0"),
     uBarrierOpacity: u(progWaveRender, "uBarrierOpacity"),
+    uBarrierClassicallyForbidden: u(progWaveRender, "uBarrierClassicallyForbidden"),
     uPaletteId: u(progWaveRender, "uPaletteId"),
   };
 
@@ -545,11 +755,6 @@ function buildPrograms() {
     uGuidingMode: u(progPartUpdate, "uGuidingMode"),
     uSpinMagnitude: u(progPartUpdate, "uSpinMagnitude"),
     uSpinSign: u(progPartUpdate, "uSpinSign"),
-    uBarrierXFrac: u(progPartUpdate, "uBarrierXFrac"),
-    uBarrierThickPx: u(progPartUpdate, "uBarrierThickPx"),
-    uSlitWidthPx: u(progPartUpdate, "uSlitWidthPx"),
-    uSlitSepPx: u(progPartUpdate, "uSlitSepPx"),
-    uV0: u(progPartUpdate, "uV0"),
     uAbsorbPx: u(progPartUpdate, "uAbsorbPx"),
     uRhoMin: u(progPartUpdate, "uRhoMin"),
     uVelClamp: u(progPartUpdate, "uVelClamp"),
@@ -615,10 +820,8 @@ function setWaveInitUniforms() {
   gl.uniform2f(U.waveInit.uPacketPosFrac, params.packetX, params.packetY);
   gl.uniform1f(U.waveInit.uPacketSigmaPx, params.packetSigma);
 
-  gl.uniform1f(U.waveInit.uBarrierXFrac, params.barrierX);
+  gl.uniform1f(U.waveInit.uBarrierYFrac, params.barrierY);
   gl.uniform1f(U.waveInit.uBarrierThickPx, params.barrierThick);
-  gl.uniform1f(U.waveInit.uSlitWidthPx, params.slitWidth);
-  gl.uniform1f(U.waveInit.uSlitSepPx, params.slitSep);
   gl.uniform1f(U.waveInit.uV0, params.V0);
 
   gl.uniform1f(U.waveInit.uAbsorbPx, params.absorbPx);
@@ -633,13 +836,10 @@ function setWaveStepUniforms(srcTex) {
   gl.uniform2i(U.waveStep.uSimRes, simW, simH);
   gl.uniform1f(U.waveStep.uHBAR, params.hbar);
   gl.uniform1f(U.waveStep.uMass, params.mass);
-  gl.uniform1f(U.waveStep.uP0, params.p0);
   gl.uniform1f(U.waveStep.uDT, params.dt);
 
-  gl.uniform1f(U.waveStep.uBarrierXFrac, params.barrierX);
+  gl.uniform1f(U.waveStep.uBarrierYFrac, params.barrierY);
   gl.uniform1f(U.waveStep.uBarrierThickPx, params.barrierThick);
-  gl.uniform1f(U.waveStep.uSlitWidthPx, params.slitWidth);
-  gl.uniform1f(U.waveStep.uSlitSepPx, params.slitSep);
   gl.uniform1f(U.waveStep.uV0, params.V0);
 
   gl.uniform1f(U.waveStep.uAbsorbPx, params.absorbPx);
@@ -748,12 +948,6 @@ function particleUpdate() {
   gl.uniform1f(U.partUpdate.uSpinMagnitude, params.spinMagnitude);
   gl.uniform1f(U.partUpdate.uSpinSign, params.spinSign);
 
-  gl.uniform1f(U.partUpdate.uBarrierXFrac, params.barrierX);
-  gl.uniform1f(U.partUpdate.uBarrierThickPx, params.barrierThick);
-  gl.uniform1f(U.partUpdate.uSlitWidthPx, params.slitWidth);
-  gl.uniform1f(U.partUpdate.uSlitSepPx, params.slitSep);
-  gl.uniform1f(U.partUpdate.uV0, params.V0);
-
   gl.uniform1f(U.partUpdate.uAbsorbPx, params.absorbPx);
   gl.uniform1f(U.partUpdate.uParticleKillMarginPx, params.particleKillMargin);
   gl.uniform1f(U.partUpdate.uRhoMin, params.rhoMin);
@@ -860,12 +1054,14 @@ function densityStepAndStamp() {
 }
 
 function computeBarrierOpacity() {
-  const E = (params.p0 * params.p0) / (2 * params.mass);
   if (params.V0 <= 0) return 0.0;
-  if (E >= params.V0) return 0.20;
-  const kappa = Math.sqrt(2 * params.mass * (params.V0 - E)) / params.hbar;
-  const T = Math.exp(-2 * kappa * params.barrierThick);
-  return Math.min(1.0, Math.max(0.20, 1.0 - T));
+  const t = Math.min(1.0, params.V0 / BARRIER_V0_MAX);
+  return 0.85 * t;
+}
+
+function isBarrierClassicallyForbidden() {
+  const kineticEnergy = (params.p0 * params.p0) / (2 * params.mass);
+  return params.V0 > kineticEnergy;
 }
 
 function drawKillBoundary() {
@@ -1013,16 +1209,16 @@ function render() {
   gl.uniform1f(U.waveRender.uVisGamma, params.visGamma);
   gl.uniform1i(U.waveRender.uShowPhase, params.showPhase);
 
-  gl.uniform1f(U.waveRender.uBarrierXFrac, params.barrierX);
+  gl.uniform1f(U.waveRender.uBarrierYFrac, params.barrierY);
   gl.uniform1f(U.waveRender.uBarrierThickPx, params.barrierThick);
-  gl.uniform1f(U.waveRender.uSlitWidthPx, params.slitWidth);
-  gl.uniform1f(U.waveRender.uSlitSepPx, params.slitSep);
-  gl.uniform1f(U.waveRender.uV0, params.V0);
 
   gl.uniform1i(U.waveRender.uPaletteId, params.paletteId | 0);
 
   if (U.waveRender.uBarrierOpacity) {
     gl.uniform1f(U.waveRender.uBarrierOpacity, computeBarrierOpacity());
+  }
+  if (U.waveRender.uBarrierClassicallyForbidden) {
+    gl.uniform1f(U.waveRender.uBarrierClassicallyForbidden, isBarrierClassicallyForbidden() ? 1.0 : 0.0);
   }
 
   gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -1089,7 +1285,9 @@ function guidingModeLabel() {
 }
 
 function updateStats() {
-  statsEl.innerHTML = `<b>Guiding</b>: ${guidingModeLabel()}`;
+  statsEl.innerHTML =
+    `<b>Guiding</b>: ${guidingModeLabel()}<br>` +
+    `<b>Sim Grid</b>: ${simW} x ${simH} (${fmt(params.simScale)}x)`;
 }
 
 function rebuildSimulation() {
@@ -1120,57 +1318,29 @@ window.addEventListener("resize", () => {
   applyViewTransform();
 });
 
-function advanceSimulationFrame() {
-  const steps = Math.max(0, Math.floor(params.stepsPerFrame));
-  for (let i = 0; i < steps; i++) {
-    waveStep();
-    particleUpdate();
-  }
-  densityStepAndStamp();
-}
-
-function drawSimulationFrame(advancePhysics) {
-  resizeCanvas();
-
-  if (advancePhysics) {
-    advanceSimulationFrame();
-  }
-
-  render();
-  updateStats();
-}
-
-window.BohmianDoubleSlit = {
-  ...(window.BohmianDoubleSlit || {}),
-  beginFrameRecording() {
-    frameRecordingActive = true;
-  },
-  endFrameRecording() {
-    frameRecordingActive = false;
-  },
-  isReady() {
-    return simulationReady;
-  },
-  renderRecordingFrame() {
-    if (!simulationReady) return;
-    drawSimulationFrame(!paused);
-  },
-};
-
 async function main() {
   await loadShaders();
   buildPrograms();
   rebuildSimulation();
   updateStats();
-  simulationReady = true;
 
   params.trailHalfLife*=0.99;
 
   requestAnimationFrame(function loop() {
-    if (!frameRecordingActive) {
-      drawSimulationFrame(!paused);
+    resizeCanvas();
+
+    if (!paused) {
+      const steps = Math.floor(params.stepsPerFrame);
+      for (let i = 0; i < steps; i++) {
+        waveStep();
+        particleUpdate();
+      }
+      densityStepAndStamp();
     }
 
+    render();
+    requestRecordingFrameAfterRender();
+    updateStats();
     requestAnimationFrame(loop);
   });
 }
