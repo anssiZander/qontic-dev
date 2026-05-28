@@ -373,15 +373,23 @@ addSlider("trailWidth", "trail width (px)", 0.5, 10.0, 0.1);
 
 removeEmptySectionHeaders();
 
-document.getElementById("reset").onclick = () => resetAll();
-document.getElementById("pause").onclick = (e) => {
+const pauseButton = document.getElementById("pause");
+function togglePause() {
   paused = !paused;
-  e.target.textContent = paused ? "Resume" : "Pause";
-};
-window.addEventListener("keydown", (e) => {
-  if (e.key.toLowerCase() === "r") resetAll();
-  if (e.key === " ") paused = !paused;
-});
+  pauseButton.textContent = paused ? "Resume" : "Pause";
+}
+
+document.getElementById("reset").onclick = () => resetAll();
+pauseButton.onclick = () => togglePause();
+
+if (isEmbedded) {
+  canvas.addEventListener("click", () => togglePause());
+} else {
+  window.addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() === "r") resetAll();
+    if (e.key === " ") togglePause();
+  });
+}
 
 const uiBody = document.getElementById("uibody");
 const minBtn = document.getElementById("minui");
@@ -420,9 +428,11 @@ const view = {
 
 const INITIAL_ZOOM_FRACTION = 0.65;
 const INITIAL_VIEW_SHIFT_X = 0.10;
+const BOUNDARY_FREEZE_DETECTION_CHANCE = 0.005;
 const EMBED_AUTO_RESTART_FRAMES = 1000;
 let userAdjustedView = false;
 let embeddedFramesSinceReset = 0;
+let physicsFrame = 0;
 
 function getEmbedAutoRestartFrameLimit() {
   if (EMBED_AUTO_RESTART_FRAMES <= 0) return 0;
@@ -667,6 +677,8 @@ function buildPrograms() {
     uSlitSepPx: u(progPartUpdate, "uSlitSepPx"),
     uV0: u(progPartUpdate, "uV0"),
     uAbsorbPx: u(progPartUpdate, "uAbsorbPx"),
+    uBoundaryFreezeChance: u(progPartUpdate, "uBoundaryFreezeChance"),
+    uPhysicsFrame: u(progPartUpdate, "uPhysicsFrame"),
     uRhoMin: u(progPartUpdate, "uRhoMin"),
     uVelClamp: u(progPartUpdate, "uVelClamp"),
     uParticleKillMarginPx: u(progPartUpdate, "uParticleKillMarginPx"),
@@ -871,6 +883,8 @@ function particleUpdate() {
   gl.uniform1f(U.partUpdate.uV0, params.V0);
 
   gl.uniform1f(U.partUpdate.uAbsorbPx, params.absorbPx);
+  gl.uniform1f(U.partUpdate.uBoundaryFreezeChance, BOUNDARY_FREEZE_DETECTION_CHANCE);
+  gl.uniform1i(U.partUpdate.uPhysicsFrame, physicsFrame);
   gl.uniform1f(U.partUpdate.uParticleKillMarginPx, params.particleKillMargin);
   gl.uniform1f(U.partUpdate.uRhoMin, params.rhoMin);
   gl.uniform1f(U.partUpdate.uVelClamp, params.velClamp);
@@ -893,6 +907,8 @@ function particleUpdate() {
   gl.bindBuffer(gl.ARRAY_BUFFER, particleSrc);
   gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 16, 0);
   gl.bindVertexArray(null);
+
+  physicsFrame = (physicsFrame + 1) % 1000000000;
 }
 
 const LN2 = Math.log(2);
@@ -1223,12 +1239,14 @@ function rebuildSimulation() {
   resetWave();
   rebuildParticles();
   rebuildDensity();
+  physicsFrame = 0;
 }
 
 function resetAll() {
   resetWave();
   rebuildParticles();
   clearDensity();
+  physicsFrame = 0;
   embeddedFramesSinceReset = 0;
 }
 

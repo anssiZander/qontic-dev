@@ -472,7 +472,8 @@
         <ul class="note-list">
           <li><a href="#focused-applet">A Bohmian particle</a></li>
           <li><a href="#count-applet">Many initial positions at once</a></li>
-          <li><a href="#embedded-applet">Equivariance</a></li>
+          <li><a href="#equivariance-applet">Equivariance</a></li>
+          <li><a href="#theory">Theory & Equations</a></li>
         </ul>
       </aside>
     </section>
@@ -525,8 +526,8 @@
     <section class="applet-section" aria-labelledby="count-applet">
       <h2 id="count-applet">Multiple instances at once</h2>
       <p>
-        The individual trajectories may look complicated--hiding the statistical behaviour-- 
-        but plotting many at once reveals the famous interference pattern emerging from the swarm of Bohmian trajectories.
+        The individual trajectories may look complicated and their collective statistical nature may be unclear. 
+        But plotting many at once reveals the famous interference pattern emerging from a swarm of Bohmian trajectories.
       </p>
 
       <div class="applet-shell is-inactive">
@@ -544,14 +545,12 @@
         </div>
       </div>
       <p class="caption">
-        With many instances plotted at once, we can see the familiar interference pattern emerging from the swarm of
-         Bohmian trajectories. 
-         Each particle is guided by the same wave, but starts at a different initial position.
+         Each instance of a particle is guided by the same wave, but starts at a different initial position.
       </p>
     </section>
 
-    <section class="applet-section" aria-labelledby="embedded-applet">
-      <h2 id="embedded-applet">Equivariance Demo</h2>
+    <section class="applet-section" aria-labelledby="equivariance-applet">
+      <h2 id="equivariance-applet">Equivariance Demo</h2>
       <p>
         
         Next, let us will initialize a large number of particle instances with positions sampled from the Born density \(\rho = |\psi|^2\) 
@@ -564,6 +563,8 @@
         
         
       </p>
+
+      
 
       <div class="applet-shell is-inactive">
         <div class="applet-toolbar">
@@ -583,13 +584,24 @@
         With enough initially sampled positions, the particle ensemble remains distributed like
         \(\rho = |\psi|^2\) as both wave and trajectories evolve.
       </p>
+
+      <p>
+        This behaviour, that the statistical distribution of bohmian particles follows
+         the time evolution of the squared modulus of the wave function, is called equivariance.
+         It means the emprical probability of finding a Bohmian particle at a location, 
+         is the same as the probability of collapse to that point upon a measurement in the standard
+         interpretation of QM.  
+      </p>
+      <p>
+        Conclusion: the two interpretations are empirically equivalent. 
+      </p>
       
     </section>
 
     
     <section aria-labelledby="theory">
       <h2 id="theory">Theory</h2>
-      <h3 id="theory">The Guiding Law</h3>
+      <h3>The Guiding Law</h3>
       <p>
         The wave  \( \psi = \psi(x,y,t) \) in pilot wave theory is the Schrödinger wave from standard quantum mechanics,
          evolving according to the Schrödinger equation:
