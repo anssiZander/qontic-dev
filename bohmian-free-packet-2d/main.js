@@ -13,7 +13,7 @@ if (!extFloatRT) {
 
 const params = {
   simScale: 0.5,
-  stepsPerFrame: 20,
+  stepsPerFrame: 5,
 
   hbar: 6.0,
   mass: 1.0,
@@ -26,7 +26,6 @@ const params = {
   doubleGaussian: 0,
   gaussianSeparation: 200.0,
 
-  nParticles: 200,
   rhoMin: 1e-6,
   velClamp: 160.0,
   guidingMode: 1,
@@ -38,20 +37,56 @@ const params = {
   showPhase: 1,
 
   showParticles: 1,
-  dotSize: 9.0,
+  nParticles: 100,
+  dotSize: 12.0,
   dotSigma: 0.28,
   dotGain: 1.,
 
   showTrail: 1,
-  trailHalfLife: 100.0,
+  trailHalfLife: 10.0,
   trailVisGain: 1.,
   trailVisGamma: 1,
   trailStampGain: 0.55,
-  trailWidth: 6.0,
+  trailWidth: 7.0,
   trailBlendMode: 1,
 
   paletteId: 5,
 };
+
+const urlParams = new URLSearchParams(window.location.search);
+const preset = urlParams.get("preset");
+
+const EMBED_PRESETS = {
+  spreading: {
+    doubleGaussian: 0,
+    guidingMode: 0,
+    nParticles: 1,
+    dotSize: 14.0,
+    trailWidth: 5.0,
+    trailHalfLife: 80.0,
+  },
+  ensemble: {
+    doubleGaussian: 0,
+    guidingMode: 0,
+    nParticles: 500,
+    dotSize: 7.0,
+    trailWidth: 4.0,
+    trailHalfLife: 45.0,
+  },
+  split: {
+    doubleGaussian: 1,
+    gaussianSeparation: 180.0,
+    guidingMode: 0,
+    nParticles: 400,
+    dotSize: 6.0,
+    trailWidth: 4.0,
+    trailHalfLife: 45.0,
+  },
+};
+
+if (EMBED_PRESETS[preset]) {
+  Object.assign(params, EMBED_PRESETS[preset]);
+}
 
 const PALETTE_NAMES = [
   "Nebula",
