@@ -96,8 +96,9 @@ const ensemblePreset = {
 const splitPreset = {
   ...embeddedBasePreset,
   doubleGaussian: 1,
-  gaussianSeparation: 180.0,
-  nParticles: 400,
+  p0: .9,
+  gaussianSeparation: 100.0,
+  nParticles: 500,
   dotSize: 6.0,
   trailWidth: 4.0,
   trailHalfLife: 5.0,
@@ -111,30 +112,25 @@ const PRESETS = {
   },
   ensemble: {
     params: ensemblePreset,
-    adjustable: ["nParticles"],
+    adjustable: ["p0","packetSigma","nParticles"],
   },
   split: {
     params: splitPreset,
-    adjustable: ["gaussianSeparation"],
+    adjustable: ["p0","packetSigma","gaussianSeparation" ],
+   
   },
 };
 
 const presetDefinition = PRESETS[preset];
 const presetParams = presetDefinition?.params;
 const adjustableControls = new Set(presetDefinition?.adjustable ?? []);
-const fixedControls = new Set(
-  presetParams
-    ? Object.keys(presetParams).filter((key) => !adjustableControls.has(key))
-    : []
-);
 
 if (presetParams) {
   Object.assign(params, presetParams);
 }
 
 function isControlFixed(key) {
-  if (adjustableControls.has(key)) return false;
-  return fixedControls.has(key);
+  return Boolean(presetDefinition) && !adjustableControls.has(key);
 }
 
 const PALETTE_NAMES = [
@@ -328,7 +324,7 @@ addSlider("p0", "momentum p", 0., 4.0, 0.1, () => resetAll());
 //addSlider("packetY", "packet start y", 0.05, 0.95, 0.01, () => resetAll());
 addSlider("packetSigma", "packet sigma", 18.0, 80.0, 1.0, () => resetAll());
 addToggleInt("doubleGaussian", "split gaussian", () => resetAll());
-addSlider("gaussianSeparation", "separation", 0.0, 400.0, 10.0, () => resetAll());
+addSlider("gaussianSeparation", "split separation", 0.0, 300.0, 10.0, () => resetAll());
 addSlider("spinS", "spin s", 0.0, 2.0, 0.5);
 if (!isControlFixed("guidingMode")) {
   const row = document.createElement("div");
