@@ -178,7 +178,7 @@ void main(){
     float t = fract((ph + 3.14159265) / 6.2831853);
     col = colorMap(t, a,b,c,d) * I;
   } else {
-    col = colorMap(I, a,b,c,d) * (0.15 + 0.85*I);
+    col = colorMap(I, a,b,c,d) * I;
   }
 
   if(uShowWave == 0) {

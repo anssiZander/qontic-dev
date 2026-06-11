@@ -70,7 +70,7 @@ const params = {
   guideMirrorX: 0.35,
   guideMirrorAngleTrimDeg: 0,
   guideMirrorYTrim: 0.0,
-  guideMirrorLength: 1550.0,
+  guideMirrorLength: 1950.0,
   guideMirrorWidth: 8.0,
   guideMirrorPhysicalWidth: 2.0,
   guideMirrorV0: 160.0,
@@ -145,9 +145,11 @@ const PRESETS = {
   splitter: {
     params: {
       ...embeddedBasePreset,
-      nParticles: 2,
-      dotSize: 14,
-      trailHalfLife: 90,
+      nParticles: 1,
+      trailHalfLife: 190,
+      dotSize: 15,
+      trailWidth: 11,
+      trailVisGain: 0.9,
     },
     adjustable: ["p0"],
   },
@@ -160,6 +162,7 @@ const PRESETS = {
       dotSize: 5,
       trailHalfLife: 25,
       trailWidth: 3,
+      showTrail: 0,
     },
     adjustable: ["nParticles"],
   },
@@ -173,7 +176,7 @@ const PRESETS = {
       trailWidth: 4,
       detectorActive: 0,
     },
-    adjustable: [],
+    adjustable: ["nParticles"],
   },
 };
 
@@ -406,7 +409,7 @@ addSlider("stepsPerFrame", "Steps/frame", 1, 100, 1);
 addSlider("dt", "dt", 0.01, 0.02, 0.001);
 
 addSectionHeader("Physical Parameters");
-addSlider("p0", "Momentum p", 0.5, 8.0, 0.1, () => resetAll());
+addSlider("p0", "Momentum p", 0.5, 4.0, 0.1, () => resetAll());
 
 addSlider("packetSigma", "packet sigma", 10.0, 150.0, 10.0);
 //addSlider("splitterX", "splitter x", 0.0, 1.0, 0.01, () => resetAll());
@@ -492,7 +495,7 @@ addSlider("trailHalfLife", "trail half-life", 1.0, 150.0, 1.0);
 addSlider("trailWidth", "trail width (px)", 0.5, 10.0, 0.1);
 
 removeEmptySectionHeaders();
-if (presetDefinition && controls.children.length === 0) {
+if (presetDefinition && controls.children.length === 0 && !isEmbedded) {
   document.getElementById("ui").style.display = "none";
 }
 
@@ -909,10 +912,6 @@ function resizeCanvas() {
 
 function simPx(px) {
   return px * params.simScale;
-}
-
-function renderPx(px) {
-  return px / PHYSICAL_DOMAIN_SCALE;
 }
 
 function getViewScale(zoom = view.zoom) {
@@ -1874,7 +1873,7 @@ function densityStepAndStamp() {
   gl.uniform1i(U.partStamp.uState, 0);
 
   gl.uniform2i(U.partStamp.uSimRes, simW, simH);
-  gl.uniform1f(U.partStamp.uPointSize, renderPx(params.dotSize));
+  gl.uniform1f(U.partStamp.uPointSize, params.dotSize);
   gl.uniform1f(U.partStamp.uVisGain, params.visGain);
   gl.uniform1f(U.partStamp.uVisGamma, params.visGamma);
   gl.uniform1f(U.partStamp.uWaveTailFade, params.waveTailFade);
@@ -1882,7 +1881,7 @@ function densityStepAndStamp() {
   gl.uniform1f(U.partStamp.uDotGain, params.dotGain);
   gl.uniform1f(U.partStamp.uStampGain, params.trailStampGain);
   gl.uniform1i(U.partStamp.uNumParticles, params.nParticles);
-  gl.uniform1f(U.partStamp.uTrailWidth, renderPx(params.trailWidth));
+  gl.uniform1f(U.partStamp.uTrailWidth, params.trailWidth);
   gl.uniform1i(U.partStamp.uRenderMode, PARTICLE_RENDER_ALL);
   setViewUniforms(U.partStamp, 0.5, 0.5, 1.0, false);
 
@@ -2112,7 +2111,7 @@ function render() {
     gl.uniform1i(U.partView.uState, 0);
 
     gl.uniform2i(U.partView.uSimRes, simW, simH);
-    gl.uniform1f(U.partView.uPointSize, renderPx(params.dotSize) * view.zoom);
+    gl.uniform1f(U.partView.uPointSize, params.dotSize * view.zoom);
     gl.uniform1f(U.partView.uVisGain, params.visGain);
     gl.uniform1f(U.partView.uVisGamma, params.visGamma);
     gl.uniform1f(U.partView.uWaveTailFade, params.waveTailFade);
@@ -2177,6 +2176,8 @@ function rebuildSimulation() {
 }
 
 function resetAll() {
+  paused = false;
+  pauseButton.textContent = "Pause";
   guideMirrorDetectorX = params.detectorX;
   resetWave();
   rebuildParticles();
@@ -2218,7 +2219,6 @@ async function main() {
         Math.floor(params.nParticles) * DETECTOR_AUTO_PAUSE_FRACTION
       );
       if (
-        params.detectorActive &&
         !detectorAutoPauseTriggered &&
         detectedCount >= autoPauseCount
       ) {
