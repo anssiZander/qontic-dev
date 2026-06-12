@@ -144,11 +144,11 @@ const embeddedBasePreset = {
 const standardCollapsePreset = {
   ...embeddedBasePreset,
   showParticles: 0,
-  nParticles: 1,
+  nParticles: 100,
   dotSize: 22,
-  colorCodePaths: 0,
+  colorCodePaths: 1,
   showTrail: 0,
-  waveTailFade: 0.45,
+  waveTailFade: 0.25,
   showHistogram: 1,
 };
 
@@ -156,7 +156,17 @@ const PRESETS = {
   "standard-collapse-edge": {
     params: {
       ...standardCollapsePreset,
+      p0: 3,
+      guideMirrorLength: 2850.0,
+      guideMirrorX: .39,
+      guideMirrorAngleTrimDeg: 22,
+      guideMirrorYTrim: -40.0,
       detectorActive: 0,
+      guideMirrorAngleTrimDeg: 17,
+      trailHalfLife: 150,
+      trailVisGain: .9,
+      trailVisGamma: .9,
+      trailStampGain: 0.55,
     },
     adjustable: ["nParticles"],
   },
@@ -164,6 +174,8 @@ const PRESETS = {
     params: {
       ...standardCollapsePreset,
       detectorActive: 1,
+      nParticles: 3000,
+      dotSize: 12,
     },
     adjustable: ["nParticles"],
   },
@@ -2142,8 +2154,10 @@ function render() {
 
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 
-  // trail overlay
-  if (params.showTrail) {
+  // Standard-collapse presets reveal the recorded path only after detection.
+  const showTrailOverlay =
+    params.showTrail && (!collapseEnabled || collapse.active);
+  if (showTrailOverlay) {
     gl.enable(gl.BLEND);
 
     // Different blending modes for better trail visibility
