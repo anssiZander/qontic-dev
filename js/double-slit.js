@@ -408,6 +408,12 @@ function initWaveWebGL() {
          uniform float u_viewMin;
          uniform float u_viewMax;
 
+         // Scale factor for Psi2 mode: set JS-side to a
+         // representative psi2 value so that the soft-normalization
+         // sqrt(psi2/u_psi2Scale)/(1+sqrt(psi2/u_psi2Scale))
+         // maps that reference point to val=0.5.
+         uniform float u_psi2Scale;
+
          uniform sampler2D u_paletteTex;
          uniform sampler2D u_palette2Tex;  // Second palette for slit 2 wave
 
@@ -502,7 +508,9 @@ function initWaveWebGL() {
                      float logv = log(psi2 + 1e-12);
                      val = (logv + 15.0) / 15.0;
                   } else if (u_mode == 3) { // Psi2
-                     val = psi2 / (1.0 + psi2);
+                     // Normalize by reference psi2 so mid-field maps to val=0.5
+                     float amp = sqrt(psi2 / max(u_psi2Scale, 1e-30));
+                     val = amp / (1.0 + amp);
                   } else { // Phase (default)
                      float phase = atan(im, re);
                      val = (phase / PI + 1.0) * 0.5;
@@ -549,8 +557,10 @@ function initWaveWebGL() {
                      val1 = (log(psi2_1 + 1e-12) + 15.0) / 15.0;
                      val2 = (log(psi2_2 + 1e-12) + 15.0) / 15.0;
                   } else if (u_mode == 3) { // Psi2
-                     val1 = psi2_1 / (1.0 + psi2_1);
-                     val2 = psi2_2 / (1.0 + psi2_2);
+                     float a1 = sqrt(psi2_1 / max(u_psi2Scale, 1e-30));
+                     float a2 = sqrt(psi2_2 / max(u_psi2Scale, 1e-30));
+                     val1 = a1 / (1.0 + a1);
+                     val2 = a2 / (1.0 + a2);
                   } else { // Phase (default)
                      float phase1 = atan(im1, re1);
                      float phase2 = atan(im2, re2);
@@ -600,8 +610,14 @@ function initWaveWebGL() {
 
             float val;
             if (u_mode == 3) { // Psi2
-               val = psi2;
-               val = val / (1.0 + val); // soft normalization
+               // Normalize by reference psi2 so mid-field maps to val=0.5.
+               // psi2 from idealized slit sources scales as 1/r^2, so without
+               // a reference scale the entire visible region maps to near-zero
+               // (the amplitude is tiny in world units). u_psi2Scale is set
+               // JS-side to the expected psi2 at a representative mid-field
+               // point, making the color map scene-adaptive.
+               float amp = sqrt(psi2 / max(u_psi2Scale, 1e-30));
+               val = amp / (1.0 + amp);
             } else if (u_mode == 4) { // log(Psi2)
                float logv = log(psi2 + 1e-12); // natural log
                // Map roughly [-15, 0] -> [0,1]
@@ -713,6 +729,7 @@ function initWaveWebGL() {
          u_alphaScale:      uni('u_alphaScale'),
          u_viewMin:         uni('u_viewMin'),
          u_viewMax:         uni('u_viewMax'),
+         u_psi2Scale:       uni('u_psi2Scale'),
          u_paletteTex:      uni('u_paletteTex'),
          u_palette2Tex:     uni('u_palette2Tex')
     };
@@ -865,6 +882,19 @@ function renderWaveWithWebGL(t, psiOptionLocal) {
    if (psiOptionLocal === 'Psi2') mode = 3;       // 3 = Psi^2
    else if (psiOptionLocal === 'LogPsi2') mode = 4; // 4 = log(Psi^2)
    gl.uniform1i(waveUniforms.u_mode, mode);
+
+   // Compute a reference psi2 value for the Psi2 colormap scale.
+   // We use the amplitude at a representative mid-field distance:
+   // the distance from a slit to the midpoint between wall and detector,
+   // at zero transverse offset (on-axis). This makes val=0.5 correspond
+   // to a typical intensity in the visible region, so fringes are
+   // visible without saturation.
+   {
+      const midX = wallXWorld + (detectorXWorld - wallXWorld) * 0.5;
+      const midR = Math.max(Math.abs(midX - wallXWorld), 10); // world units
+      const refPsi2 = 1.0 / (midR * midR);
+      gl.uniform1f(waveUniforms.u_psi2Scale, refPsi2);
+   }
 
    // Map the current viewing window into [0,1] for the GPU
    // path. For all GPU modes, the scalar "val" is already
