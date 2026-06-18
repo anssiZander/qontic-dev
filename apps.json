@@ -56,6 +56,14 @@
     "description": "Bohmian delayed-choice notebook with a balanced splitter, guided trajectories, detector statistics, and an in-flight detector choice."
   },
   {
+    "title": "Classical Limit",
+    "slug": "classical-limit",
+    "status": "live",
+    "url": "classical-limit/",
+    "tags": ["Pilot-wave", "Classical limit", "WebGL2"],
+    "description": "Applet for exploring how a Bohmian wave packet in a reflecting box changes from visibly quantum pilot-wave motion to straighter, cleaner classical-looking wall bounces."
+  },
+  {
     "title": "Eigenstates in 3D Box",
     "slug": "eigenstates-in-3d-box",
     "status": "live",

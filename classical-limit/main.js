@@ -13,37 +13,39 @@ if (!extFloatRT) {
 
 const params = {
   simScale: 0.5,
-  stepsPerFrame: 5,
+  stepsPerFrame: 6,
 
-  hbar: 1.0,
+  classicality: 0.0,
+  classicalSpeed: 2.0,
+  packetSpread: 1.0,
+
+  hbar: 6.0,
   mass: 1.0,
   p0: 2.0,
-  dt: 0.04,
+  dt: 0.035,
 
-  packetX: 0.3,
+  packetX: 0.36,
   packetY: 0.5,
-  packetSigma: 30.0,
+  packetSigma: 24.0,
   doubleGaussian: 0,
   gaussianSeparation: 200.0,
 
   rhoMin: 1e-6,
   velClamp: 160.0,
-  guidingMode: 1,
   boundaryMode: 0,
-  spinS: 0.5,
 
   visGain: 20.0,
   visGamma: 0.5,
   showPhase: 1,
 
   showParticles: 1,
-  nParticles: 100,
-  dotSize: 16.0,
+  nParticles: 64,
+  dotSize: 10.0,
   dotSigma: 0.28,
   dotGain: 1.,
 
   showTrail: 1,
-  trailHalfLife: 30.0,
+  trailHalfLife: 18.0,
   trailVisGain: 0.5,
   trailVisGamma: 0.6,
   trailStampGain: 0.55,
@@ -55,83 +57,75 @@ const params = {
 
 const urlParams = new URLSearchParams(window.location.search);
 const isEmbedded = urlParams.get("embed") === "1";
-const preset = urlParams.get("preset");
 
-const embeddedBasePreset = {
-  simScale: 0.5,
-  stepsPerFrame: 5,
-  dt: 0.04,
-  p0: 2.0,
-  packetSigma: 30.0,
-  doubleGaussian: 0,
-  gaussianSeparation: 200.0,
-  
-  spinS: 0.5,
-  guidingMode: 0,
-  boundaryMode: 0,
-  nParticles: 100,
-  dotSize: 16.0,
-  dotGain: 1.0,
-  showTrail: 1,
-  trailHalfLife: 30.0,
-  trailWidth: 6.0,
+const CLASSICAL_LIMIT = {
+  quantumHbar: 6.0,
+  classicalHbar: 0.35,
+  classicalGridWavenumber: 0.7,
+  maxGridWavenumber: 0.9,
+  quantumSigma: 24.0,
+  classicalSigma: 90.0,
 };
 
-const spreadingPreset = {
-  ...embeddedBasePreset,
-  nParticles: 1,
-  dotSize: 16.0,
-  trailWidth: 5.0,
-  trailHalfLife: 5.0,
-};
-
-const ensemblePreset = {
-  ...embeddedBasePreset,
-  nParticles: 500,
-  showPhase: 1,
-  dotSize: 9.0,
-  trailWidth: 4.0,
-  trailHalfLife: 3.0,
-};
-
-const splitPreset = {
-  ...embeddedBasePreset,
-  doubleGaussian: 1,
-  p0: .9,
-  gaussianSeparation: 100.0,
-  nParticles: 500,
-  dotSize: 7.0,
-  trailWidth: 4.0,
-  trailHalfLife: 5.0,
-};
-
-const PRESETS = {
-  // Preset params are fixed and hidden unless their key is listed in adjustable.
-  spreading: {
-    params: spreadingPreset,
-    adjustable: ["p0", "packetSigma"],
-  },
-  ensemble: {
-    params: ensemblePreset,
-    adjustable: ["p0","packetSigma","nParticles"],
-  },
-  split: {
-    params: splitPreset,
-    adjustable: ["p0","packetSigma","gaussianSeparation" ],
-   
-  },
-};
-
-const presetDefinition = PRESETS[preset];
-const presetParams = presetDefinition?.params;
-const adjustableControls = new Set(presetDefinition?.adjustable ?? []);
-
-if (presetParams) {
-  Object.assign(params, presetParams);
+function clamp01(x) {
+  return Math.min(1, Math.max(0, x));
 }
 
+function mix(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function smooth01(t) {
+  t = clamp01(t);
+  return t * t * (3 - 2 * t);
+}
+
+function applyClassicalLimit() {
+  const t = smooth01(params.classicality);
+  const requestedHbar = mix(CLASSICAL_LIMIT.quantumHbar, CLASSICAL_LIMIT.classicalHbar, t);
+  const quantumK = Math.min(CLASSICAL_LIMIT.maxGridWavenumber, params.classicalSpeed / CLASSICAL_LIMIT.quantumHbar);
+  const targetK = mix(quantumK, CLASSICAL_LIMIT.classicalGridWavenumber, t);
+  params.hbar = requestedHbar;
+  params.p0 = params.hbar * targetK;
+  params.mass = (params.hbar * Math.sin(targetK)) / params.classicalSpeed;
+  params.packetSigma = mix(CLASSICAL_LIMIT.quantumSigma, CLASSICAL_LIMIT.classicalSigma, t) * params.packetSpread;
+  params.boundaryMode = 0;
+}
+
+function classicalityLabel() {
+  const t = params.classicality;
+  if (t < 0.18) return "Quantum";
+  if (t > 0.82) return "Classical";
+  return `${Math.round(t * 100)}%`;
+}
+
+let classicalReadout = null;
+
+function updateClassicalReadout() {
+  if (!classicalReadout) return;
+  const k = params.p0 / params.hbar;
+  classicalReadout.textContent = `hbar ${fmt(params.hbar)}, k ${fmt(k)}, width ${fmt(params.packetSigma)}`;
+}
+
+const urlClassicality = parseFloat(urlParams.get("classicality"));
+if (Number.isFinite(urlClassicality)) {
+  params.classicality = clamp01(urlClassicality);
+}
+
+const urlSpeed = parseFloat(urlParams.get("speed"));
+if (Number.isFinite(urlSpeed)) {
+  params.classicalSpeed = Math.min(4.0, Math.max(0.5, urlSpeed));
+}
+
+const urlSpread = parseFloat(urlParams.get("spread"));
+if (Number.isFinite(urlSpread)) {
+  params.packetSpread = Math.min(2.5, Math.max(0.4, urlSpread));
+}
+
+applyClassicalLimit();
+
 function isControlFixed(key) {
-  return Boolean(presetDefinition) && !adjustableControls.has(key);
+  return false;
 }
 
 const PALETTE_NAMES = [
@@ -181,6 +175,10 @@ function addSlider(key, label, min, max, step, onChange = null) {
   input.addEventListener("input", () => {
     const v = parseFloat(input.value);
     params[key] = v;
+    if (key === "classicalSpeed" || key === "packetSpread") {
+      applyClassicalLimit();
+      updateClassicalReadout();
+    }
     val.textContent = fmt(v);
   });
   input.addEventListener("change", () => onChange && onChange());
@@ -189,6 +187,52 @@ function addSlider(key, label, min, max, step, onChange = null) {
   row.appendChild(input);
   row.appendChild(val);
   controls.appendChild(row);
+}
+
+function addClassicalityControl() {
+  const row = document.createElement("div");
+  row.className = "row";
+
+  const lab = document.createElement("label");
+  lab.textContent = "classical limit";
+
+  const input = document.createElement("input");
+  input.type = "range";
+  input.min = 0;
+  input.max = 1;
+  input.step = 0.01;
+  input.value = params.classicality;
+
+  const val = document.createElement("div");
+  val.className = "val";
+  val.textContent = classicalityLabel();
+
+  input.addEventListener("input", () => {
+    params.classicality = parseFloat(input.value);
+    applyClassicalLimit();
+    val.textContent = classicalityLabel();
+    updateClassicalReadout();
+  });
+  input.addEventListener("change", () => resetAll());
+
+  row.appendChild(lab);
+  row.appendChild(input);
+  row.appendChild(val);
+  controls.appendChild(row);
+
+  const readout = document.createElement("div");
+  readout.className = "row";
+  const readoutLabel = document.createElement("label");
+  readoutLabel.textContent = "effective values";
+  classicalReadout = document.createElement("div");
+  classicalReadout.style.flex = "1";
+  classicalReadout.style.color = "#d9e6f8";
+  classicalReadout.style.fontSize = "12px";
+  classicalReadout.style.textAlign = "right";
+  readout.appendChild(readoutLabel);
+  readout.appendChild(classicalReadout);
+  controls.appendChild(readout);
+  updateClassicalReadout();
 }
 
 function addToggleInt(key, label, onChange = null) {
@@ -314,121 +358,28 @@ function removeEmptySectionHeaders() {
   }
 }
 
+addSectionHeader("Regime");
+addClassicalityControl();
+addSlider("classicalSpeed", "drift speed", 0.5, 4.0, 0.1, () => {
+  applyClassicalLimit();
+  resetAll();
+  updateClassicalReadout();
+});
+addSlider("packetSpread", "packet spread", 0.4, 2.5, 0.05, () => {
+  applyClassicalLimit();
+  resetAll();
+  updateClassicalReadout();
+});
+
+addSectionHeader("Performance");
 addSlider("simScale", "sim scale", 0.25, 1.0, 0.05, () => rebuildSimulation());
 addSlider("stepsPerFrame", "Steps/frame", 1, 51, 5);
-addSlider("dt", "dt", 0.01, 0.04, 0.01);
-
-addSectionHeader("Physical Parameters");
-addSlider("p0", "momentum p", 0., 4.0, 0.1, () => resetAll());
-
-//addSlider("packetX", "packet start x", 0.05, 0.95, 0.01, () => resetAll());
-//addSlider("packetY", "packet start y", 0.05, 0.95, 0.01, () => resetAll());
-addSlider("packetSigma", "packet sigma", 18.0, 80.0, 1.0, () => resetAll());
-addToggleInt("doubleGaussian", "split gaussian", () => resetAll());
-addSlider("gaussianSeparation", "split separation", 0.0, 300.0, 10.0, () => resetAll());
-addSlider("spinS", "spin s", 0.0, 2.0, 0.5);
-if (!isControlFixed("guidingMode")) {
-  const row = document.createElement("div");
-  row.className = "row mode-row";
-
-  const lab = document.createElement("label");
-  lab.textContent = "physics mode";
-
-  const group = document.createElement("div");
-  group.className = "toggle-group";
-
-  const btnSchrodinger = document.createElement("button");
-  btnSchrodinger.textContent = "Schrodinger";
-  btnSchrodinger.addEventListener("click", () => {
-    params.guidingMode = 0;
-    updateToggleButtons();
-    resetAll();
-  });
-
-  const btnPauli = document.createElement("button");
-  btnPauli.textContent = "Pauli (spin up)";
-  btnPauli.addEventListener("click", () => {
-    params.guidingMode = 1;
-    updateToggleButtons();
-    resetAll();
-  });
-
-  const btnPauliDown = document.createElement("button");
-  btnPauliDown.textContent = "Pauli (spin down)";
-  btnPauliDown.addEventListener("click", () => {
-    params.guidingMode = 2;
-    updateToggleButtons();
-    resetAll();
-  });
-
-  group.appendChild(btnSchrodinger);
-  group.appendChild(btnPauli);
-  group.appendChild(btnPauliDown);
-
-  function updateToggleButtons() {
-    btnSchrodinger.classList.toggle("selected", params.guidingMode === 0);
-    btnPauli.classList.toggle("selected", params.guidingMode === 1);
-    btnPauliDown.classList.toggle("selected", params.guidingMode === 2);
-  }
-  updateToggleButtons();
-
-  const val = document.createElement("div");
-  val.className = "val";
-  val.textContent = "";
-
-  row.appendChild(lab);
-  row.appendChild(group);
-  row.appendChild(val);
-  controls.appendChild(row);
-}
-
-if (!isControlFixed("boundaryMode")) {
-  const row = document.createElement("div");
-  row.className = "row mode-row";
-
-  const lab = document.createElement("label");
-  lab.textContent = "boundary conditions";
-
-  const group = document.createElement("div");
-  group.className = "toggle-group";
-
-  const btnReflecting = document.createElement("button");
-  btnReflecting.textContent = "Reflecting";
-  btnReflecting.addEventListener("click", () => {
-    params.boundaryMode = 0;
-    updateBoundaryButtons();
-  });
-
-  const btnPeriodic = document.createElement("button");
-  btnPeriodic.textContent = "Periodic";
-  btnPeriodic.addEventListener("click", () => {
-    params.boundaryMode = 1;
-    updateBoundaryButtons();
-  });
-
-  group.appendChild(btnReflecting);
-  group.appendChild(btnPeriodic);
-
-  function updateBoundaryButtons() {
-    btnReflecting.classList.toggle("selected", params.boundaryMode === 0);
-    btnPeriodic.classList.toggle("selected", params.boundaryMode === 1);
-  }
-  updateBoundaryButtons();
-
-  const val = document.createElement("div");
-  val.className = "val";
-  val.textContent = "";
-
-  row.appendChild(lab);
-  row.appendChild(group);
-  row.appendChild(val);
-  controls.appendChild(row);
-}
+addSlider("dt", "dt", 0.01, 0.04, 0.005);
 
 addSectionHeader("Visual Parameters");
 addToggleInt("showPhase", "show phase");
 addToggleInt("showParticles", "show particles");
-addSlider("nParticles", "particle count", 1, 3000, 1, () => resetAll());
+addSlider("nParticles", "particle count", 1, 100, 1, () => resetAll());
 addSlider("dotSize", "particle size", 2.0, 16.0, 0.5);
 addSlider("dotGain", "particle brightness", 0.1, 3.0, 0.1);
 
@@ -637,8 +588,6 @@ function buildPrograms() {
     uHBAR: u(progPartUpdate, "uHBAR"),
     uMass: u(progPartUpdate, "uMass"),
     uDT: u(progPartUpdate, "uDT"),
-    uGuidingMode: u(progPartUpdate, "uGuidingMode"),
-    uSpinS: u(progPartUpdate, "uSpinS"),
     uRhoMin: u(progPartUpdate, "uRhoMin"),
     uVelClamp: u(progPartUpdate, "uVelClamp"),
     uBoundaryMode: u(progPartUpdate, "uBoundaryMode"),
@@ -826,8 +775,6 @@ function particleUpdate() {
   gl.uniform1f(U.partUpdate.uHBAR, params.hbar);
   gl.uniform1f(U.partUpdate.uMass, params.mass);
   gl.uniform1f(U.partUpdate.uDT, params.dt);
-  gl.uniform1i(U.partUpdate.uGuidingMode, params.guidingMode | 0);
-  gl.uniform1f(U.partUpdate.uSpinS, params.spinS);
 
   gl.uniform1f(U.partUpdate.uRhoMin, params.rhoMin);
   gl.uniform1f(U.partUpdate.uVelClamp, params.velClamp);
@@ -1017,6 +964,8 @@ function render() {
 
 function rebuildSimulation() {
   resizeCanvas();
+  applyClassicalLimit();
+  updateClassicalReadout();
 
   if (texA) gl.deleteTexture(texA);
   if (texB) gl.deleteTexture(texB);
@@ -1038,6 +987,8 @@ function rebuildSimulation() {
 }
 
 function resetAll() {
+  applyClassicalLimit();
+  updateClassicalReadout();
   resetWave();
   rebuildParticles();
   clearDensity();
