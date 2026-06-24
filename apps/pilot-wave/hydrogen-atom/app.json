@@ -1,0 +1,8 @@
+{
+  "title": "Hydrogen Atom",
+  "type": "app",
+  "category": "pilot-wave",
+  "description": "Hydrogen orbital visualization with trajectory-oriented pilot-wave structure.",
+  "tags": ["Pilot-wave", "Hydrogen", "Orbitals"],
+  "entry": "hydrogen-3d.html"
+}

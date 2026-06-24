@@ -1,4 +1,6 @@
 
+cp index.html index.manual-backup.html
+cat > index.html <<'EOF'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,7 +8,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <title>Q-Ontic Lab — Interactive Quantum Simulations</title>
-
   <meta name="description" content="Q-Ontic Lab develops interactive quantum simulations and notebooks for comparing different representations of quantum mechanics, including multiview and pilot-wave approaches." />
 
   <style>
@@ -50,7 +51,7 @@
     }
 
     header p {
-      max-width: 760px;
+      max-width: 780px;
       margin: 0.75rem auto 0;
       font-size: 1.15rem;
       opacity: 0.94;
@@ -102,21 +103,33 @@
       font-size: 1.02rem;
     }
 
-    .featured {
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 1.5rem;
-      margin-bottom: 2rem;
-      box-shadow: 0 4px 18px rgba(0, 30, 80, 0.06);
+    .controls {
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 0 0 2rem;
     }
 
-    .featured h2 {
-      margin-top: 0;
+    select, input {
+      padding: 0.65rem 0.8rem;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      font-size: 0.95rem;
+      background: white;
+      color: var(--text);
+    }
+
+    input {
+      min-width: 280px;
     }
 
     .section {
       margin: 2.5rem 0;
+    }
+
+    .section[hidden] {
+      display: none;
     }
 
     .section-header {
@@ -153,6 +166,10 @@
       min-height: 210px;
     }
 
+    .card[hidden] {
+      display: none;
+    }
+
     .card h3 {
       margin: 0 0 0.45rem;
       color: var(--blue);
@@ -184,19 +201,24 @@
       color: var(--green-text);
     }
 
-    .tag-multi {
+    .tag-comparative {
       background: var(--multi);
       color: var(--multi-text);
     }
 
-    .tag-pilot {
+    .tag-pilot-wave {
       background: var(--pilot);
       color: var(--pilot-text);
     }
 
-    .tag-note {
+    .tag-notebook {
       background: var(--note);
       color: var(--note-text);
+    }
+
+    .tag-neutral {
+      background: #eef1f5;
+      color: #44515f;
     }
 
     .button {
@@ -221,6 +243,11 @@
       gap: 1.25rem;
     }
 
+    .empty {
+      color: var(--muted);
+      font-style: italic;
+    }
+
     footer {
       background: #e9edf3;
       color: #52606d;
@@ -234,13 +261,9 @@
     }
 
     @media (max-width: 800px) {
-      header h1 {
-        font-size: 2.1rem;
-      }
-
-      .two-col {
-        grid-template-columns: 1fr;
-      }
+      header h1 { font-size: 2.1rem; }
+      .two-col { grid-template-columns: 1fr; }
+      input { min-width: 100%; box-sizing: border-box; }
     }
   </style>
 </head>
@@ -266,262 +289,167 @@
 </nav>
 
 <main>
-
   <section class="intro">
     <p>
       Q-Ontic Lab develops browser-based tools for exploring how different
-      quantum representations describe the same physical phenomena. The project
-      distinguishes between standalone simulation apps and interactive notebooks:
-      apps are designed for immediate exploration, while notebooks combine
-      explanation, context, and embedded simulations.
+      quantum representations describe the same physical phenomena. Apps are
+      designed for immediate exploration, while notebooks combine explanation,
+      context, and embedded simulations.
     </p>
   </section>
 
-  <section class="featured" id="featured">
-    <h2>Featured App: Analytical Double-Slit Simulation</h2>
-    <p>
-      A multiview simulation of the double-slit experiment comparing wavefunction
-      evolution, collapse-style detection, pilot-wave trajectories, and
-      branching-style descriptions.
-    </p>
-    <a class="button" href="apps/comparative/double-slit-analytical/">Launch Featured App</a>
-  </section>
+  <div class="controls">
+    <select id="view-filter" aria-label="Filter by section">
+      <option value="all">All</option>
+      <option value="comparative">Comparative apps</option>
+      <option value="pilot-wave">Pilot-wave apps</option>
+      <option value="notebook">Notebooks</option>
+    </select>
+    <input id="search" type="search" placeholder="Search simulations and notebooks…" />
+  </div>
 
-  <section class="section" id="comparative">
+  <section class="section" id="comparative-section" data-section="comparative">
     <div class="section-header">
       <h2>Comparative Apps</h2>
-      <p>
-        Standalone simulations that compare multiple quantum representations or
-        interpretations side by side.
-      </p>
+      <p>Standalone simulations that compare multiple quantum representations or interpretations side by side.</p>
     </div>
-
-    <div class="grid">
-      <article class="card">
-        <h3>Double-Slit Experiment — Analytical</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-multi">Comparative</span>
-        </div>
-        <p>
-          Analytical double-slit simulation comparing collapse, pilot-wave, and
-          branching-style descriptions.
-        </p>
-        <a class="button" href="apps/comparative/double-slit-analytical/">Launch</a>
-      </article>
-
-      <article class="card">
-        <h3>Stern-Gerlach Experiment — 3D</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-multi">Comparative</span>
-        </div>
-        <p>
-          Spin-1/2 particle through an inhomogeneous magnetic field with
-          collapse, pilot-wave, and branching views.
-        </p>
-        <a class="button" href="apps/comparative/stern-gerlach/">Launch</a>
-      </article>
-
-      <article class="card">
-        <h3>Bell Experiment — Entanglement</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-multi">Comparative</span>
-        </div>
-        <p>
-          Entangled spin-pair simulation with angle-dependent correlations and
-          contrasting representations of nonlocal dependence.
-        </p>
-        <a class="button" href="apps/comparative/bell-experiment/">Launch</a>
-      </article>
-
-      <article class="card">
-        <h3>Quantum Measurement with Detector</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-multi">Comparative</span>
-        </div>
-        <p>
-          Detector-coupled tunneling simulation with explicit measurement
-          back-action and outcome statistics.
-        </p>
-        <a class="button" href="apps/comparative/measurement/">Launch</a>
-      </article>
-
-      <article class="card">
-        <h3>Free Particle — Gaussian Packet</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-multi">Comparative</span>
-        </div>
-        <p>
-          Free Gaussian wave packet with screen detection and alternative
-          representational views of the same event.
-        </p>
-        <a class="button" href="apps/comparative/free-particle/free-particle.html">Launch</a>
-      </article>
-    </div>
+    <div class="grid" id="comparative-grid"></div>
   </section>
 
-  <section class="section" id="pilot-wave">
+  <section class="section" id="pilot-wave-section" data-section="pilot-wave">
     <div class="section-header">
       <h2>Pilot-Wave Apps</h2>
-      <p>
-        Standalone trajectory-focused simulations for exploring pilot-wave
-        dynamics, guidance laws, and wave-packet motion.
-      </p>
+      <p>Standalone trajectory-focused simulations for exploring pilot-wave dynamics, guidance laws, and wave-packet motion.</p>
     </div>
-
-    <div class="grid">
-
-      <article class="card">
-        <h3>Double-Slit Experiment — Numerical</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-pilot">Pilot-wave</span>
-        </div>
-        <p>
-          GPU-based numerical wave-packet propagation through a double slit with
-          trajectory visualization.
-        </p>
-        <a class="button" href="apps/pilot-wave/double-slit-numerical/">Launch</a>
-      </article>
-
-      <article class="card">
-        <h3>Pilot-Wave Tunneling — WebGL2</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-pilot">Pilot-wave</span>
-        </div>
-        <p>
-          Pilot-wave tunneling simulation showing guided trajectories and
-          wave-packet dynamics. Adapted from work by Anssi Zander.
-        </p>
-        <a class="button" href="apps/pilot-wave/tunneling/">Launch</a>
-      </article>
-
-
-      <article class="card">
-        <h3>Hydrogen Atom</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-pilot">Pilot-wave</span>
-        </div>
-        <p>
-          Hydrogen orbital visualization with trajectory-oriented pilot-wave
-          structure.
-        </p>
-        <a class="button" href="apps/pilot-wave/hydrogen-atom/hydrogen-3d.html">Launch</a>
-      </article>
-    </div>
+    <div class="grid" id="pilot-wave-grid"></div>
   </section>
 
-  <section class="section" id="notebooks">
+  <section class="section" id="notebook-section" data-section="notebook">
     <div class="section-header">
       <h2>Interactive Notebooks</h2>
-      <p>
-        Longer explanatory pages that combine narrative, context, and embedded
-        interactive demonstrations.
-      </p>
+      <p>Longer explanatory pages that combine narrative, context, and embedded interactive demonstrations.</p>
     </div>
-
-    <div class="grid">
-      <article class="card">
-        <h3>Pilot-Wave Double Slit </h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-pilot">Pilot-wave</span>
-        </div>
-        <p>
-          WebGL2 double-slit simulation with Schrödinger and Pauli spin-1/2
-          guidance laws. Adapted from work by Anssi Zander.
-        </p>
-        <a class="button" href="notebooks/double-slit-webgl/">Open Notebook</a>
-      </article>
-
-      <article class="card">
-        <h3>Pilot-Wave Free Packet — 2D</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-pilot">Pilot-wave</span>
-        </div>
-        <p>
-          Two-dimensional free-packet spreading with pilot-wave trajectory
-          guidance. Adapted from work by Anssi Zander.
-        </p>
-        <a class="button" href="notebooks/free-packet-2d/">Open Notebook</a>
-      </article>
-
-      <article class="card">
-        <h3>Pilot-Wave Particle in a Box — 3D</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-pilot">Pilot-wave</span>
-        </div>
-        <p>
-          Three-dimensional particle-in-a-box visualization with guided
-          trajectories and interactive camera controls.
-        </p>
-        <a class="button" href="notebooks/particle-box-3d/">Open Notebook</a>
-      </article>
-
-
-
-      <article class="card">
-        <h3>Delayed-Choice Notebook</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-note">Notebook</span>
-        </div>
-        <p>
-          Interactive notebook on delayed-choice interferometry and alternative
-          representations of the experiment.
-        </p>
-        <a class="button" href="notebooks/delayed-choice/">Open Notebook</a>
-      </article>
-    </div>
+    <div class="grid" id="notebook-grid"></div>
   </section>
 
   <section class="section" id="research">
     <div class="section-header">
       <h2>Research and Project Information</h2>
-      <p>
-        Q-Ontic Lab is a research and education project on visual representation,
-        interpretation, and reasoning in quantum mechanics.
-      </p>
+      <p>Q-Ontic Lab is a research and education project on visual representation, interpretation, and reasoning in quantum mechanics.</p>
     </div>
 
     <div class="two-col">
       <article class="card">
         <h3>Team and Collaborators</h3>
-        <p>
-          Meet the researchers, students, and collaborators contributing to the
-          Q-Ontic Lab.
-        </p>
+        <p>Meet the researchers, students, and collaborators contributing to the Q-Ontic Lab.</p>
         <a class="button" href="collaborators.html">View Team</a>
       </article>
 
       <article class="card">
         <h3>Source Code</h3>
-        <p>
-          The simulations and notebooks are developed as open browser-based tools.
-        </p>
+        <p>The simulations and notebooks are developed as open browser-based tools.</p>
         <a class="button" href="https://github.com/qontic/qontic">GitHub Repository</a>
       </article>
     </div>
   </section>
-
 </main>
 
 <footer>
-  <p>
-    Q-Ontic Lab · Interactive quantum simulations for research, teaching, and outreach.
-  </p>
-  <p>
-    Contact: <a href="mailto:yepes@rice.edu">yepes@rice.edu</a>
-  </p>
+  <p>Q-Ontic Lab · Interactive quantum simulations for research, teaching, and outreach.</p>
+  <p>Contact: <a href="mailto:yepes@rice.edu">yepes@rice.edu</a></p>
 </footer>
+
+<script>
+const SECTION_INFO = {
+  comparative: "comparative-grid",
+  "pilot-wave": "pilot-wave-grid",
+  notebook: "notebook-grid"
+};
+
+function tagClass(tag, item) {
+  if (item.type === "notebook" || tag.toLowerCase() === "notebook") return "tag-notebook";
+  if (item.category === "comparative") return "tag-comparative";
+  if (item.category === "pilot-wave") return "tag-pilot-wave";
+  return "tag-neutral";
+}
+
+function card(item) {
+  const tags = ["Live", ...(item.tags || [])]
+    .map(t => `<span class="tag ${t === "Live" ? "tag-live" : tagClass(t, item)}">${t}</span>`)
+    .join("");
+
+  const search = [
+    item.title,
+    item.type,
+    item.category,
+    item.description,
+    ...(item.tags || [])
+  ].join(" ").toLowerCase();
+
+  return `
+    <article class="card" data-search="${search}" data-section="${item.type === "notebook" ? "notebook" : item.category}">
+      <h3>${item.title}</h3>
+      <div class="tags">${tags}</div>
+      <p>${item.description}</p>
+      <a class="button" href="${item.url}">${item.type === "notebook" ? "Open Notebook" : "Launch"}</a>
+    </article>
+  `;
+}
+
+function render(items) {
+  for (const id of Object.values(SECTION_INFO)) {
+    document.getElementById(id).innerHTML = "";
+  }
+
+  for (const item of items) {
+    const section = item.type === "notebook" ? "notebook" : item.category;
+    const gridId = SECTION_INFO[section];
+    if (!gridId) continue;
+    document.getElementById(gridId).insertAdjacentHTML("beforeend", card(item));
+  }
+
+  for (const [section, gridId] of Object.entries(SECTION_INFO)) {
+    const grid = document.getElementById(gridId);
+    if (!grid.children.length) {
+      grid.innerHTML = '<p class="empty">No items yet.</p>';
+    }
+  }
+
+  applyFilters();
+}
+
+function applyFilters() {
+  const selected = document.getElementById("view-filter").value;
+  const q = document.getElementById("search").value.trim().toLowerCase();
+
+  document.querySelectorAll(".section[data-section]").forEach(section => {
+    const sectionName = section.dataset.section;
+    const sectionMatch = selected === "all" || selected === sectionName;
+    let anyVisible = false;
+
+    section.querySelectorAll(".card").forEach(c => {
+      const match = sectionMatch && (!q || c.dataset.search.includes(q));
+      c.hidden = !match;
+      if (match) anyVisible = true;
+    });
+
+    section.hidden = !sectionMatch || !anyVisible;
+  });
+}
+
+fetch("catalog.json")
+  .then(r => r.json())
+  .then(render)
+  .catch(err => {
+    console.error("Could not load catalog.json", err);
+    document.getElementById("comparative-grid").innerHTML =
+      '<p class="empty">Could not load catalog.json. Run scripts/build-catalog.py before deploying.</p>';
+  });
+
+document.getElementById("view-filter").addEventListener("change", applyFilters);
+document.getElementById("search").addEventListener("input", applyFilters);
+</script>
 
 </body>
 </html>
+EOF

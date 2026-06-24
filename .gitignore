@@ -13,3 +13,4 @@ dist/
 build/
 .ipynb_checkpoints/
 _site/
+catalog.json

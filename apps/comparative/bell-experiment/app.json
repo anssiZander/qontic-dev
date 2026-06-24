@@ -1,0 +1,8 @@
+{
+  "title": "Bell Experiment — Entanglement",
+  "type": "app",
+  "category": "comparative",
+  "description": "Interactive Bell-pair simulation with angle-dependent correlations and contrasting representational views.",
+  "tags": ["Multiview", "Entanglement", "Nonlocality"],
+  "entry": "index.html"
+}

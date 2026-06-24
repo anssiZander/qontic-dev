@@ -1,0 +1,8 @@
+{
+  "title": "Double-Slit Experiment — Numerical",
+  "type": "app",
+  "category": "pilot-wave",
+  "description": "GPU-based numerical wave-packet propagation through a double slit with trajectory visualization.",
+  "tags": ["Pilot-wave", "Double slit", "GPU"],
+  "entry": "index.html"
+}
