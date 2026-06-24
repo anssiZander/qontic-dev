@@ -36,18 +36,18 @@ const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const trailFormat = "rgba16float";
 
 const params = {
-  simScale: 2.0,
+  simScale: 1.0,
   stepsPerFrame: 120,
 
   classicality: 0.0,
-  classicalSpeed: 4.0,
+  classicalSpeed: 8.0,
   velocityAngleDeg: 45.0,
   packetSpread: 1.0,
 
-  hbar: 12.0,
-  mass: 1.0,
-  p0: 4.0,
-  dt: 0.005,
+  hbar: 24.0,
+  mass: 0.25,
+  p0: 2.0,
+  dt: 0.002,
 
   packetX: 0.55,
   packetY: 0.5,
@@ -66,17 +66,17 @@ const params = {
   showPhase: 1,
 
   showParticles: 1,
-  nParticles: 64,
-  dotSize: 10.0,
+  nParticles: 1,
+  dotSize: 30.0,
   dotSigma: 0.28,
   dotGain: 1.0,
 
   showTrail: 1,
-  trailHalfLife: 18.0,
+  trailHalfLife: 108.0,
   trailVisGain: 0.5,
   trailVisGamma: 0.6,
   trailStampGain: 0.55,
-  trailWidth: 6.0,
+  trailWidth: 19.0,
   trailBlendMode: 1,
 
   paletteId: 5,
@@ -91,15 +91,15 @@ const REGIME_PRESETS = {
     label: "Quantum packet",
     switchLabel: "Use classical preset",
     classicality: 0.0,
-    simScale: 2.0,
+    simScale: 1.0,
     showPhase: 1,
-    speed: 4.0,
-    hbar: 12.0,
-    hbarOverMass: 36.0,
+    speed: 8.0,
+    hbar: 24.0,
+    hbarOverMass: 96.0,
     packetSigma: 72.0,
     densityMaskLow: 0.0,
     densityMaskHigh: 0.0,
-    dt: 0.005,
+    dt: 0.002,
     stepsPerFrame: 120,
   },
   classical: {
@@ -124,7 +124,7 @@ const REGIME_PRESETS = {
     switchLabel: "Use quantum preset",
     classicality: 1.0,
     simScale: 2.0,
-    showPhase: 0,
+    showPhase: 1,
     speed: 1.2,
     hbar: 0.012,
     hbarOverMass: 0.8,
@@ -241,6 +241,21 @@ function isControlFixed(key) {
 }
 
 let paused = false;
+const RECORDING_CONFIG = {
+  fps: 60,
+  videoBitsPerSecond: 14_000_000,
+  chunkMs: 1000,
+};
+const recordingState = {
+  recorder: null,
+  stream: null,
+  videoTrack: null,
+  chunks: [],
+  startedAt: 0,
+  mimeType: "",
+  finalizing: false,
+  lastUrl: null,
+};
 
 const controls = document.getElementById("controls");
 
@@ -394,6 +409,7 @@ removeEmptySectionHeaders();
 
 document.getElementById("reset").onclick = () => resetAll();
 const pauseButton = document.getElementById("pause");
+const recordButton = document.getElementById("record");
 
 function setPaused(nextPaused) {
   paused = Boolean(nextPaused);
@@ -405,6 +421,169 @@ function togglePause() {
 }
 
 pauseButton.onclick = togglePause;
+function canRecordCanvas() {
+  return typeof MediaRecorder !== "undefined" && typeof canvas.captureStream === "function" && !!chooseRecordingMimeType();
+}
+
+function isRecording() {
+  return recordingState.recorder?.state === "recording";
+}
+
+function chooseRecordingMimeType() {
+  const candidates = [
+    "video/mp4;codecs=avc1.42E01E",
+    "video/mp4;codecs=avc1.640028",
+    "video/mp4;codecs=h264",
+    "video/mp4",
+    "video/webm;codecs=vp9",
+    "video/webm;codecs=vp8",
+    "video/webm",
+  ];
+  return candidates.find(type => MediaRecorder.isTypeSupported?.(type)) || "";
+}
+
+function recordingExtension(mimeType = recordingState.mimeType) {
+  return mimeType.includes("webm") ? "webm" : "mp4";
+}
+
+function recordingFileName(startedAt = recordingState.startedAt) {
+  const stamp = new Date(startedAt || Date.now()).toISOString().replace(/[:.]/g, "-");
+  return `classical-limit-${stamp}.${recordingExtension()}`;
+}
+
+function syncRecordingButton() {
+  const recording = isRecording();
+  const supported = canRecordCanvas();
+  recordButton.textContent = recordingState.finalizing
+    ? "Saving Recording..."
+    : (recording ? "Stop Recording" : "Start Recording");
+  recordButton.classList.toggle("recording", recording);
+  recordButton.disabled = recordingState.finalizing || !supported;
+  recordButton.title = supported
+    ? "Records the WebGPU canvas at a fixed 60 fps; UI overlays are excluded."
+    : "Canvas recording is not supported by this browser.";
+}
+
+function toggleRecording() {
+  if (isRecording()) stopRecording();
+  else startRecording();
+}
+
+function startRecording() {
+  if (!canRecordCanvas()) {
+    alert("Canvas recording is not supported by this browser.");
+    syncRecordingButton();
+    return;
+  }
+  clearRecordingUrl();
+
+  const mimeType = chooseRecordingMimeType();
+  const options = {
+    mimeType,
+    videoBitsPerSecond: RECORDING_CONFIG.videoBitsPerSecond,
+  };
+
+  let stream;
+  let recorder;
+  try {
+    stream = canvas.captureStream(RECORDING_CONFIG.fps);
+    recorder = new MediaRecorder(stream, options);
+  } catch (error) {
+    stream?.getTracks().forEach(track => track.stop());
+    alert(`Could not start canvas recording: ${error.message}`);
+    syncRecordingButton();
+    return;
+  }
+
+  recordingState.recorder = recorder;
+  recordingState.stream = stream;
+  recordingState.videoTrack = stream.getVideoTracks()[0] || null;
+  recordingState.chunks = [];
+  recordingState.startedAt = Date.now();
+  recordingState.mimeType = recorder.mimeType || mimeType;
+  recordingState.finalizing = false;
+
+  recorder.ondataavailable = event => {
+    if (event.data && event.data.size > 0) recordingState.chunks.push(event.data);
+  };
+  recorder.onerror = event => {
+    console.error("Recording error:", event.error || event);
+    stopRecording();
+  };
+  recorder.onstop = finishRecordingDownload;
+  recorder.start(RECORDING_CONFIG.chunkMs);
+  syncRecordingButton();
+}
+
+function stopRecording() {
+  const recorder = recordingState.recorder;
+  if (!recorder || recorder.state === "inactive") return;
+  recordingState.finalizing = true;
+  syncRecordingButton();
+
+  try {
+    recorder.requestData();
+  } catch (error) {
+    console.warn("Could not flush recording data:", error);
+  }
+  recorder.stop();
+}
+
+function finishRecordingDownload() {
+  recordingState.stream?.getTracks().forEach(track => track.stop());
+  recordingState.stream = null;
+  recordingState.videoTrack = null;
+  const chunks = recordingState.chunks;
+  recordingState.chunks = [];
+
+  if (!chunks.length) {
+    recordingState.recorder = null;
+    recordingState.finalizing = false;
+    alert("No recording data was produced.");
+    syncRecordingButton();
+    return;
+  }
+
+  const blob = new Blob(chunks, { type: recordingState.mimeType || chooseRecordingMimeType() || "video/mp4" });
+  const fileName = recordingFileName();
+  recordingState.recorder = null;
+  recordingState.finalizing = false;
+  downloadRecordingBlob(blob, fileName);
+  syncRecordingButton();
+}
+
+function clearRecordingUrl() {
+  if (recordingState.lastUrl) {
+    URL.revokeObjectURL(recordingState.lastUrl);
+    recordingState.lastUrl = null;
+  }
+}
+
+function downloadRecordingBlob(blob, fileName) {
+  clearRecordingUrl();
+  recordingState.lastUrl = URL.createObjectURL(blob);
+  const url = recordingState.lastUrl;
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName || recordingFileName();
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => {
+    if (recordingState.lastUrl === url) clearRecordingUrl();
+  }, 1000);
+}
+
+recordButton.onclick = toggleRecording;
+syncRecordingButton();
+
+window.addEventListener("beforeunload", () => {
+  if (isRecording()) {
+    recordingState.stream?.getTracks().forEach(track => track.stop());
+  }
+  clearRecordingUrl();
+});
+
 window.addEventListener("keydown", (e) => {
   if (e.key.toLowerCase() === "r") resetAll();
   if (e.key === " ") togglePause();

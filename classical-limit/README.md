@@ -7,13 +7,14 @@ The wave uses finite-difference Schrodinger evolution in WebGPU compute passes. 
 The app exposes fixed presets through a single switch button instead of a group of free physics sliders.
 The presets keep the on-screen drift speed close to each other, while changing the effective quantum scale:
 
-- `Quantum packet`: `hbar = 12`, `hbar / mass = 36`, `sigma = 72 grid cells`, `dt = 0.005`, `steps/frame = 120`, `sim scale = 2`.
+- `Quantum packet`: `hbar = 24`, `hbar / mass = 96`, `sigma = 72 grid cells`, `dt = 0.002`, `steps/frame = 120`, `sim scale = 1`.
 - `Classical packet`: `hbar = 0.12`, `hbar / mass = 8`, `sigma = 64 grid cells`, `dt = 0.025`, `steps/frame = 25`, `sim scale = 2`.
 - `Recording classical`: `hbar = 0.012`, `hbar / mass = 0.8`, `sigma = 48 grid cells`, `dt = 0.08`, `steps/frame = 40`, `sim scale = 2`.
 
 The initial velocity angle is `45deg`.
 The `velocity angle` slider rotates the initial plane-wave momentum from `-90deg` to `90deg`.
 The visual controls can toggle phase, particles, and trails, and adjust particle count, particle appearance, and trail appearance without changing the fixed physics presets.
+The recording button captures the WebGPU canvas only at 60 fps, excluding UI overlays and the credit badge, and downloads an MP4/WebM file depending on browser support.
 Mouse-wheel scrolling over the canvas zooms the view; double-clicking the canvas resets the view.
 
 The guidance law is purely Schrodinger/Bohmian, with no Pauli spin-current term.
