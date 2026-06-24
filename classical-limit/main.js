@@ -75,7 +75,7 @@ const params = {
   dotGain: 1.0,
 
   showTrail: 1,
-  trailHalfLife: 158.0,
+  trailHalfLife: 1558.0,
   trailVisGain: 0.5,
   trailVisGamma: 0.6,
   trailStampGain: 0.55,
@@ -133,13 +133,14 @@ const REGIME_PRESETS = {
     simScale: 4.0,
     showWave: 1,
     particleMode: 0,
-    showPhase: 1,
-    speed: 2.0,
-    hbar: 0.03,
-    hbarOverMass: 4.0,
-    packetSigma: 64.0,
-    densityMaskLow: 0.0008,
-    densityMaskHigh: 0.006,
+    showPhase: 0,
+    speed: 2.35,
+    hbar: 0.018,
+    hbarOverMass: 2.2,
+    packetSigma: 44.0,
+    densityMaskLow: 0.003,
+    densityMaskHigh: 0.02,
+    paletteId: 10,
     dt: 0.05,
     stepsPerFrame: 25,
   },
@@ -224,6 +225,7 @@ function applyRegimePreset(presetId = activePresetId) {
   params.packetSigma = preset.packetSigma;
   params.densityMaskLow = preset.densityMaskLow;
   params.densityMaskHigh = preset.densityMaskHigh;
+  params.paletteId = preset.paletteId ?? 5;
   params.dt = preset.dt;
   params.stepsPerFrame = preset.stepsPerFrame;
   params.boundaryMode = 0;
@@ -1127,6 +1129,40 @@ fn paletteColor(idIn: i32, t: f32) -> vec3<f32> {
   return palette(t, a, b, c, d);
 }
 
+fn smoothPurpleDensity(tIn: f32) -> vec3<f32> {
+  let t = clamp(tIn, 0.0, 1.0);
+  let base = vec3<f32>(0.06, 0.005, 0.11);
+  let mid = vec3<f32>(0.42, 0.02, 0.70);
+  let hot = vec3<f32>(1.00, 0.18, 0.95);
+  let a = smoothstep(0.0, 0.65, t);
+  let b = smoothstep(0.55, 1.0, t);
+  return mix(mix(base, mid, a), hot, b);
+}
+
+fn rhoAt(coordIn: vec2<i32>) -> f32 {
+  let maxCoord = vec2<i32>(i32(simW(params)) - 1, i32(simH(params)) - 1);
+  let coord = vec2<u32>(clamp(coordIn, vec2<i32>(0, 0), maxCoord));
+  let psi = wave[cellIndex(params, coord.x, coord.y)].xy;
+  return dot(psi, psi);
+}
+
+fn blurredRhoAt(coord: vec2<u32>) -> f32 {
+  let center = vec2<i32>(i32(coord.x), i32(coord.y));
+  var acc = 0.0;
+  var weightSum = 0.0;
+
+  for (var oy: i32 = -8; oy <= 8; oy = oy + 2) {
+    for (var ox: i32 = -8; ox <= 8; ox = ox + 2) {
+      let dist = length(vec2<f32>(f32(ox), f32(oy)));
+      let weight = max(0.0, 1.0 - dist / 11.5);
+      acc += rhoAt(center + vec2<i32>(ox, oy)) * weight;
+      weightSum += weight;
+    }
+  }
+
+  return acc / max(weightSum, 1.0e-6);
+}
+
 @fragment
 fn fs(in: FullscreenOut) -> @location(0) vec4<f32> {
   let qView = params.viewCenter + (in.uv - vec2<f32>(0.5, 0.5)) / params.viewScale;
@@ -1136,7 +1172,11 @@ fn fs(in: FullscreenOut) -> @location(0) vec4<f32> {
   let q = clamp(qView, vec2<f32>(0.0, 0.0), vec2<f32>(0.999999, 0.999999));
   let coord = vec2<u32>(q * params.simSize);
   let psi = wave[cellIndex(params, coord.x, coord.y)].xy;
-  let rho = dot(psi, psi);
+  let paletteId = i32(params.paletteId + 0.5);
+  var rho = dot(psi, psi);
+  if (paletteId == 10) {
+    rho = blurredRhoAt(coord);
+  }
   var intensity = 1.0 - exp(-params.visGain * rho);
   if (params.densityMask.y > params.densityMask.x) {
     intensity *= smoothstep(params.densityMask.x, params.densityMask.y, rho);
@@ -1144,12 +1184,14 @@ fn fs(in: FullscreenOut) -> @location(0) vec4<f32> {
   intensity = pow(clamp(intensity, 0.0, 1.0), params.visGamma);
 
   var col: vec3<f32>;
-  if (params.showPhase > 0.5) {
+  if (paletteId == 10) {
+    col = smoothPurpleDensity(intensity) * intensity;
+  } else if (params.showPhase > 0.5) {
     let ph = atan2(psi.y, psi.x);
     let t = fract((ph + PI) / TAU);
-    col = paletteColor(i32(params.paletteId + 0.5), t) * intensity;
+    col = paletteColor(paletteId, t) * intensity;
   } else {
-    col = paletteColor(i32(params.paletteId + 0.5), intensity) * intensity;
+    col = paletteColor(paletteId, intensity) * intensity;
   }
 
   return vec4<f32>(col, 1.0);
