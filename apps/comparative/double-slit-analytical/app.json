@@ -1,0 +1,8 @@
+{
+  "title": "Double-Slit Experiment — Analytical",
+  "type": "app",
+  "category": "comparative",
+  "description": "Analytical multiview simulation comparing collapse, pilot-wave, and branching-style descriptions of the double-slit experiment.",
+  "tags": ["Multiview", "Double slit", "Born rule"],
+  "entry": "index.html"
+}

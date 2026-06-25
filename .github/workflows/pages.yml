@@ -40,6 +40,9 @@ jobs:
         working-directory: apps/comparative/measurement
         run: npm run build
 
+      - name: Build catalog
+        run: python3 scripts/build-catalog.py
+
       - name: Prepare static site
         run: |
           mkdir -p _site

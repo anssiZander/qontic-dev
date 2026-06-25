@@ -6,522 +6,471 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <title>Q-Ontic Lab — Interactive Quantum Simulations</title>
+  <meta name="description" content="Q-Ontic Lab develops interactive quantum simulations and notebooks for comparing different representations of quantum mechanics." />
 
-  <meta name="description" content="Q-Ontic Lab develops interactive quantum simulations and notebooks for comparing different representations of quantum mechanics, including multiview and pilot-wave approaches." />
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
   <style>
     :root {
-      --blue: #003366;
-      --blue2: #0055aa;
-      --bg: #f7f8fb;
-      --card: #ffffff;
-      --border: #dbe3f0;
-      --text: #263238;
-      --muted: #5f6b7a;
-      --green: #d4edda;
-      --green-text: #155724;
-      --pilot: #ede7f6;
-      --pilot-text: #4527a0;
-      --multi: #e3f2fd;
-      --multi-text: #0d47a1;
-      --note: #fff3cd;
-      --note-text: #856404;
+      --blue:#003366;
+      --blue2:#0055aa;
+      --bg:#f7f8fb;
+      --card:#fff;
+      --border:#dbe3f0;
+      --text:#263238;
+      --muted:#5f6b7a;
+      --multi:#e3f2fd;
+      --multi-text:#0d47a1;
+      --pilot:#ede7f6;
+      --pilot-text:#4527a0;
+      --note:#fff3cd;
+      --note-text:#856404;
+      --neutral:#eef1f5;
+      --neutral-text:#44515f;
     }
 
     body {
-      margin: 0;
-      font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.55;
+      margin:0;
+      font-family:"Segoe UI",system-ui,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      line-height:1.45;
     }
 
     header {
-      background: linear-gradient(135deg, #00264d, #004080);
-      color: white;
-      padding: 3rem 1.5rem;
-      text-align: center;
+      background:linear-gradient(135deg,#00264d,#004080);
+      color:white;
+      text-align:center;
+      padding:1.7rem 1rem 1.55rem;
     }
 
     header h1 {
-      margin: 0;
-      font-size: 2.7rem;
-      letter-spacing: 0.02em;
+      margin:0;
+      font-size:2.25rem;
+      letter-spacing:.015em;
     }
 
     header p {
-      max-width: 760px;
-      margin: 0.75rem auto 0;
-      font-size: 1.15rem;
-      opacity: 0.94;
-    }
-
-    nav {
-      background: white;
-      border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-
-    nav .inner {
-      max-width: 1180px;
-      margin: 0 auto;
-      padding: 0.7rem 1rem;
-      display: flex;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: center;
-    }
-
-    nav a {
-      color: var(--blue);
-      text-decoration: none;
-      font-weight: 700;
-      font-size: 0.95rem;
-      padding: 0.35rem 0.55rem;
-      border-radius: 5px;
-    }
-
-    nav a:hover {
-      background: #eef4fb;
+      max-width:760px;
+      margin:.45rem auto 0;
+      font-size:1.02rem;
+      opacity:.92;
     }
 
     main {
-      max-width: 1180px;
-      margin: 2rem auto 3rem;
-      padding: 0 1rem;
+      max-width:1180px;
+      margin:1.35rem auto 2.4rem;
+      padding:0 1rem;
     }
 
     .intro {
-      max-width: 920px;
-      margin: 0 auto 2.2rem;
-      text-align: center;
-      color: var(--muted);
-      font-size: 1.02rem;
+      max-width:960px;
+      margin:0 auto 1.2rem;
+      text-align:center;
+      color:var(--muted);
+      font-size:.98rem;
     }
 
-    .featured {
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 1.5rem;
-      margin-bottom: 2rem;
-      box-shadow: 0 4px 18px rgba(0, 30, 80, 0.06);
+    .toolbar {
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:.7rem;
+      flex-wrap:wrap;
+      margin:0 0 1.35rem;
+      padding:.75rem;
+      background:white;
+      border:1px solid var(--border);
+      border-radius:12px;
+      box-shadow:0 2px 10px rgba(0,30,80,.04);
     }
 
-    .featured h2 {
-      margin-top: 0;
+    .tabs {
+      display:flex;
+      gap:.45rem;
+      flex-wrap:wrap;
+      justify-content:center;
+    }
+
+    .tab {
+      border:1px solid var(--border);
+      background:#fff;
+      color:var(--blue);
+      padding:.5rem .82rem;
+      border-radius:999px;
+      font-weight:700;
+      cursor:pointer;
+      font-size:.9rem;
+    }
+
+    .tab.active {
+      background:var(--blue2);
+      color:white;
+      border-color:var(--blue2);
+    }
+
+    #search {
+      width:min(340px,100%);
+      padding:.52rem .75rem;
+      border:1px solid var(--border);
+      border-radius:999px;
+      font-size:.9rem;
+      background:#fff;
     }
 
     .section {
-      margin: 2.5rem 0;
+      display:none;
+      margin:0;
+    }
+
+    .section.active {
+      display:block;
     }
 
     .section-header {
-      margin-bottom: 1rem;
-      border-bottom: 2px solid var(--border);
-      padding-bottom: 0.4rem;
+      margin:.6rem 0 .85rem;
+      border-bottom:1px solid var(--border);
+      padding-bottom:.35rem;
     }
 
     .section-header h2 {
-      color: var(--blue);
-      margin: 0;
-      font-size: 1.55rem;
+      color:var(--blue);
+      margin:0;
+      font-size:1.35rem;
     }
 
     .section-header p {
-      margin: 0.35rem 0 0;
-      color: var(--muted);
+      margin:.2rem 0 0;
+      color:var(--muted);
+      font-size:.92rem;
     }
 
     .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(315px, 1fr));
-      gap: 1.25rem;
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+      gap:.9rem;
     }
 
     .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.15rem 1.25rem;
-      box-shadow: 0 2px 10px rgba(0, 30, 80, 0.05);
-      display: flex;
-      flex-direction: column;
-      min-height: 210px;
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:.9rem 1rem;
+      box-shadow:0 2px 8px rgba(0,30,80,.045);
+      display:flex;
+      flex-direction:column;
+      min-height:155px;
+    }
+
+    .card[hidden] {
+      display:none !important;
     }
 
     .card h3 {
-      margin: 0 0 0.45rem;
-      color: var(--blue);
-      font-size: 1.08rem;
+      margin:0 0 .35rem;
+      color:var(--blue);
+      font-size:1rem;
+      line-height:1.25;
     }
 
     .card p {
-      margin: 0.5rem 0 1rem;
-      color: #3f4a56;
-      font-size: 0.93rem;
-      flex: 1;
+      margin:.35rem 0 .75rem;
+      color:#3f4a56;
+      font-size:.9rem;
+      flex:1;
+    }
+
+    .card-footer {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:.6rem;
+      margin-top:auto;
     }
 
     .tags {
-      margin-bottom: 0.2rem;
+      display:flex;
+      gap:.3rem;
+      flex-wrap:wrap;
+      align-items:center;
     }
 
     .tag {
-      display: inline-block;
-      font-size: 0.72rem;
-      font-weight: 700;
-      border-radius: 4px;
-      padding: 2px 7px;
-      margin: 0 4px 4px 0;
+      display:inline-block;
+      font-size:.68rem;
+      font-weight:700;
+      border-radius:4px;
+      padding:2px 6px;
     }
 
-    .tag-live {
-      background: var(--green);
-      color: var(--green-text);
+    .tag-comparative {
+      background:var(--multi);
+      color:var(--multi-text);
     }
 
-    .tag-multi {
-      background: var(--multi);
-      color: var(--multi-text);
+    .tag-pilot-wave {
+      background:var(--pilot);
+      color:var(--pilot-text);
     }
 
-    .tag-pilot {
-      background: var(--pilot);
-      color: var(--pilot-text);
+    .tag-notebook {
+      background:var(--note);
+      color:var(--note-text);
     }
 
-    .tag-note {
-      background: var(--note);
-      color: var(--note-text);
+    .tag-neutral {
+      background:var(--neutral);
+      color:var(--neutral-text);
     }
 
     .button {
-      display: inline-block;
-      align-self: flex-start;
-      background: var(--blue2);
-      color: white;
-      text-decoration: none;
-      border-radius: 5px;
-      padding: 0.55rem 0.9rem;
-      font-weight: 700;
-      font-size: 0.9rem;
+      display:inline-block;
+      white-space:nowrap;
+      background:var(--blue2);
+      color:white;
+      text-decoration:none;
+      border-radius:5px;
+      padding:.42rem .72rem;
+      font-weight:700;
+      font-size:.82rem;
     }
 
     .button:hover {
-      background: #003f7f;
+      background:#003f7f;
     }
 
-    .two-col {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.25rem;
+    .empty {
+      color:var(--muted);
+      font-style:italic;
     }
 
     footer {
-      background: #e9edf3;
-      color: #52606d;
-      padding: 1.6rem;
-      text-align: center;
-      font-size: 0.92rem;
+      margin-top:2.2rem;
+      padding:1.25rem 1rem;
+      text-align:center;
+      color:#52606d;
+      background:#eef2f7;
+      border-top:1px solid var(--border);
+      font-size:.88rem;
+    }
+
+    footer p {
+      margin:.25rem 0;
     }
 
     footer a {
-      color: var(--blue2);
+      color:var(--blue2);
+      text-decoration:none;
     }
 
-    @media (max-width: 800px) {
+    footer a:hover {
+      text-decoration:underline;
+    }
+
+    @media(max-width:800px) {
       header h1 {
-        font-size: 2.1rem;
+        font-size:1.9rem;
       }
 
-      .two-col {
-        grid-template-columns: 1fr;
+      .toolbar {
+        align-items:stretch;
+      }
+
+      #search {
+        width:100%;
+        box-sizing:border-box;
+      }
+
+      .tabs {
+        width:100%;
+      }
+
+      .tab {
+        flex:1 1 auto;
       }
     }
   </style>
 </head>
 
 <body>
-
 <header>
   <h1>Q-Ontic Lab</h1>
-  <p>
-    Interactive quantum simulations and notebooks for comparing alternative
-    representations of quantum mechanics.
-  </p>
+  <p>Interactive quantum simulations and notebooks for comparing alternative representations of quantum mechanics.</p>
 </header>
 
-<nav>
-  <div class="inner">
-    <a href="#comparative">Comparative Apps</a>
-    <a href="#pilot-wave">Pilot-Wave Apps</a>
-    <a href="#notebooks">Notebooks</a>
-    <a href="#research">Research</a>
-    <a href="collaborators.html">Team</a>
-  </div>
-</nav>
-
 <main>
-
   <section class="intro">
     <p>
-      Q-Ontic Lab develops browser-based tools for exploring how different
-      quantum representations describe the same physical phenomena. The project
-      distinguishes between standalone simulation apps and interactive notebooks:
-      apps are designed for immediate exploration, while notebooks combine
-      explanation, context, and embedded simulations.
+      Browser-based tools for exploring how different quantum representations describe the same physical phenomena.
+      Apps support immediate exploration; notebooks combine explanation, context, and embedded simulations.
     </p>
   </section>
 
-  <section class="featured" id="featured">
-    <h2>Featured App: Analytical Double-Slit Simulation</h2>
-    <p>
-      A multiview simulation of the double-slit experiment comparing wavefunction
-      evolution, collapse-style detection, pilot-wave trajectories, and
-      branching-style descriptions.
-    </p>
-    <a class="button" href="apps/comparative/double-slit-analytical/">Launch Featured App</a>
-  </section>
+  <div class="toolbar">
+    <div class="tabs">
+      <button class="tab active" data-tab="comparative">Comparative Apps</button>
+      <button class="tab" data-tab="pilot-wave">Pilot-Wave Apps</button>
+      <button class="tab" data-tab="notebook">Notebooks</button>
+      <button class="tab" data-tab="all">All</button>
+    </div>
 
-  <section class="section" id="comparative">
+    <input id="search" type="search" placeholder="Search…" />
+  </div>
+
+  <section class="section active" id="section-comparative">
     <div class="section-header">
       <h2>Comparative Apps</h2>
-      <p>
-        Standalone simulations that compare multiple quantum representations or
-        interpretations side by side.
-      </p>
+      <p>Standalone simulations that compare multiple quantum representations side by side.</p>
     </div>
-
-    <div class="grid">
-      <article class="card">
-        <h3>Double-Slit Experiment — Analytical</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-multi">Comparative</span>
-        </div>
-        <p>
-          Analytical double-slit simulation comparing collapse, pilot-wave, and
-          branching-style descriptions.
-        </p>
-        <a class="button" href="apps/comparative/double-slit-analytical/">Launch</a>
-      </article>
-
-      <article class="card">
-        <h3>Stern-Gerlach Experiment — 3D</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-multi">Comparative</span>
-        </div>
-        <p>
-          Spin-1/2 particle through an inhomogeneous magnetic field with
-          collapse, pilot-wave, and branching views.
-        </p>
-        <a class="button" href="apps/comparative/stern-gerlach/">Launch</a>
-      </article>
-
-      <article class="card">
-        <h3>Bell Experiment — Entanglement</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-multi">Comparative</span>
-        </div>
-        <p>
-          Entangled spin-pair simulation with angle-dependent correlations and
-          contrasting representations of nonlocal dependence.
-        </p>
-        <a class="button" href="apps/comparative/bell-experiment/">Launch</a>
-      </article>
-
-      <article class="card">
-        <h3>Quantum Measurement with Detector</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-multi">Comparative</span>
-        </div>
-        <p>
-          Detector-coupled tunneling simulation with explicit measurement
-          back-action and outcome statistics.
-        </p>
-        <a class="button" href="apps/comparative/measurement/">Launch</a>
-      </article>
-
-      <article class="card">
-        <h3>Free Particle — Gaussian Packet</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-multi">Comparative</span>
-        </div>
-        <p>
-          Free Gaussian wave packet with screen detection and alternative
-          representational views of the same event.
-        </p>
-        <a class="button" href="apps/comparative/free-particle/free-particle.html">Launch</a>
-      </article>
-    </div>
+    <div class="grid" id="grid-comparative"></div>
   </section>
 
-  <section class="section" id="pilot-wave">
+  <section class="section" id="section-pilot-wave">
     <div class="section-header">
       <h2>Pilot-Wave Apps</h2>
-      <p>
-        Standalone trajectory-focused simulations for exploring pilot-wave
-        dynamics, guidance laws, and wave-packet motion.
-      </p>
+      <p>Trajectory-focused simulations for exploring pilot-wave dynamics and wave-packet motion.</p>
     </div>
-
-    <div class="grid">
-
-      <article class="card">
-        <h3>Double-Slit Experiment — Numerical</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-pilot">Pilot-wave</span>
-        </div>
-        <p>
-          GPU-based numerical wave-packet propagation through a double slit with
-          trajectory visualization.
-        </p>
-        <a class="button" href="apps/pilot-wave/double-slit-numerical/">Launch</a>
-      </article>
-
-      <article class="card">
-        <h3>Pilot-Wave Tunneling — WebGL2</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-pilot">Pilot-wave</span>
-        </div>
-        <p>
-          Pilot-wave tunneling simulation showing guided trajectories and
-          wave-packet dynamics. Adapted from work by Anssi Zander.
-        </p>
-        <a class="button" href="apps/pilot-wave/tunneling/">Launch</a>
-      </article>
-
-
-      <article class="card">
-        <h3>Hydrogen Atom</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-pilot">Pilot-wave</span>
-        </div>
-        <p>
-          Hydrogen orbital visualization with trajectory-oriented pilot-wave
-          structure.
-        </p>
-        <a class="button" href="apps/pilot-wave/hydrogen-atom/hydrogen-3d.html">Launch</a>
-      </article>
-    </div>
+    <div class="grid" id="grid-pilot-wave"></div>
   </section>
 
-  <section class="section" id="notebooks">
+  <section class="section" id="section-notebook">
     <div class="section-header">
       <h2>Interactive Notebooks</h2>
-      <p>
-        Longer explanatory pages that combine narrative, context, and embedded
-        interactive demonstrations.
-      </p>
+      <p>Longer explanatory pages that combine narrative, context, and embedded interactive demonstrations.</p>
     </div>
-
-    <div class="grid">
-      <article class="card">
-        <h3>Pilot-Wave Double Slit </h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-pilot">Pilot-wave</span>
-        </div>
-        <p>
-          WebGL2 double-slit simulation with Schrödinger and Pauli spin-1/2
-          guidance laws. Adapted from work by Anssi Zander.
-        </p>
-        <a class="button" href="notebooks/double-slit-webgl/">Open Notebook</a>
-      </article>
-
-      <article class="card">
-        <h3>Pilot-Wave Free Packet — 2D</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-pilot">Pilot-wave</span>
-        </div>
-        <p>
-          Two-dimensional free-packet spreading with pilot-wave trajectory
-          guidance. Adapted from work by Anssi Zander.
-        </p>
-        <a class="button" href="notebooks/free-packet-2d/">Open Notebook</a>
-      </article>
-
-      <article class="card">
-        <h3>Pilot-Wave Particle in a Box — 3D</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-pilot">Pilot-wave</span>
-        </div>
-        <p>
-          Three-dimensional particle-in-a-box visualization with guided
-          trajectories and interactive camera controls.
-        </p>
-        <a class="button" href="notebooks/particle-box-3d/">Open Notebook</a>
-      </article>
-
-
-
-      <article class="card">
-        <h3>Delayed-Choice Notebook</h3>
-        <div class="tags">
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-note">Notebook</span>
-        </div>
-        <p>
-          Interactive notebook on delayed-choice interferometry and alternative
-          representations of the experiment.
-        </p>
-        <a class="button" href="notebooks/delayed-choice/">Open Notebook</a>
-      </article>
-    </div>
+    <div class="grid" id="grid-notebook"></div>
   </section>
 
-  <section class="section" id="research">
+  <section class="section" id="section-all">
     <div class="section-header">
-      <h2>Research and Project Information</h2>
-      <p>
-        Q-Ontic Lab is a research and education project on visual representation,
-        interpretation, and reasoning in quantum mechanics.
-      </p>
+      <h2>All Simulations and Notebooks</h2>
+      <p>Complete catalog of currently available Q-Ontic tools.</p>
     </div>
-
-    <div class="two-col">
-      <article class="card">
-        <h3>Team and Collaborators</h3>
-        <p>
-          Meet the researchers, students, and collaborators contributing to the
-          Q-Ontic Lab.
-        </p>
-        <a class="button" href="collaborators.html">View Team</a>
-      </article>
-
-      <article class="card">
-        <h3>Source Code</h3>
-        <p>
-          The simulations and notebooks are developed as open browser-based tools.
-        </p>
-        <a class="button" href="https://github.com/qontic/qontic">GitHub Repository</a>
-      </article>
-    </div>
+    <div class="grid" id="grid-all"></div>
   </section>
-
 </main>
 
 <footer>
+  <p>Q-Ontic Lab is a research and education project at Rice University.</p>
   <p>
-    Q-Ontic Lab · Interactive quantum simulations for research, teaching, and outreach.
-  </p>
-  <p>
+    <a href="collaborators.html">Team</a>
+    &nbsp;|&nbsp;
+    Source code: <a href="https://github.com/qontic/qontic">GitHub</a>
+    &nbsp;|&nbsp;
     Contact: <a href="mailto:yepes@rice.edu">yepes@rice.edu</a>
   </p>
 </footer>
 
+<script>
+let catalog = [];
+
+function sectionOf(item) {
+  return item.type === "notebook" ? "notebook" : item.category;
+}
+
+function tagClass(tag, item) {
+  if (item.type === "notebook" || tag.toLowerCase() === "notebook") return "tag-notebook";
+  if (item.category === "comparative") return "tag-comparative";
+  if (item.category === "pilot-wave") return "tag-pilot-wave";
+  return "tag-neutral";
+}
+
+function makeCard(item) {
+  const tags = (item.tags || []).map(t => {
+    const cls = tagClass(t, item);
+    return `<span class="tag ${cls}">${t}</span>`;
+  }).join("");
+
+  const search = [
+    item.title,
+    item.type,
+    item.category,
+    item.description,
+    ...(item.tags || [])
+  ].join(" ").toLowerCase();
+
+  return `
+    <article class="card" data-search="${search}">
+      <h3>${item.title}</h3>
+      <p>${item.description}</p>
+      <div class="card-footer">
+        <div class="tags">${tags}</div>
+        <a class="button" href="${item.url}" target="_blank" rel="noopener">Open</a>
+      </div>
+    </article>
+  `;
+}
+
+function renderCatalog() {
+  $("#grid-comparative,#grid-pilot-wave,#grid-notebook,#grid-all").empty();
+
+  for (const item of catalog) {
+    const s = sectionOf(item);
+    const html = makeCard(item);
+
+    if (s === "comparative") $("#grid-comparative").append(html);
+    if (s === "pilot-wave") $("#grid-pilot-wave").append(html);
+    if (s === "notebook") $("#grid-notebook").append(html);
+
+    $("#grid-all").append(html);
+  }
+
+  $(".grid").each(function() {
+    if (!$(this).children().length) {
+      $(this).html('<p class="empty">No items yet.</p>');
+    }
+  });
+
+  applySearch();
+}
+
+function showTab(tab, pushState) {
+  $(".tab").removeClass("active");
+  $(`.tab[data-tab="${tab}"]`).addClass("active");
+
+  $(".section").removeClass("active");
+  $(`#section-${tab}`).addClass("active");
+
+  if (pushState !== false) history.replaceState(null, "", "#" + tab);
+
+  applySearch();
+}
+
+function applySearch() {
+  const q = $("#search").val().trim().toLowerCase();
+
+  $(".section.active .card").each(function() {
+    const match = !q || $(this).data("search").includes(q);
+    $(this).attr("hidden", !match);
+  });
+}
+
+$(function() {
+  $(".tab").on("click", function() {
+    showTab($(this).data("tab"));
+  });
+
+  window.addEventListener("hashchange", function() {
+    const tab = location.hash.slice(1);
+    if (tab) showTab(tab, false);
+  });
+
+  $("#search").on("input", applySearch);
+
+  $.getJSON("catalog.json")
+    .done(function(data) {
+      catalog = data;
+      renderCatalog();
+      const hash = location.hash.slice(1);
+      if (hash) showTab(hash, false);
+    })
+    .fail(function(err) {
+      console.error("Could not load catalog.json", err);
+      $("#grid-comparative").html(
+        '<p class="empty">Could not load catalog.json. Run scripts/build-catalog.py before deploying.</p>'
+      );
+    });
+});
+</script>
 </body>
 </html>

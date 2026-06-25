@@ -1,0 +1,8 @@
+{
+  "title": "Pilot-Wave Free Packet — 2D Notebook",
+  "type": "notebook",
+  "category": "pilot-wave",
+  "description": "Notebook-style presentation of two-dimensional pilot-wave free-packet dynamics.",
+  "tags": ["Notebook", "Pilot-wave", "Free particle"],
+  "entry": "index.html"
+}
