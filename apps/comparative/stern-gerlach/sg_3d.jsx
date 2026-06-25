@@ -1038,42 +1038,6 @@ export default function App() {
     );
     scene.add(cRing);
 
-    // ── Background cloud ──────────────────────────────────────────────────────
-    const bgPos = new Float32Array(BG_N * 3);
-    const bgCol = new Float32Array(BG_N * 3);
-    const bgSz  = new Float32Array(BG_N);
-    const bgGeo = new THREE.BufferGeometry();
-    bgGeo.setAttribute("position", new THREE.BufferAttribute(bgPos, 3));
-    bgGeo.setAttribute("aColor",   new THREE.BufferAttribute(bgCol, 3));
-    bgGeo.setAttribute("size",     new THREE.BufferAttribute(bgSz,  1));
-    const bgMat = new THREE.ShaderMaterial({
-      vertexShader: `
-        attribute float size; attribute vec3 aColor; varying vec3 vColor;
-        void main(){
-          vColor=aColor;
-          vec4 mv=modelViewMatrix*vec4(position,1.0);
-          gl_PointSize=size*(280.0/-mv.z);
-          gl_Position=projectionMatrix*mv;
-        }`,
-      fragmentShader: `
-        varying vec3 vColor;
-        void main(){
-          float d=length(gl_PointCoord-vec2(0.5));
-          if(d>0.5)discard;
-          gl_FragColor=vec4(vColor,(1.0-smoothstep(0.15,0.5,d))*0.82);
-        }`,
-      transparent: true, vertexColors: true, depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    });
-    const bgPoints = new THREE.Points(bgGeo, bgMat);
-    scene.add(bgPoints);
-    const bgSt = Array.from({ length: BG_N }, (_, i) => ({
-      phase: i / BG_N,
-      x0: (Math.random() - 0.5) * SIG * 1.4,
-      y0: (Math.random() - 0.5) * SIG * 1.4,
-      dx: 0, dy: 0,
-    }));
-
     // ── Featured Bohmian particles ────────────────────────────────────────────
     const fDots = Array.from({ length: MAX_P }, (_, i) => {
       const m = new THREE.Mesh(
@@ -1237,7 +1201,6 @@ export default function App() {
       scene, camera, renderer,
       magGrp, arrow, spinArrow,
       wSlabMeshes, wPoints, wPos, wCol, wGeo, wSamples, cRing,
-      bgSt, bgPos, bgCol, bgSz, bgGeo, bgPoints,
       fDots, fGlows, fLines,
       addHit, clearHits: clearHitsFunc,
       rebuild, trajs: () => trajs,
@@ -1266,7 +1229,6 @@ export default function App() {
       const pp      = isPost ? (frac - 0.5) / 0.5 : 0;
       const tIdx    = clamp(Math.round(frac * STEPS), 0, STEPS);
       const sw      = s.showWave;
-      Tr.bgPoints.visible = sw;
 
       // ── Magnet: rotate group around Z so n̂ = (sinφ, cosφ, 0) ───────────────
       // magGrp.rotation.z = phiRad means local-Y axis → world n̂.
@@ -1324,12 +1286,17 @@ export default function App() {
         // Per-slab opacity budget spread over all slabs
         const slabOpacity = 1.0;
 
+        const sigZCur = isPost ? sigZP : sigZ_;
         Tr.wSlabMeshes.forEach((mesh) => {
           const u = mesh.material.uniforms;
+          const slabZ = u.uSlabZ.value;
+          // Only render slabs within ±2.2σ_Z of the packet centre — eliminates
+          // faint distant dots caused by the Gaussian Z-tail on far-away slabs
+          if (Math.abs(slabZ - wZ) > 2.2 * sigZCur) { mesh.visible = false; return; }
           // uSlabZ was set at creation and never changes — the shader computes
           // the Z-Gaussian falloff based on distance from uWz each frame
           u.uSigXY.value  = isPost ? sigPst : sigXY_;
-          u.uSigZ.value   = isPost ? sigZP  : sigZ_;
+          u.uSigZ.value   = sigZCur;
           u.uCx.value     = isPost ? mPx : 0;
           u.uCy.value     = isPost ? mPy : 0;
           u.uCx2.value    = mMx;
@@ -1341,7 +1308,7 @@ export default function App() {
           const isPostSlab = s.fieldModel === 'finite'
           ? (wZ > Z_MAG - (s.magL||1.0) / 2)
           : isPost;
-        u.uIsPost.value = isPostSlab ? 1.0 : 0.0;
+          u.uIsPost.value = isPostSlab ? 1.0 : 0.0;
           u.uOpacity.value  = slabOpacity;
           u.uMode.value     = s.wMode === 'old' ? 0.0 : 1.0;
           u.uBright.value   = s.wBright || 1.0;
@@ -1355,43 +1322,6 @@ export default function App() {
       Tr.cRing.material.opacity = sw ? nr * 0.65 : 0;
       // Ring lives in XY plane at z=0 — rotate around Z to align gap with n̂
       Tr.cRing.rotation.z = -phiRad;
-
-      // ── Background cloud ───────────────────────────────────────────────────
-      Tr.bgSt.forEach((p, i) => {
-        if (s.running) p.phase = (p.phase + s.speed / PERIOD) % 1;
-        const bpp = p.phase > 0.5 ? (p.phase - 0.5) / 0.5 : 0;
-        let bx = p.x0, by = p.y0;
-        if (p.phase >= 0.5) {
-          const sep2 = bpp*KICK, sig2 = SIG*(1+bpp*0.5);
-          const rp2 = ((bx-nn.x*sep2)**2+(by-nn.y*sep2)**2)/sig2**2;
-          const rm2 = ((bx+nn.x*sep2)**2+(by+nn.y*sep2)**2)/sig2**2;
-          const vn  = (pP*Math.exp(-rp2)-pM*Math.exp(-rm2)) /
-                      (pP*Math.exp(-rp2)+pM*Math.exp(-rm2)+1e-12) * KICK*s.speed/PERIOD;
-          p.dx += nn.x*vn; p.dy += nn.y*vn; bx += p.dx; by += p.dy;
-        }
-        if (p.phase < 1/PERIOD) {
-          p.x0=(Math.random()-0.5)*SIG*1.4; p.y0=(Math.random()-0.5)*SIG*1.4;
-          p.dx=0; p.dy=0;
-        }
-        Tr.bgPos[i*3]=bx; Tr.bgPos[i*3+1]=by; Tr.bgPos[i*3+2]=lerp(Z_SRC,Z_DET,p.phase);
-        // Color: cyan→(green or red) based on local density
-        const mix = clamp(bpp*3, 0, 1);
-        let cr=0.55, cg=0.80, cb=1.0;
-        if (bpp > 0) {
-          const sep2=bpp*KICK, sig2=SIG*(1+bpp*0.5);
-          const rp2=((bx-nn.x*sep2)**2+(by-nn.y*sep2)**2)/sig2**2;
-          const rm2=((bx+nn.x*sep2)**2+(by+nn.y*sep2)**2)/sig2**2;
-          const fP=(pP*Math.exp(-rp2))/(pP*Math.exp(-rp2)+pM*Math.exp(-rm2)+1e-12);
-          cr=lerp(0.55,lerp(1.0,0.15,fP),mix);
-          cg=lerp(0.80,lerp(0.28,0.92,fP),mix);
-          cb=lerp(1.00,lerp(0.12,0.45,fP),mix);
-        }
-        Tr.bgCol[i*3]=cr; Tr.bgCol[i*3+1]=cg; Tr.bgCol[i*3+2]=cb;
-        Tr.bgSz[i] = sw ? 0.20+bpp*0.10 : 0;
-      });
-      Tr.bgGeo.attributes.position.needsUpdate=true;
-      Tr.bgGeo.attributes.aColor.needsUpdate=true;
-      Tr.bgGeo.attributes.size.needsUpdate=true;
 
       // ── Featured particles ─────────────────────────────────────────────────
       const td   = Tr.trajs();
@@ -1681,6 +1611,11 @@ magnet rather than kinking sharply at $z=0$.</p>
       <div style={{display:'flex', alignItems:'center', height:38, flexShrink:0,
         background:'rgba(4,10,30,0.98)', borderBottom:'1px solid rgba(40,80,180,0.3)',
         paddingLeft:12, gap:4}}>
+        <a href="../../../index.html" style={{fontSize:11, color:'#4060a0', fontFamily:'monospace',
+          letterSpacing:'0.06em', marginRight:12, textDecoration:'none',
+          opacity:0.75, cursor:'pointer'}}
+          onMouseEnter={e=>e.currentTarget.style.opacity='1'}
+          onMouseLeave={e=>e.currentTarget.style.opacity='0.75'}>⟵ Q-Ontic Lab</a>
         <span style={{fontSize:11, color:'#4060a0', fontFamily:'monospace',
           letterSpacing:'0.08em', marginRight:12}}>STERN-GERLACH 3D</span>
         <button className={'tbb'+(activeTab==='sim'?' tba':'')}

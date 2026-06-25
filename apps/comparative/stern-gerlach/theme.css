@@ -1,12 +1,7 @@
 /*
- * Qontic shared design theme
+ * Qontic design theme
  * Color scheme: stern-gerlach dark navy
  * Font: Inter (body) + JetBrains Mono (numbers / code)
- *
- * Usage:
- *   Vanilla HTML:  <link rel="stylesheet" href="../shared/theme.css">
- *   Vite/React:    import "../../shared/theme.css";
- *   From same dir: @import "../shared/theme.css";
  */
 
 /* ── Google Fonts ─────────────────────────────────────────────── */
