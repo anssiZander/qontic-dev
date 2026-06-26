@@ -1,0 +1,8 @@
+{
+  "title": "Delayed-Choice Notebook",
+  "type": "notebook",
+  "category": "foundations",
+  "description": "Interactive notebook on delayed-choice interferometry and alternative representations of the experiment.",
+  "tags": ["Notebook", "Delayed choice", "Interferometry"],
+  "entry": "index.html"
+}

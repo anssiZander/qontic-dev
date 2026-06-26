@@ -1,69 +1,476 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>Q-Ontic Lab — Interactive Quantum Simulations</title>
-  <meta name="description" content="Q-Ontic Lab: interactive quantum simulations for comparative exploration of Copenhagen, pilot-wave, and Many-Worlds interpretations. Free browser-based tools for research, teaching, and outreach." />
-  <meta name="keywords" content="quantum simulation, quantum mechanics, Copenhagen interpretation, pilot-wave theory, Bohmian mechanics, Many-Worlds, double-slit, Stern-Gerlach, hydrogen atom, Bell inequality, quantum measurement, interactive education" />
-  <meta name="robots" content="index,follow,max-image-preview:large" />
-  <link rel="canonical" href="http://qonticlab.rice.edu/" />
-  <meta property="og:site_name" content="Q-Ontic Lab" />
-  <meta property="og:title" content="Q-Ontic Lab — Interactive Quantum Simulations" />
-  <meta property="og:description" content="Browser-based quantum simulations comparing Copenhagen, pilot-wave, and Many-Worlds interpretations. Free tools for research, teaching, and outreach." />
-  <meta property="og:url" content="http://qonticlab.rice.edu/" />
-  <meta property="og:type" content="website" />
-  <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="Q-Ontic Lab — Interactive Quantum Simulations" />
-  <meta name="twitter:description" content="Browser-based quantum simulations comparing Copenhagen, pilot-wave, and Many-Worlds interpretations." />
-  <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"WebSite","name":"Q-Ontic Lab","url":"http://qonticlab.rice.edu/","description":"Interactive quantum simulations for comparative exploration of interpretations of quantum mechanics.","author":{"@type":"Person","email":"yepes@rice.edu"}}
-  </script>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚛</text></svg>" />
-  <link rel="stylesheet" href="css/main-style.css" />
+  <meta name="description" content="Q-Ontic Lab develops interactive quantum simulations and notebooks for comparing different representations of quantum mechanics." />
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
   <style>
-    body{font-family:"Segoe UI",sans-serif;margin:0;padding:0;background:#f9f9f9;color:#333}header{background:#003366;color:white;padding:2rem;text-align:center}header h1{margin:0;font-size:2.5rem}.subtitle{font-size:1.2rem;margin-top:.5rem}main{max-width:1100px;margin:2rem auto;padding:0 1rem}.intro{margin-bottom:2rem}.controls{display:grid;grid-template-columns:minmax(220px,340px) 1fr;gap:.9rem;margin:0 0 1.5rem;align-items:end}.control-field label{display:block;color:#003366;font-size:.85rem;font-weight:700;margin:0 0 .35rem}#category-filter,#search{width:100%;padding:.65rem 1rem;font-size:1rem;border:1px solid #bcc8de;border-radius:6px;box-sizing:border-box;background:#fff;color:#222}#category-filter:focus,#search:focus{outline:2px solid #0055aa;border-color:#0055aa}.section-heading{color:#003366;font-size:1.4rem;margin:2rem 0 .35rem;padding-bottom:.3rem;border-bottom:2px solid #dde3ee}#category-description{margin:0 0 1rem;color:#555;line-height:1.55}.sim-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.25rem}.sim-card{background:#fff;border:1px solid #dde3ee;border-radius:8px;padding:1.2rem 1.4rem 1rem;box-shadow:0 1px 4px rgba(0,0,51,.07);display:flex;flex-direction:column}.sim-card h3{margin:0 0 .35rem;color:#003366;font-size:1.05rem}.sim-card p{margin:0 0 .8rem;font-size:.9rem;line-height:1.55;flex:1}.button{display:inline-block;margin-top:.5rem;padding:.6rem 1rem;background:#0055aa;color:white;text-decoration:none;border-radius:4px}.button:hover{background:#003f7f}.tags{margin-bottom:.5rem}.tag{display:inline-block;font-size:.72rem;padding:1px 7px;border-radius:3px;margin:0 3px 4px 0;font-weight:600}.tag-live{background:#d4edda;color:#155724}.tag-topic{background:#e8ecf7;color:#003366}#no-results{display:none;color:#666;font-style:italic;grid-column:1/-1}footer{background:#eee;padding:1.5rem;text-align:center;font-size:.9rem;color:#555}footer a{color:#0055aa}@media(max-width:700px){.controls{grid-template-columns:1fr}}
+    :root {
+      --blue:#003366;
+      --blue2:#0055aa;
+      --bg:#f7f8fb;
+      --card:#fff;
+      --border:#dbe3f0;
+      --text:#263238;
+      --muted:#5f6b7a;
+      --multi:#e3f2fd;
+      --multi-text:#0d47a1;
+      --pilot:#ede7f6;
+      --pilot-text:#4527a0;
+      --note:#fff3cd;
+      --note-text:#856404;
+      --neutral:#eef1f5;
+      --neutral-text:#44515f;
+    }
+
+    body {
+      margin:0;
+      font-family:"Segoe UI",system-ui,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      line-height:1.45;
+    }
+
+    header {
+      background:linear-gradient(135deg,#00264d,#004080);
+      color:white;
+      text-align:center;
+      padding:1.7rem 1rem 1.55rem;
+    }
+
+    header h1 {
+      margin:0;
+      font-size:2.25rem;
+      letter-spacing:.015em;
+    }
+
+    header p {
+      max-width:760px;
+      margin:.45rem auto 0;
+      font-size:1.02rem;
+      opacity:.92;
+    }
+
+    main {
+      max-width:1180px;
+      margin:1.35rem auto 2.4rem;
+      padding:0 1rem;
+    }
+
+    .intro {
+      max-width:960px;
+      margin:0 auto 1.2rem;
+      text-align:center;
+      color:var(--muted);
+      font-size:.98rem;
+    }
+
+    .toolbar {
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:.7rem;
+      flex-wrap:wrap;
+      margin:0 0 1.35rem;
+      padding:.75rem;
+      background:white;
+      border:1px solid var(--border);
+      border-radius:12px;
+      box-shadow:0 2px 10px rgba(0,30,80,.04);
+    }
+
+    .tabs {
+      display:flex;
+      gap:.45rem;
+      flex-wrap:wrap;
+      justify-content:center;
+    }
+
+    .tab {
+      border:1px solid var(--border);
+      background:#fff;
+      color:var(--blue);
+      padding:.5rem .82rem;
+      border-radius:999px;
+      font-weight:700;
+      cursor:pointer;
+      font-size:.9rem;
+    }
+
+    .tab.active {
+      background:var(--blue2);
+      color:white;
+      border-color:var(--blue2);
+    }
+
+    #search {
+      width:min(340px,100%);
+      padding:.52rem .75rem;
+      border:1px solid var(--border);
+      border-radius:999px;
+      font-size:.9rem;
+      background:#fff;
+    }
+
+    .section {
+      display:none;
+      margin:0;
+    }
+
+    .section.active {
+      display:block;
+    }
+
+    .section-header {
+      margin:.6rem 0 .85rem;
+      border-bottom:1px solid var(--border);
+      padding-bottom:.35rem;
+    }
+
+    .section-header h2 {
+      color:var(--blue);
+      margin:0;
+      font-size:1.35rem;
+    }
+
+    .section-header p {
+      margin:.2rem 0 0;
+      color:var(--muted);
+      font-size:.92rem;
+    }
+
+    .grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+      gap:.9rem;
+    }
+
+    .card {
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:.9rem 1rem;
+      box-shadow:0 2px 8px rgba(0,30,80,.045);
+      display:flex;
+      flex-direction:column;
+      min-height:155px;
+    }
+
+    .card[hidden] {
+      display:none !important;
+    }
+
+    .card h3 {
+      margin:0 0 .35rem;
+      color:var(--blue);
+      font-size:1rem;
+      line-height:1.25;
+    }
+
+    .card p {
+      margin:.35rem 0 .75rem;
+      color:#3f4a56;
+      font-size:.9rem;
+      flex:1;
+    }
+
+    .card-footer {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:.6rem;
+      margin-top:auto;
+    }
+
+    .tags {
+      display:flex;
+      gap:.3rem;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .tag {
+      display:inline-block;
+      font-size:.68rem;
+      font-weight:700;
+      border-radius:4px;
+      padding:2px 6px;
+    }
+
+    .tag-comparative {
+      background:var(--multi);
+      color:var(--multi-text);
+    }
+
+    .tag-pilot-wave {
+      background:var(--pilot);
+      color:var(--pilot-text);
+    }
+
+    .tag-notebook {
+      background:var(--note);
+      color:var(--note-text);
+    }
+
+    .tag-neutral {
+      background:var(--neutral);
+      color:var(--neutral-text);
+    }
+
+    .button {
+      display:inline-block;
+      white-space:nowrap;
+      background:var(--blue2);
+      color:white;
+      text-decoration:none;
+      border-radius:5px;
+      padding:.42rem .72rem;
+      font-weight:700;
+      font-size:.82rem;
+    }
+
+    .button:hover {
+      background:#003f7f;
+    }
+
+    .empty {
+      color:var(--muted);
+      font-style:italic;
+    }
+
+    footer {
+      margin-top:2.2rem;
+      padding:1.25rem 1rem;
+      text-align:center;
+      color:#52606d;
+      background:#eef2f7;
+      border-top:1px solid var(--border);
+      font-size:.88rem;
+    }
+
+    footer p {
+      margin:.25rem 0;
+    }
+
+    footer a {
+      color:var(--blue2);
+      text-decoration:none;
+    }
+
+    footer a:hover {
+      text-decoration:underline;
+    }
+
+    @media(max-width:800px) {
+      header h1 {
+        font-size:1.9rem;
+      }
+
+      .toolbar {
+        align-items:stretch;
+      }
+
+      #search {
+        width:100%;
+        box-sizing:border-box;
+      }
+
+      .tabs {
+        width:100%;
+      }
+
+      .tab {
+        flex:1 1 auto;
+      }
+    }
   </style>
 </head>
+
 <body>
-<header><h1>Q-Ontic Lab</h1><p class="subtitle">Interactive quantum simulations for representational comparison</p></header>
+<header>
+  <h1>Q-Ontic Lab</h1>
+  <p>Interactive quantum simulations and notebooks for comparing alternative representations of quantum mechanics.</p>
+</header>
+
 <main>
-  <section class="intro"><p>The Q-Ontic Lab develops interactive quantum simulations designed to support comparative exploration of different representational frameworks in quantum mechanics. Rather than endorsing a single interpretation, the Lab focuses on how alternative visual and conceptual representations of empirically equivalent dynamics shape explanation, intuition, and reasoning. The tools are intended for research, teaching, and outreach.</p></section>
-  <div class="controls" aria-label="Simulation filters">
-    <div class="control-field"><label for="category-filter">View</label><select id="category-filter" aria-label="Choose simulation category"><option value="multi" selected>Multiview: various interpretations</option><option value="pilot">Pilot-wave dynamics</option><option value="all">All simulations</option></select></div>
-    <div class="control-field"><label for="search">Search</label><input id="search" type="search" placeholder="Search simulations…" aria-label="Search simulations" autocomplete="off" /></div>
+  <section class="intro">
+    <p>
+      Browser-based tools for exploring how different quantum representations describe the same physical phenomena.
+      Apps support immediate exploration; notebooks combine explanation, context, and embedded simulations.
+    </p>
+  </section>
+
+  <div class="toolbar">
+    <div class="tabs">
+      <button class="tab active" data-tab="comparative">Comparative Apps</button>
+      <button class="tab" data-tab="pilot-wave">Pilot-Wave Apps</button>
+      <button class="tab" data-tab="notebook">Notebooks</button>
+      <button class="tab" data-tab="all">All</button>
+    </div>
+
+    <input id="search" type="search" placeholder="Search…" />
   </div>
-  <h2 class="section-heading" id="heading-live">Multiview Quantum Simulations</h2>
-  <p id="category-description">Compare how different interpretations or representational views describe the same quantum phenomena.</p>
-  <div class="sim-grid" id="grid-live"><p id="no-results">No simulations match your search.</p></div>
+
+  <section class="section active" id="section-comparative">
+    <div class="section-header">
+      <h2>Comparative Apps</h2>
+      <p>Standalone simulations that compare multiple quantum representations side by side.</p>
+    </div>
+    <div class="grid" id="grid-comparative"></div>
+  </section>
+
+  <section class="section" id="section-pilot-wave">
+    <div class="section-header">
+      <h2>Pilot-Wave Apps</h2>
+      <p>Trajectory-focused simulations for exploring pilot-wave dynamics and wave-packet motion.</p>
+    </div>
+    <div class="grid" id="grid-pilot-wave"></div>
+  </section>
+
+  <section class="section" id="section-notebook">
+    <div class="section-header">
+      <h2>Interactive Notebooks</h2>
+      <p>Longer explanatory pages that combine narrative, context, and embedded interactive demonstrations.</p>
+    </div>
+    <div class="grid" id="grid-notebook"></div>
+  </section>
+
+  <section class="section" id="section-all">
+    <div class="section-header">
+      <h2>All Simulations and Notebooks</h2>
+      <p>Complete catalog of currently available Q-Ontic tools.</p>
+    </div>
+    <div class="grid" id="grid-all"></div>
+  </section>
 </main>
-<footer><p>The Q-Ontic Lab supports research, teaching, and outreach on quantum mechanics through interactive visualization and representational comparison.</p><p><a href="collaborators.html">Meet the team</a> &nbsp;·&nbsp; Contact: <a href="mailto:yepes@rice.edu">yepes@rice.edu</a></p></footer>
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZWF6YQM0YV"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-ZWF6YQM0YV');gtag('event','page_view',{page_title:document.title,page_location:window.location.href,page_path:window.location.pathname});</script>
+
+<footer>
+  <p>Q-Ontic Lab is a research and education project at Rice University.</p>
+  <p>
+    <a href="collaborators.html">Team</a>
+    &nbsp;|&nbsp;
+    Source code: <a href="https://github.com/qontic/qontic">GitHub</a>
+    &nbsp;|&nbsp;
+    Contact: <a href="mailto:yepes@rice.edu">yepes@rice.edu</a>
+  </p>
+</footer>
+
 <script>
-(function(){'use strict';
-const CATEGORY_COPY={multi:{heading:'Multiview Quantum Simulations',description:'Compare how different interpretations or representational views describe the same quantum phenomena.'},pilot:{heading:'Pilot-Wave Dynamics',description:'Trajectory-focused simulations for exploring pilot-wave dynamics, guidance laws, and wave-packet motion.'},all:{heading:'All Simulations',description:'All currently available Q-Ontic simulations, including multiview comparison tools and specialized pilot-wave visualizations.'}};
-function statusTag(status){return status==='live'?'<span class="tag tag-live">Live</span>':''}function topicTags(tags){return tags.map(t=>`<span class="tag tag-topic">${t}</span>`).join('')}function buildCard(app){return `<div class="sim-card" data-slug="${app.slug}" data-category="${app.category}" data-search="${[app.title,...app.tags,app.description,app.category].join(' ').toLowerCase()}"><h3>${app.title}</h3><div class="tags">${statusTag(app.status)}${topicTags(app.tags)}</div><p>${app.description}</p><a class="button" href="${app.url}" data-slug="${app.slug}">Launch</a></div>`}
-function injectStructuredData(apps){const items=apps.filter(a=>a.status==='live'&&a.url).map((a,i)=>({'@type':'ListItem',position:i+1,url:'http://qonticlab.rice.edu/'+a.url,name:a.title}));const ld={'@context':'https://schema.org','@type':'ItemList',name:'Q-Ontic Lab Simulations',description:'Interactive quantum simulations comparing Copenhagen, pilot-wave, and Many-Worlds interpretations.',numberOfItems:items.length,itemListElement:items};const s=document.createElement('script');s.type='application/ld+json';s.textContent=JSON.stringify(ld);document.head.appendChild(s)}
-function render(apps){const grid=document.getElementById('grid-live');const noResults=document.getElementById('no-results');grid.innerHTML=noResults.outerHTML+apps.map(buildCard).join('');injectStructuredData(apps);document.querySelectorAll('a.button[data-slug]').forEach(link=>{link.addEventListener('click',function(){if(typeof gtag==='function'){gtag('event','app_launch',{app_name:this.closest('.sim-card').querySelector('h3').textContent.trim(),app_slug:this.dataset.slug})}})})}
-function applyFilters(){const selected=document.getElementById('category-filter').value;const query=document.getElementById('search').value.trim().toLowerCase();const copy=CATEGORY_COPY[selected]||CATEGORY_COPY.multi;document.getElementById('heading-live').textContent=copy.heading;document.getElementById('category-description').textContent=copy.description;let anyVisible=false;document.querySelectorAll('.sim-card').forEach(card=>{const categoryMatch=selected==='all'||selected===card.dataset.category;const searchMatch=!query||card.dataset.search.includes(query);const visible=categoryMatch&&searchMatch;card.hidden=!visible;if(visible)anyVisible=true});document.getElementById('no-results').style.display=anyVisible?'none':'block'}
-const APPS=[
-{title:'Double-Slit Experiment — Analytical',slug:'double-slit-analytical',status:'live',category:'multi',url:'qsf-v1.html',tags:['Multiview','Wave interference','Born rule'],description:'Explore the double-slit experiment with an analytically computed wavefunction. Visualise Copenhagen collapse, pilot-wave trajectories, and Many-Worlds branching side by side.'},
-{title:'Stern-Gerlach Experiment — 3D',slug:'stern-gerlach',status:'live',category:'multi',url:'stern-gerlach/',tags:['Multiview','Spin-½','Measurement','3D'],description:'Full 3D simulation of a spin-½ particle traversing an inhomogeneous magnetic field. Compare Copenhagen collapse, pilot-wave trajectories, and Many-Worlds branching, with a live Born-rule histogram.'},
-{title:'Free Particle — Gaussian Wave Packet',slug:'free-particle',status:'live',category:'multi',url:'free-particle/free-particle.html',tags:['Multiview','Wave packets','Detector'],description:'Animated 2D Gaussian wave packet freely propagating and detected at a screen. Compare Copenhagen collapse, pilot-wave trajectories, and Many-Worlds branching.'},
-{title:'Quantum Measurement with Detector',slug:'measurement',status:'live',category:'multi',url:'measurement/',tags:['Multiview','Measurement','Detector coupling'],description:'Detector-coupled tunneling simulation comparing Collapse/Copenhagen, Pilot-Wave, and Many-Worlds pictures, with explicit detector back-action and outcome statistics.'},
-{title:'Bell Experiment — Entanglement',slug:'bell-experiment',status:'live',category:'multi',url:'bell-experiment/',tags:['Multiview','Entanglement','Non-locality','Spin-½'],description:'Interactive Bell-pair simulation with angle-dependent correlations, detector-distance timing, and side-by-side Collapse/Copenhagen and pilot-wave visualizations, including non-local wave updates.'},
-{title:'Double-Slit Experiment — Numerical',slug:'double-slit-numerical',status:'live',category:'pilot',url:'2slit-wavepacket/',tags:['Pilot-wave dynamics','Wave packets','GPU simulation'],description:'Real-time GPU simulation of a Gaussian wave packet propagating through a double slit, including wave dynamics and trajectory visualization.'},
-{title:'Pilot-Wave Double Slit — WebGL2',slug:'bohmian-double-slit-webgl',status:'live',category:'pilot',url:'bohmian-double-slit-webgl/',tags:['Pilot-wave dynamics','WebGL2','Spin guidance'],description:'WebGL2 double-slit simulation with selectable Schrödinger and Pauli spin-1/2 guiding laws. Adapted for Q-Ontic Lab from Anssi Zander’s BohmianDoubleSlit demo, with permission and attribution.'},
-{title:'Bohmian Tunneling',slug:'tunneling-webgl',status:'live',category:'pilot',url:'tunneling-webgl/',tags:['Interactive notebook','Tunneling','WebGL2'],description:'Interactive notebook on above-barrier transmission, quantum tunneling, and reflected and transmitted Bohmian trajectory ensembles.'},
-{title:'Pilot-Wave Free Packet — 2D',slug:'bohmian-free-packet-2d',status:'live',category:'pilot',url:'bohmian-free-packet-2d/',tags:['Pilot-wave dynamics','Free particle','WebGL2'],description:'Two-dimensional pilot-wave free-packet simulation showing wave-packet spreading and guided trajectories. Adapted for Q-Ontic Lab from Anssi Zander’s Bohmian-Free-Packet demo, with permission and attribution.'},
-{title:'Classical Limit',slug:'classical-limit',status:'live',category:'pilot',url:'classical-limit/',tags:['Pilot-wave dynamics','Classical limit','WebGL2'],description:'Applet for exploring how a Bohmian wave packet in a reflecting box changes from visibly quantum pilot-wave motion to straighter, cleaner classical-looking wall bounces.'},
-{title:'Delayed Choice',slug:'delayed-choice',status:'live',category:'pilot',url:'delayed-choice/',tags:['Pilot-wave dynamics','Delayed choice','Interferometry','WebGL2'],description:'Bohmian delayed-choice notebook with a balanced splitter, guided trajectories, detector statistics, and an in-flight detector choice.'},
-{title:'Eigenstates in 3D Box',slug:'eigenstates-in-3d-box',status:'live',category:'pilot',url:'eigenstates-in-3d-box/',tags:['Pilot-wave dynamics','Eigenstates','3D','WebGPU'],description:'Three-dimensional particle-in-a-box notebook with eigenstate density, nodal surfaces, Pauli spin current, and Bohmian trajectories.'},
-{title:'Stern-Gerlach Close Up',slug:'stern-gerlach-close-up',status:'live',category:'pilot',url:'stern-gerlach-close-up/',tags:['Pilot-wave dynamics','Stern-Gerlach','3D','Spin guidance'],description:'Interactive notebook about Pauli spinor splitting, magnetic-field gradients, measurement branches, and Bohmian trajectories.'},
-{title:'Hydrogen Atom',slug:'hydrogen-atom',status:'live',category:'pilot',url:'hydrogen-atom/hydrogen-3d.html',tags:['Pilot-wave dynamics','Orbitals','3D'],description:'Interactive 3D visualization of hydrogen orbitals and trajectory-oriented pilot-wave structure.'}
-];
-render(APPS);document.getElementById('category-filter').addEventListener('change',applyFilters);document.getElementById('search').addEventListener('input',applyFilters);applyFilters();
-}());
+let catalog = [];
+
+function sectionOf(item) {
+  return item.type === "notebook" ? "notebook" : item.category;
+}
+
+function tagClass(tag, item) {
+  if (item.type === "notebook" || tag.toLowerCase() === "notebook") return "tag-notebook";
+  if (item.category === "comparative") return "tag-comparative";
+  if (item.category === "pilot-wave") return "tag-pilot-wave";
+  return "tag-neutral";
+}
+
+function makeCard(item) {
+  const tags = (item.tags || []).map(t => {
+    const cls = tagClass(t, item);
+    return `<span class="tag ${cls}">${t}</span>`;
+  }).join("");
+
+  const search = [
+    item.title,
+    item.type,
+    item.category,
+    item.description,
+    ...(item.tags || [])
+  ].join(" ").toLowerCase();
+
+  return `
+    <article class="card" data-search="${search}">
+      <h3>${item.title}</h3>
+      <p>${item.description}</p>
+      <div class="card-footer">
+        <div class="tags">${tags}</div>
+        <a class="button" href="${item.url}" target="_blank" rel="noopener">Open</a>
+      </div>
+    </article>
+  `;
+}
+
+function renderCatalog() {
+  $("#grid-comparative,#grid-pilot-wave,#grid-notebook,#grid-all").empty();
+
+  for (const item of catalog) {
+    const s = sectionOf(item);
+    const html = makeCard(item);
+
+    if (s === "comparative") $("#grid-comparative").append(html);
+    if (s === "pilot-wave") $("#grid-pilot-wave").append(html);
+    if (s === "notebook") $("#grid-notebook").append(html);
+
+    $("#grid-all").append(html);
+  }
+
+  $(".grid").each(function() {
+    if (!$(this).children().length) {
+      $(this).html('<p class="empty">No items yet.</p>');
+    }
+  });
+
+  applySearch();
+}
+
+function showTab(tab, pushState) {
+  $(".tab").removeClass("active");
+  $(`.tab[data-tab="${tab}"]`).addClass("active");
+
+  $(".section").removeClass("active");
+  $(`#section-${tab}`).addClass("active");
+
+  if (pushState !== false) history.replaceState(null, "", "#" + tab);
+
+  applySearch();
+}
+
+function applySearch() {
+  const q = $("#search").val().trim().toLowerCase();
+
+  $(".section.active .card").each(function() {
+    const match = !q || $(this).data("search").includes(q);
+    $(this).attr("hidden", !match);
+  });
+}
+
+$(function() {
+  $(".tab").on("click", function() {
+    showTab($(this).data("tab"));
+  });
+
+  window.addEventListener("hashchange", function() {
+    const tab = location.hash.slice(1);
+    if (tab) showTab(tab, false);
+  });
+
+  $("#search").on("input", applySearch);
+
+  $.getJSON("catalog.json")
+    .done(function(data) {
+      catalog = data;
+      renderCatalog();
+      const hash = location.hash.slice(1);
+      if (hash) showTab(hash, false);
+    })
+    .fail(function(err) {
+      console.error("Could not load catalog.json", err);
+      $("#grid-comparative").html(
+        '<p class="empty">Could not load catalog.json. Run scripts/build-catalog.py before deploying.</p>'
+      );
+    });
+});
 </script>
 </body>
 </html>

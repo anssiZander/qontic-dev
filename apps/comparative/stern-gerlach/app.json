@@ -1,0 +1,8 @@
+{
+  "title": "Stern-Gerlach Experiment — 3D",
+  "type": "app",
+  "category": "comparative",
+  "description": "Three-dimensional Stern-Gerlach simulation comparing collapse, pilot-wave, and branching-style descriptions.",
+  "tags": ["Multiview", "Spin-1/2", "Measurement"],
+  "entry": "index.html"
+}
