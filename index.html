@@ -389,19 +389,6 @@
 let catalog = [];
 const RETURN_TAB_KEY = "qontic:returnTab";
 const VALID_TABS = new Set(["comparative", "pilot-wave", "notebook", "all"]);
-const knownGpuPaths = [
-  "apps/pilot-wave/stern-gerlach-close-up/",
-  "apps/pilot-wave/hydrogen-atom/",
-  "apps/pilot-wave/double-slit-numerical/",
-  "apps/pilot-wave/tunneling/",
-  "apps/comparative/stern-gerlach/",
-  "apps/comparative/measurement/",
-  "apps/comparative/double-slit-analytical/",
-  "notebooks/double-slit-webgl/",
-  "notebooks/free-packet-2d/",
-  "notebooks/delayed-choice/",
-  "notebooks/particle-box-3d/"
-];
 
 function currentTab() {
   const hashTab = location.hash.slice(1);
@@ -424,8 +411,10 @@ function normalizePath(p) {
 }
 
 function isGpuApp(item) {
-  const path = normalizePath(item.url);
-  return knownGpuPaths.some(prefix => path.startsWith(prefix));
+  if (item.gpu === true) return true;
+
+  const tags = Array.isArray(item.tags) ? item.tags : [];
+  return tags.some(tag => /^(gpu|webgpu|webgl2)$/i.test(String(tag).trim()));
 }
 
 function sectionOf(item) {
@@ -433,7 +422,7 @@ function sectionOf(item) {
 }
 
 function tagClass(tag, item) {
-  if (tag.toLowerCase() === "gpu") return "tag-gpu";
+  if (/^(gpu|webgpu|webgl2)$/i.test(String(tag).trim())) return "tag-gpu";
   if (item.type === "notebook" || tag.toLowerCase() === "notebook") return "tag-notebook";
   if (item.category === "comparative") return "tag-comparative";
   if (item.category === "pilot-wave") return "tag-pilot-wave";
@@ -442,7 +431,7 @@ function tagClass(tag, item) {
 
 function makeCard(item) {
   const uiTags = [...(item.tags || [])];
-  if (isGpuApp(item) && !uiTags.some(t => String(t).toLowerCase() === "gpu")) uiTags.push("GPU");
+  if (isGpuApp(item) && !uiTags.some(t => /^(gpu|webgpu|webgl2)$/i.test(String(t).trim()))) uiTags.push("GPU");
 
   const tags = uiTags.map(t => {
     const cls = tagClass(t, item);

@@ -5,6 +5,17 @@ from pathlib import Path
 ROOTS = [Path("apps"), Path("notebooks")]
 items = []
 
+
+def is_gpu_item(item):
+    if item.get("gpu") is True:
+        return True
+
+    fields = [item.get("title", ""), item.get("description", "")]
+    tags = item.get("tags", [])
+    fields.extend(tags if isinstance(tags, list) else [])
+    blob = " ".join(str(field) for field in fields).lower()
+    return any(keyword in blob for keyword in ("webgpu", "webgl2", "gpu"))
+
 for root in ROOTS:
     if not root.exists():
         continue
@@ -22,6 +33,7 @@ for root in ROOTS:
 
         item["url"] = url
         item["path"] = str(folder).replace("\\", "/")
+        item["gpu"] = is_gpu_item(item)
         items.append(item)
 
 order = {"comparative": 0, "pilot-wave": 1, "foundations": 2}
