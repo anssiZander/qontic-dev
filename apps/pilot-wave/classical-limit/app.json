@@ -1,8 +1,0 @@
-{
-  "title": "Classical Limit — WebGPU",
-  "type": "app",
-  "category": "pilot-wave",
-  "description": "Pilot-wave applet showing how a Gaussian packet in a reflecting box approaches cleaner classical-looking wall bounces.",
-  "tags": ["Pilot-wave", "Classical limit", "WebGPU"],
-  "entry": "index.html"
-}
