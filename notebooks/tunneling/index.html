@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Eigenstates in 3D Box - Q-Ontic Lab</title>
-  <meta name="description" content="An educational notebook about particle-in-a-box eigenstates, Pauli spin current, and Bohmian trajectories in three dimensions." />
+  <title>Bohmian Tunneling - Q-Ontic Lab</title>
+  <meta name="description" content="An interactive notebook about quantum tunneling, reflected and transmitted wave packets, and Bohmian trajectories." />
   <script>
     window.MathJax = {
       tex: {
@@ -47,6 +47,7 @@
     }
     .site-banner h1 {
       margin: 0;
+      color: #fff;
       font-size: 2.25rem;
       line-height: 1.1;
     }
@@ -66,6 +67,7 @@
       margin-bottom: 2.8rem;
       scroll-margin-top: 24px;
     }
+
     .page-nav {
       display: flex;
       padding-top: 1rem;
@@ -88,12 +90,17 @@
       color: var(--blue-900);
       box-shadow: 0 1px 3px rgba(0, 0, 51, 0.06);
     }
+    .nav-button:hover {
+      border-color: #bdd0e6;
+      background: #f1f6fc;
+    }
     .primary-button {
       border: 1px solid var(--blue-700);
       background: var(--blue-700);
       color: #fff;
     }
     .primary-button:hover {
+      border-color: var(--blue-800);
       background: var(--blue-800);
       color: #fff;
     }
@@ -115,7 +122,7 @@
       line-height: 1.12;
     }
     .page-hero p:last-child {
-      max-width: 780px;
+      max-width: 800px;
       margin: 0.9rem 0 0;
       color: var(--muted);
       font-size: 1.08rem;
@@ -167,9 +174,7 @@
       margin: 0 0 0.8rem;
       font-size: 1.75rem;
     }
-    .applet-section > p {
-      max-width: 900px;
-    }
+    .applet-section > p { max-width: 920px; }
     .applet-shell {
       overflow: hidden;
       border: 1px solid #1d3558;
@@ -206,7 +211,7 @@
       border: 0;
       border-radius: 0;
       background: rgba(0, 0, 0, 0.22);
-      color: rgba(255, 255, 255, 0.86);
+      color: rgba(255, 255, 255, 0.88);
       font: 700 2rem/1 "Segoe UI", system-ui, sans-serif;
       cursor: pointer;
     }
@@ -226,6 +231,7 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 1.2rem 2rem;
     }
+    .theory-grid > div { min-width: 0; }
     .equation {
       overflow-x: auto;
       margin: 0.8rem 0;
@@ -242,10 +248,7 @@
       background: var(--blue-900);
       color: #fff;
     }
-    .site-footer-inner {
-      padding: 1.5rem 0;
-    }
-    .site-footer a { color: #cce7ff; }
+    .site-footer-inner { padding: 1.5rem 0; }
 
     @media (max-width: 760px) {
       .page-hero h1 { font-size: 2.25rem; }
@@ -269,174 +272,174 @@
 
     <section class="page-hero" aria-labelledby="page-title">
       <p class="kicker">Educational notebook</p>
-      <h1 id="page-title">Eigenstates in 3D Box</h1>
-      <p>Explore the stationary states, the Pauli spin current, and Bohmian motion.</p>
+      <h1 id="page-title">Bohmian Tunneling</h1>
+      <p>Follow a wave packet and its Bohmian trajectories as they meet a finite potential barrier.</p>
     </section>
 
     <section class="intro-grid" aria-label="Notebook preview and section navigation">
       <figure class="header-image">
-        <img src="groundStatePoster.png" alt="Ground-state density and Bohmian trajectories inside a three-dimensional box">
+        <img src="transmissionPoster.png" alt="A quantum wave packet and Bohmian trajectories interacting with a potential barrier">
       </figure>
       <aside class="note-box" aria-labelledby="sections-nav">
         <h2 id="sections-nav">Sections</h2>
         <ul class="note-list">
-          <li><a href="#ground-state">Ground state</a></li>
-          <li><a href="#excited-state">Excited states and nodes</a></li>
-          <li><a href="#magnetic-field">Spin current and magnetic field</a></li>
+          <li><a href="#transmission">Above-barrier transmission</a></li>
+          <li><a href="#tunneling">Quantum tunneling</a></li>
+          <li><a href="#ensemble">An ensemble of outcomes</a></li>
           <li><a href="#theory">Theory and equations</a></li>
+          <li><a href="#full-applet">Full applet</a></li>
         </ul>
       </aside>
     </section>
 
-    <section class="applet-section" aria-labelledby="ground-state">
-      <h2 id="ground-state">Ground-state</h2>
+    <section class="applet-section" aria-labelledby="transmission">
+      <h2 id="transmission">Above-barrier transmission</h2>
       <p>
-        All the energy eigenstates are stationary states, which means their probability density does not change in time.
-        Let us start with the ground state.
+        Begin with an incoming packet whose mean kinetic energy exceeds the barrier height.
+        The barrier still distorts the wave and can produce partial reflection, but transmission
+        is not classically forbidden.
       </p>
       <p>
-        The state \(n_x=n_y=n_z=1\) has no interior nodal planes.
-        The phase of the wave functionis spatially constant, and therefore the scalar guidance current vanishes,
-        making bohmian particles seem to stand still.
-        However, if we take the spin into account, there will be an extra spin current in the guidance equation,
-        which can produce nontrivial motion even in the ground state.
-        Switch the spin current on and off in the following demo.
+        Note, how some reflected particles never even "touch the wall".
+        The reflecting component of the wave pushes them back before they "get in contact".
+      </p>
+      <p>
+        Some particles almost seem to get "trapped inside the wall" for a time.
+        This happens since there is wave reflection also when "stepping from higher potential to lower one",
+        which is a bit counterintuitive classically.
+      </p>
+      <p>
+         Adjust the momentum and barrier height to move across the
+        boundary \(E=V_0\).
       </p>
       <div class="applet-shell is-inactive">
-        <div class="applet-toolbar">Ground state: \(n=(1,1,1)\)</div>
-        <div class="applet-stage" style="background-image:url('groundStatePoster.png')">
-          <iframe class="applet-frame" title="Ground-state particle in a three-dimensional box"
-            data-src="full-applet.html?embed=1&amp;preset=ground" allow="fullscreen"></iframe>
-          <button class="applet-play" type="button" aria-label="Play ground-state simulation">Play</button>
+        <div class="applet-toolbar">Compare kinetic energy with barrier height</div>
+        <div class="applet-stage" style="background-image:url('transmissionPoster.png')">
+          <iframe class="applet-frame" title="Above-barrier Bohmian transmission"
+            data-src="full-applet.html?embed=1&amp;preset=transmission" allow="fullscreen"></iframe>
+          <button class="applet-play" type="button" aria-label="Play above-barrier transmission simulation">Play</button>
         </div>
       </div>
-      <p class="caption">Drag to orbit the box. The XY, XZ, and YZ buttons provide orthographic views.</p>
+      <p class="caption">Incoming packet whose mean kinetic energy exceeds the potential barrier.</p>
     </section>
 
-    <section class="applet-section" aria-labelledby="excited-state">
-      <h2 id="excited-state">Excited states and nodes</h2>
+    <section class="applet-section" aria-labelledby="tunneling">
+      <h2 id="tunneling">Quantum tunneling</h2>
       <p>
-        Higher quantum numbers introduce nodal cells. The phase is still spatially constant within each nodal cell.
-        Therefore the phase dependent guidance current vanishes everywhere, and the Bohmian particles again appear to be at rest.
-        But as before, the density gradients will induce spin current which has the effect of driving the bohmian particles around
-        density level curves. Each particle remains confined to a single nodal cell,
-        as the spin current can only circulate them along the density curves.
+        When \(E&lt;V_0\), a classical particle cannot enter the barrier region.
+        Classically it cannot pass trough, no matter how thin the barrier is.
+
+      </p>
+      <p>
+        The quantum wave instead penetrates the barrier, although the amplitude decays exponentially.
+        Therefore, for a thin enough barrier, a substantial portion of the wave can pass trough!
+        Change the barrier height and thickness to see how strongly they suppress transmission.
       </p>
       <div class="applet-shell is-inactive">
-        <div class="applet-toolbar">Excited eigenstates and nodal structure</div>
-        <div class="applet-stage" style="background-image:url('excitedStatePoster.png')">
-          <iframe class="applet-frame" title="Excited eigenstates in a three-dimensional box"
-            data-src="full-applet.html?embed=1&amp;preset=excited" allow="fullscreen"></iframe>
-          <button class="applet-play" type="button" aria-label="Play excited-state simulation">Play</button>
+        <div class="applet-toolbar">A classically forbidden barrier</div>
+        <div class="applet-stage" style="background-image:url('tunnelingPoster.png')">
+          <iframe class="applet-frame" title="Bohmian quantum tunneling through a finite barrier"
+            data-src="full-applet.html?embed=1&amp;preset=tunneling" allow="fullscreen"></iframe>
+          <button class="applet-play" type="button" aria-label="Play quantum tunneling simulation">Play</button>
         </div>
       </div>
-      <p class="caption">Spin current which has the effect of driving the bohmian particles around
-        density level curves.</p>
+      <p class="caption">The red barrier indicates that its height exceeds the packet's mean kinetic energy.</p>
     </section>
 
-    <section class="applet-section" aria-labelledby="magnetic-field">
-      <h2 id="magnetic-field">Magnetic field</h2>
+    <section class="applet-section" aria-labelledby="ensemble">
+      <h2 id="ensemble">A larger ensemble</h2>
       <p>
-        We can also apply a uniform magnetic field. The field is indicated by red lines.
-        As is well known, a magnetic field is represented through a vector potential,
-         which enters the kinetic term of the Pauli equation through minimal coupling.
-         The magnetic field also couples directly to the particle’s spin.
-        In Bohmian mechanics, the vector potential contributes an additional term to the particle’s guidance law.
-        Visually it can create a visual precession of the spin orbits.
+        Let us follow a larger ensemble to observe the equivariance in action again.
+        The inital position are sampled from \(|\psi|^2\).
+         displays the reflected and transmitted probabilities.
+      </p>
+      <p>
+        As usual, the particle density follows the squared modulus of the wave, testifying to the empirical equivalence of
+        the standard interpretation and the bohmian interpretation.
+      </p>
+      <p>
+        Play with
       </p>
       <div class="applet-shell is-inactive">
-        <div class="applet-toolbar">Spin current and uniform magnetic field</div>
-        <div class="applet-stage" style="background-image:url('spinCurrentPoster.png')">
-          <iframe class="applet-frame" title="Pauli spin-current demonstration in a three-dimensional box"
-            data-src="full-applet.html?embed=1&amp;preset=magnetic" allow="fullscreen"></iframe>
-          <button class="applet-play" type="button" aria-label="Play spin-current simulation">Play</button>
+        <div class="applet-toolbar">Reflected and transmitted particle populations</div>
+        <div class="applet-stage" style="background-image:url('ensemblePoster.png')">
+          <iframe class="applet-frame" title="Bohmian tunneling ensemble"
+            data-src="full-applet.html?embed=1&amp;preset=ensemble" allow="fullscreen"></iframe>
+          <button class="applet-play" type="button" aria-label="Play tunneling ensemble simulation">Play</button>
         </div>
       </div>
-      <p class="caption">Field lines indicate the selected uniform magnetic-field direction.</p>
+      <p class="caption">Equivariance of the two distributions become evident with a larger sample.</p>
     </section>
 
     <section id="theory" aria-labelledby="theory-title">
       <h2 id="theory-title">Theory and equations</h2>
       <div class="theory-grid">
         <div>
-          <h3>Box eigenfunctions</h3>
-          <p>For a rectangular box with side lengths \(L_x,L_y,L_z\), separation of variables gives</p>
+          <h3>Wave evolution</h3>
+          <p>The packet evolves according to the time-dependent Schrödinger equation:</p>
           <div class="equation">
             \[
-              \psi_{n_xn_yn_z}(x,y,z)
-              =
-              \sqrt{\frac{8}{L_xL_yL_z}}
-              \sin\!\left(\frac{n_x\pi x}{L_x}\right)
-              \sin\!\left(\frac{n_y\pi y}{L_y}\right)
-              \sin\!\left(\frac{n_z\pi z}{L_z}\right).
-            \]
-          </div>
-          <p>Each positive integer \(n_i\) fixes the nodal structure along one spatial axis.</p>
-        </div>
-        <div>
-          <h3>Energy and density</h3>
-          <div class="equation">
-            \[
-              E_{n_xn_yn_z}
-              =
-              \frac{\hbar^2\pi^2}{2m}
-              \left(
-                \frac{n_x^2}{L_x^2}
-                \frac{n_y^2}{L_y^2}
-                \frac{n_z^2}{L_z^2}
-              \right),
-              \qquad
-              \rho=\Psi^\dagger\Psi .
-            \]
-          </div>
-          <p>An energy eigenstate changes only by a global time-dependent phase, so its density remains stationary.</p>
-        </div>
-        <div>
-          <h3>Pauli evolution</h3>
-          <div class="equation">
-            \[
-              i\hbar\frac{\partial\Psi}{\partial t}
+              i\hbar\frac{\partial\psi}{\partial t}
               =
               \left[
-                \frac{1}{2m}(-i\hbar\nabla-\mathbf A)^2
-                -\frac{\hbar}{2m}\boldsymbol{\sigma}\cdot\mathbf B
-              \right]\Psi .
+                -\frac{\hbar^2}{2m}\nabla^2+V(\mathbf x)
+              \right]\psi .
             \]
           </div>
-          <p>The simulation uses hard-wall boundary conditions and a symmetric-gauge vector potential for the uniform magnetic field.</p>
+          <p>The finite barrier occupies a region of width \(a\) with potential \(V_0\).</p>
+        </div>
+        <div>
+          <h3>Evanescent penetration</h3>
+          <p>For a stationary component with \(E&lt;V_0\), the wave number inside the barrier is imaginary:</p>
+          <div class="equation">
+            \[
+              \kappa=\frac{\sqrt{2m(V_0-E)}}{\hbar},
+              \qquad
+              \psi_{\mathrm{barrier}}\sim e^{-\kappa y}.
+            \]
+          </div>
+          <p>For a sufficiently wide barrier, the transmission probability scales approximately as \(T\propto e^{-2\kappa a}\).</p>
+        </div>
+        <div>
+          <h3>Probability balance</h3>
+          <div class="equation">
+            \[
+              \rho=|\psi|^2,
+              \qquad
+              R+T=1 .
+            \]
+          </div>
+          <p>The reflected and transmitted packets are parts of one continuously evolving wave function.</p>
         </div>
         <div>
           <h3>Bohmian guidance</h3>
           <div class="equation">
             \[
-              \mathbf v
+              \dot{\mathbf x}
               =
-              \frac{\hbar}{m\rho}
-              \operatorname{Im}(\Psi^\dagger\nabla\Psi)
-              +
-              \frac{s\hbar}{m\rho}
-              \nabla\times(\Psi^\dagger\boldsymbol{\sigma}\Psi)
-              -
-              \frac{\mathbf A}{m}.
+              \frac{\mathbf j}{\rho},
+              \qquad
+              \mathbf j
+              =
+              \frac{\hbar}{m}\operatorname{Im}
+              \left(\psi^*\nabla\psi\right).
             \]
           </div>
-          <p>The first term is the convective current, the second is the spin current, and the last accounts for magnetic coupling in the simulation's units.</p>
+          <p>Each particle follows one continuous path into either the reflected or transmitted branch.</p>
         </div>
       </div>
     </section>
 
     <section class="next-step" aria-labelledby="full-applet">
       <h2 id="full-applet">Full Applet</h2>
-      <p>Open the original-scale simulation with its complete control panel in a separate browser tab.</p>
+      <p>Open the original-scale simulation with its complete controls in a separate browser tab.</p>
       <a class="primary-button" href="full-applet.html" target="_blank" rel="noopener">Open Full Applet</a>
     </section>
   </main>
 
   <footer class="site-footer">
     <div class="site-footer-inner">
-      Adapted for Q-Ontic Lab from
-      <a href="https://github.com/anssiZander/Bohmian3DBox" target="_blank" rel="noopener">Bohmian3DBox</a>
-      by Anssi Zander.
+      An interactive Q-Ontic Lab notebook by Anssi Zander.
     </div>
   </footer>
 

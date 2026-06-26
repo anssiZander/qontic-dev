@@ -1,5 +1,3 @@
-import { createShaderSources } from "./shaders.js";
-
 const canvas = document.getElementById("c");
 if (!navigator.gpu) {
   alert("WebGPU is not available. Use a current Chrome/Edge desktop browser with WebGPU enabled.");
@@ -35,14 +33,32 @@ const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const WAVE_WORKGROUP_SIZE = 256;
 const PARTICLE_WORKGROUP_SIZE = 128;
 const WAVE_CELL_BYTES = 32;
-const DEFAULT_B_FIELD = 0.0;
-const MAX_EIGEN_QUANTUM_NUMBER = 6;
+const DEFAULT_SG_GRADIENT = 4.0;
+const TUNNEL_Z_SCALE = 2.0;
 const maxWaveBytes = Math.min(device.limits.maxStorageBufferBindingSize, device.limits.maxBufferSize);
 const maxWaveCellsByStorage = Math.max(32 ** 3, Math.floor(maxWaveBytes / WAVE_CELL_BYTES));
-const maxResByStorage = Math.floor(Math.cbrt(maxWaveCellsByStorage));
-const maxResByDispatch = Math.floor(Math.cbrt(device.limits.maxComputeWorkgroupsPerDimension * WAVE_WORKGROUP_SIZE));
+
+function zResolutionForBase(baseRes) {
+  return Math.max(1, Math.round(baseRes * TUNNEL_Z_SCALE));
+}
+
+function voxelCountForBaseResolution(baseRes) {
+  return baseRes * baseRes * zResolutionForBase(baseRes);
+}
+
+function maxBaseResolutionForCells(maxCells) {
+  let baseRes = Math.floor(Math.cbrt(maxCells / TUNNEL_Z_SCALE));
+  while (baseRes > 1 && voxelCountForBaseResolution(baseRes) > maxCells) baseRes--;
+  return baseRes;
+}
+
+const maxResByStorage = maxBaseResolutionForCells(maxWaveCellsByStorage);
+const maxResByDispatch = maxBaseResolutionForCells(device.limits.maxComputeWorkgroupsPerDimension * WAVE_WORKGROUP_SIZE);
 const rawMaxSimRes = Math.min(256, maxResByStorage, maxResByDispatch);
 const MAX_SIM_RES = Math.max(32, Math.floor(rawMaxSimRes / 4) * 4);
+const urlParams = new URLSearchParams(window.location.search);
+const preset = urlParams.get("preset");
+const isEmbedded = urlParams.get("embed") === "1";
 
 const params = {
   simRes: Math.min(128, MAX_SIM_RES),
@@ -52,104 +68,94 @@ const params = {
 
   hbar: 6.0,
   mass: 1.0,
+  p0: 5.5,
   dt: 0.01,
 
-  nParticles: 100,
+  packetX: 0.25,
+  packetY: 0.5,
+  packetZ: 0.5,
+  packetSigma: 10.0,
+
+  nParticles: 500,
   rhoMin: 1e-6,
   velClamp: 80.0,
-  spinS: 2.,
-  initialSpin: 0,
-  bFieldStrength: DEFAULT_B_FIELD,
-  bFieldAxis: 0,
-  eigenNx: 1,
-  eigenNy: 1,
-  eigenNz: 1,
+  spinS: 0.5,
+  initialSpin: 1,
+  sgGradient: DEFAULT_SG_GRADIENT,
+  sgFieldOn: 1,
 
-  cloudGain: .02,
-  cloudGamma: 0.55,
-  cloudLowBoost: 0.5,
+  cloudGain: .05,
+  cloudGamma: 0.7,
+  cloudLowBoost: 0.9,
   cloudCutoff: 0.003,
   cloudPointSize: 80.,
   showPhase: 0,
   showCloud: 1,
-  showProjectedContour: 1,
-  showLevelsets: 1,
-  showFieldLines: 1,
 
   showParticles: 1,
-  dotSize: 25.0,
+  dotSize: 10.0,
   dotSigma: 0.28,
   dotGain: 2.0,
 
   showTrail: 1,
-  trailHalfLife: 2.0,
+  trailHalfLife: 0.5,
   trailVisGain: 0.5,
   trailVisGamma: 1,
   trailStampGain: 0.45,
-  trailWidth: 14.0,
+  trailWidth: 15.0,
   trailBlendMode: 2,
   densityScale: 0.5,
+
+  paletteId: 4,
 };
 
-const urlParams = new URLSearchParams(window.location.search);
-const preset = urlParams.get("preset");
-const isEmbedded = urlParams.get("embed") === "1";
-
 const embeddedBasePreset = {
-  simRes: 64,
-  stepsPerFrame: 4,
-  nParticles: 300,
+  simRes: Math.min(96, MAX_SIM_RES),
+  stepsPerFrame: 8,
+  cameraProjection: 0,
+  p0: 5.5,
+  packetSigma: 10.0,
+  spinS: 0.5,
+  sgGradient: DEFAULT_SG_GRADIENT,
   showCloud: 1,
+  cloudGain: 0.05,
+  showPhase: 0,
   showParticles: 1,
+  nParticles: 500,
+  dotSize: 10.0,
+  dotGain: 2.0,
   showTrail: 1,
-  showProjectedContour: 1,
-  showLevelsets: 0,
-  showFieldLines: 0,
+  trailHalfLife: 0.5,
 };
 
 const PRESETS = {
-  ground: {
+  "free-propagation": {
     params: {
       ...embeddedBasePreset,
-      eigenNx: 1,
-      eigenNy: 1,
-      eigenNz: 1,
-      bFieldStrength: 0,
-      spinS: 2,
-      showTrail: 1,
+      initialSpin: 1,
+      sgFieldOn: 0,
+      sgGradient: 0,
     },
-    adjustable: ["spinS", "nParticles","showPhase","showTrail"],
+    adjustable: ["initialSpin","showCloud","nParticles", "showParticles"],
   },
-  excited: {
+  "spin-up": {
     params: {
       ...embeddedBasePreset,
-      eigenNx: 2,
-      eigenNy: 1,
-      eigenNz: 2,
-      showPhase: 1,
-      bFieldStrength: 0,
-      spinS: 2,
+      initialSpin: 1,
+      sgFieldOn: 1,
+      sgGradient: DEFAULT_SG_GRADIENT,
     },
-    adjustable: [
-      "spinS",
-      "eigenQuantumNumbers",
-      "showPhase","showTrail"
-    ],
+    adjustable: ["sgGradient", "showCloud", "showParticles", "showTrail"],
   },
-  magnetic: {
+  "spin-split": {
     params: {
       ...embeddedBasePreset,
-      eigenNx: 1,
-      eigenNy: 1,
-      eigenNz: 1,
-      bFieldStrength: 0.01,
-      bFieldAxis: 0,
-      initialSpin: 0,
-      spinS: 2,
-      showPhase: 1,
-      showFieldLines: 1,
+      initialSpin: 1,
+      sgFieldOn: 1,
+      sgGradient: DEFAULT_SG_GRADIENT,
+      nParticles: 1200,
     },
-    adjustable: ["spinS", "initialSpin", "bFieldStrength", "bFieldAxis","eigenQuantumNumbers","showPhase",],
+    adjustable: ["sgGradient", "nParticles", "showCloud", "showParticles", "showTrail"],
   },
 };
 
@@ -157,9 +163,23 @@ const presetDefinition = PRESETS[preset];
 const adjustableControls = new Set(presetDefinition?.adjustable ?? []);
 if (presetDefinition) Object.assign(params, presetDefinition.params);
 
-function isControlFixed(key) {
+function isPresetLocked(key) {
   return Boolean(presetDefinition) && !adjustableControls.has(key);
 }
+
+const PALETTE_NAMES = [
+  "Nebula",
+  "Synthwave",
+  "Viridis-ish",
+  "Inferno-ish",
+  "Ice",
+  "Plasma Drift",
+  "Arctic Aurora",
+  "Solar Flare",
+  "Cosmic Dust",
+  "Neon Noir",
+  "Pastel Mirage"
+];
 
 const GUIDING_MODE_NAMES = [
   "Pauli spinor"
@@ -167,58 +187,14 @@ const GUIDING_MODE_NAMES = [
 
 const INITIAL_SPIN_NAMES = [
   "+Z",
-  "-Z",
-  "+X"
+  "Up+Down"
 ];
 
-const B_FIELD_AXIS_NAMES = [
-  "X",
-  "Y",
-  "Z"
-];
-
-const EQUIPOTENTIAL_LEVEL_COUNT = 9;
-const EQUIPOTENTIAL_LOG_RHO_MAX = -0.45;
-const EQUIPOTENTIAL_LOG_RHO_STEP = 0.83;
-const EQUIPOTENTIAL_SUBDIV = 3;
-const EQUIPOTENTIAL_LINE_WIDTH_PX = 3.0;
-const DRAW_COORDINATE_AXES = true;
-const COORDINATE_AXIS_OPACITY = 0.6;
-const COORDINATE_AXIS_SEGMENTS = 28;
-const COORDINATE_AXIS_SHAFT_RADIUS_FRACTION = 0.010;
-const COORDINATE_AXIS_HEAD_RADIUS_FRACTION = 0.032;
-const COORDINATE_AXIS_HEAD_LENGTH_FRACTION = 0.12;
-const CENTER_CUBE_IN_SCREENSPACE = true;
-const UI_SCENE_SCREEN_OFFSET_X =0.15;
-const INFO_OVERLAY_FONT_FAMILY = "OrbitronInfo";
-const INFO_OVERLAY_FONT_FILE = "./Orbitron-Medium.ttf";
-const INFO_OVERLAY_SIZE_MULTIPLIER = 2;
-const INFO_OVERLAY_WIDTH_CSS = 200 * INFO_OVERLAY_SIZE_MULTIPLIER;
-const INFO_OVERLAY_HEIGHT_CSS = 144 * INFO_OVERLAY_SIZE_MULTIPLIER;
-const INFO_OVERLAY_SCALE = 2;
-const INFO_OVERLAY_TEXTURE_WIDTH = INFO_OVERLAY_WIDTH_CSS * INFO_OVERLAY_SCALE;
-const INFO_OVERLAY_TEXTURE_HEIGHT = INFO_OVERLAY_HEIGHT_CSS * INFO_OVERLAY_SCALE;
-const INFO_OVERLAY_MARGIN_CSS = 18;
-const DRAW_INFO_OVERLAY_IN_WEBGPU = !isEmbedded;
+const SCENE_SCREEN_OFFSET_X = 0.15;
 
 let paused = false;
 let redrawPending = true;
 const PAUSED_IDLE_MS = 180;
-const infoOverlayCanvas = document.createElement("canvas");
-infoOverlayCanvas.width = INFO_OVERLAY_TEXTURE_WIDTH;
-infoOverlayCanvas.height = INFO_OVERLAY_TEXTURE_HEIGHT;
-Object.assign(infoOverlayCanvas.style, {
-  position: "absolute",
-  top: `${INFO_OVERLAY_MARGIN_CSS}px`,
-  right: `${INFO_OVERLAY_MARGIN_CSS}px`,
-  width: `${INFO_OVERLAY_WIDTH_CSS}px`,
-  height: `${INFO_OVERLAY_HEIGHT_CSS}px`,
-  display: "none",
-  pointerEvents: "none",
-  zIndex: "6",
-});
-document.getElementById("wrap")?.appendChild(infoOverlayCanvas);
-const infoOverlayCtx = infoOverlayCanvas.getContext("2d");
 
 function requestRedraw() {
   redrawPending = true;
@@ -233,24 +209,14 @@ const viewButtons = {
   YZ: document.getElementById("viewYZ"),
 };
 
-let simW = 0, simH = 0, simD = 0;
-let voxelCount = 0;
-
 function fmt(v) {
   const av = Math.abs(v);
   if (av >= 1000 || (av > 0 && av < 0.01)) return v.toExponential(2);
   return v.toFixed(3).replace(/\.?0+$/, "");
 }
 
-function selectedEigenMode() {
-  const nx = Math.max(1, Math.min(MAX_EIGEN_QUANTUM_NUMBER, Math.round(params.eigenNx)));
-  const ny = Math.max(1, Math.min(MAX_EIGEN_QUANTUM_NUMBER, Math.round(params.eigenNy)));
-  const nz = Math.max(1, Math.min(MAX_EIGEN_QUANTUM_NUMBER, Math.round(params.eigenNz)));
-  return { nx, ny, nz, key: nx * nx + ny * ny + nz * nz };
-}
-
 function addSlider(key, label, min, max, step, onChange = null) {
-  if (isControlFixed(key)) return;
+  if (isPresetLocked(key)) return null;
   const row = document.createElement("div");
   row.className = "row";
 
@@ -267,7 +233,6 @@ function addSlider(key, label, min, max, step, onChange = null) {
   const val = document.createElement("div");
   val.className = "val";
   val.textContent = fmt(params[key]);
-  if (key === "bFieldStrength") val.style.display = "none";
 
   input.addEventListener("input", () => {
     const v = parseFloat(input.value);
@@ -287,7 +252,7 @@ function addSlider(key, label, min, max, step, onChange = null) {
 }
 
 function addToggleInt(key, label, onChange = null) {
-  if (isControlFixed(key)) return;
+  if (isPresetLocked(key)) return null;
   const row = document.createElement("div");
   row.className = "row";
   const lab = document.createElement("label");
@@ -313,84 +278,8 @@ function addToggleInt(key, label, onChange = null) {
   controls.appendChild(row);
 }
 
-function addSpinCurrentToggle() {
-  if (isControlFixed("spinS")) return;
-  const row = document.createElement("div");
-  row.className = "row";
-
-  const lab = document.createElement("label");
-  lab.textContent = "Spin current";
-
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.style.flex = "1";
-
-  const sync = () => {
-    btn.textContent = params.spinS > 0 ? "ON" : "OFF";
-  };
-
-  btn.addEventListener("click", () => {
-    params.spinS = params.spinS > 0 ? 0 : 2;
-    sync();
-    requestTrailClear();
-    requestRedraw();
-  });
-
-  const val = document.createElement("div");
-  val.className = "val";
-  val.textContent = "";
-
-  row.appendChild(lab);
-  row.appendChild(btn);
-  row.appendChild(val);
-  controls.appendChild(row);
-  sync();
-}
-
-function addToggleButtonGroup(label, entries) {
-  const visibleEntries = entries.filter(([key]) => !isControlFixed(key));
-  if (visibleEntries.length === 0) return;
-  const row = document.createElement("div");
-  row.className = "row";
-
-  const lab = document.createElement("label");
-  lab.textContent = label;
-
-  const group = document.createElement("div");
-  group.className = "toggle-group";
-
-  const buttons = visibleEntries.map(([key, text]) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.textContent = text;
-    btn.addEventListener("click", () => {
-      params[key] = params[key] ? 0 : 1;
-      sync();
-      requestRedraw();
-    });
-    group.appendChild(btn);
-    return [key, btn];
-  });
-
-  const sync = () => {
-    for (const [key, btn] of buttons) {
-      btn.classList.toggle("selected", !!params[key]);
-    }
-  };
-
-  const val = document.createElement("div");
-  val.className = "val";
-  val.textContent = "";
-
-  row.appendChild(lab);
-  row.appendChild(group);
-  row.appendChild(val);
-  controls.appendChild(row);
-  sync();
-}
-
 function addCycleButton(key, label, values, onChange = null) {
-  if (isControlFixed(key)) return { button: null, sync() {} };
+  if (isPresetLocked(key)) return null;
   const row = document.createElement("div");
   row.className = "row";
 
@@ -423,126 +312,6 @@ function addCycleButton(key, label, values, onChange = null) {
   return { button: btn, sync };
 }
 
-function addSegmentedControl(key, label, values, onChange = null) {
-  if (isControlFixed(key)) return { sync() {} };
-  const row = document.createElement("div");
-  row.className = "row";
-
-  const lab = document.createElement("label");
-  lab.textContent = label;
-
-  const group = document.createElement("div");
-  group.className = "toggle-group";
-
-  const buttons = values.map((value, index) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.textContent = value;
-    btn.style.whiteSpace = "nowrap";
-    btn.addEventListener("click", () => {
-      params[key] = index;
-      sync();
-      if (onChange) onChange(index);
-      requestRedraw();
-    });
-    group.appendChild(btn);
-    return btn;
-  });
-
-  const sync = () => {
-    const selected = params[key] | 0;
-    buttons.forEach((btn, index) => btn.classList.toggle("selected", index === selected));
-  };
-
-  const val = document.createElement("div");
-  val.className = "val";
-  val.textContent = "";
-
-  row.appendChild(lab);
-  row.appendChild(group);
-  row.appendChild(val);
-  controls.appendChild(row);
-  sync();
-  return { sync };
-}
-
-function addEigenQuantumPicker(onChange = null) {
-  if (isControlFixed("eigenQuantumNumbers")) return { sync() {} };
-  const row = document.createElement("div");
-  row.className = "row";
-
-  const lab = document.createElement("label");
-  lab.textContent = "quantum numbers";
-
-  const picker = document.createElement("div");
-  picker.style.display = "grid";
-  picker.style.gridTemplateColumns = "repeat(3, minmax(0, 1fr))";
-  picker.style.gap = "12px 46px";
-  picker.style.flex = "1";
-
-  const selectEntries = [
-    ["eigenNx", "nx"],
-    ["eigenNy", "ny"],
-    ["eigenNz", "nz"],
-  ];
-
-  const selects = selectEntries.map(([key, label]) => {
-    const cell = document.createElement("div");
-    cell.style.minWidth = "40px";
-
-    const caption = document.createElement("div");
-    caption.textContent = label;
-    caption.style.fontSize = "10px";
-    caption.style.color = "#aaa";
-    caption.style.textAlign = "center";
-    caption.style.marginBottom = "2px";
-
-    const select = document.createElement("select");
-    select.title = `${label} quantum number`;
-    select.style.width = "100%";
-    select.style.padding = "6px 4px";
-    select.style.borderRadius = "6px";
-    select.style.border = "1px solid rgba(255,255,255,0.2)";
-    select.style.background = "rgba(0,0,0,0.55)";
-    select.style.color = "#fff";
-    select.style.fontVariantNumeric = "tabular-nums";
-    select.style.textAlign = "center";
-    for (let n = 1; n <= MAX_EIGEN_QUANTUM_NUMBER; n++) {
-      const option = document.createElement("option");
-      option.value = String(n);
-      option.textContent = String(n);
-      select.appendChild(option);
-    }
-    select.addEventListener("change", () => {
-      params[key] = parseInt(select.value, 10);
-      sync();
-      if (onChange) onChange();
-      requestRedraw();
-    });
-    cell.appendChild(caption);
-    cell.appendChild(select);
-    picker.appendChild(cell);
-    return [key, select];
-  });
-
-  const val = document.createElement("div");
-  val.className = "val";
-  val.style.display = "90px";
-
-  const sync = () => {
-    for (const [key, select] of selects) {
-      select.value = String(Math.max(1, Math.min(MAX_EIGEN_QUANTUM_NUMBER, Math.round(params[key]))));
-    }
-  };
-
-  row.appendChild(lab);
-  row.appendChild(picker);
-  row.appendChild(val);
-  controls.appendChild(row);
-  sync();
-  return { sync };
-}
-
 function addSectionHeader(label) {
   const header = document.createElement("div");
   header.className = "control-section-header";
@@ -557,16 +326,7 @@ function addSectionHeader(label) {
   controls.appendChild(header);
 }
 
-function removeEmptySectionHeaders() {
-  const children = [...controls.children];
-  children.forEach((child, index) => {
-    if (!child.classList.contains("control-section-header")) return;
-    const next = children[index + 1];
-    if (!next || next.classList.contains("control-section-header")) child.remove();
-  });
-}
-
-addSlider("simRes", "grid size", 32, MAX_SIM_RES, 4, () => rebuildSimulation());
+addSlider("simRes", "sim resolution", 64, MAX_SIM_RES, 4, () => rebuildSimulation());
 addSlider("stepsPerFrame", "Steps/frame", 1, 30, 1);
 addSlider("dt", "dt", 0.002, 0.02, 0.002);
 
@@ -577,70 +337,62 @@ const cameraProjectionControl = addCycleButton("cameraProjection", "camera view"
 });
 
 addSectionHeader("Physical Parameters");
-addSpinCurrentToggle();
-addSegmentedControl("initialSpin", "Spin", INITIAL_SPIN_NAMES, () => resetAll());
-addSlider("bFieldStrength", "B strength", 0.0, 0.05, 0.001);
-addSegmentedControl("bFieldAxis", "B direction", B_FIELD_AXIS_NAMES, () => {
-  rebuildMagneticFieldLines();
-});
-const eigenQuantumPicker = addEigenQuantumPicker(() => resetAll());
+addSlider("p0", "momentum p", 0., 6.0, 0.1, () => resetAll());
+
+addSlider("packetSigma", "packet sigma", 4.0, 14.0, 0.5, () => resetAll());
+addSlider("spinS", "spin strength", 0.0, 2.0, 0.5);
+addCycleButton("initialSpin", "initial spin", INITIAL_SPIN_NAMES, () => resetAll());
+addToggleInt("sgFieldOn", "SG z-gradient", () => requestTrailClear());
+addSlider("sgGradient", "SG strength", 0.0, 9.9, 0.002, () => requestTrailClear());
 
 
 addSectionHeader("Visual Parameters");
 addToggleInt("showCloud", "density cloud");
+addSlider("cloudGain", "cloud density", 0.1, 2.0, 0.1);
 addToggleInt("showPhase", "show phase");
-addToggleButtonGroup("contours", [
-  ["showProjectedContour", "floor contours"],
-  ["showLevelsets", "Levelsets"],
-]);
-addToggleInt("showFieldLines", "B streamlines");
-addSlider("cloudGain", "cloud density", 0.005, 0.05, 0.005);
 
 addToggleInt("showParticles", "show particles");
-addSlider("nParticles", "particle count", 1, 301, 10, () => rebuildParticles());
-
-addSlider("dotSize", "particle size", 2.0, 26.0, 0.5);
+addSlider("nParticles", "particle count", 1, 3001, 100, () => rebuildParticles());
+addSlider("dotSize", "particle size", 2.0, 26.0, 1);
 addSlider("dotGain", "particle brightness", 0.1, 5.0, 0.1);
 
 addToggleInt("showTrail", "draw trails");
 addSlider("trailHalfLife", "trail half-life", .1, 10.0, .1);
-//addSlider("trailVisGain", "trail gain", 0.1, 1.0, 0.1);
-//addSlider("trailVisGamma", "trail gamma", 0.4, 2.0, 0.05);
-addSlider("trailWidth", "trail width", 1, 15.0, 1);
 
-removeEmptySectionHeaders();
+document.querySelectorAll(".control-section-header").forEach((header) => {
+  const next = header.nextElementSibling;
+  if (!next || next.classList.contains("control-section-header")) header.remove();
+});
 
 document.getElementById("reset").onclick = () => resetAll();
 const pauseButton = document.getElementById("pause");
-
-function setPaused(nextPaused) {
-  paused = Boolean(nextPaused);
+function syncPauseButton() {
   pauseButton.textContent = paused ? "Resume" : "Pause";
+}
+function setPaused(nextPaused) {
+  const next = Boolean(nextPaused);
+  if (paused === next) return;
+  paused = next;
+  syncPauseButton();
   requestRedraw();
 }
-
-function togglePause() {
+pauseButton.onclick = () => {
   setPaused(!paused);
-}
+};
 
-pauseButton.onclick = togglePause;
+window.addEventListener("message", (event) => {
+  if (!isEmbedded || event.origin !== window.location.origin) return;
+  if (event.data?.type === "qontic:set-paused") setPaused(event.data.paused);
+});
 
 window.addEventListener("keydown", (e) => {
   if (e.key.toLowerCase() === "r") resetAll();
   if (e.key === " ") {
     e.preventDefault();
-    togglePause();
+    setPaused(!paused);
   }
   handleCameraKey(e);
 });
-
-if (isEmbedded) {
-  window.addEventListener("message", (event) => {
-    if (event.origin !== window.location.origin) return;
-    if (event.data?.type !== "qontic:set-paused" || !event.data.paused) return;
-    setPaused(true);
-  });
-}
 
 window.addEventListener("keyup", (e) => {
   handleCameraKeyUp(e);
@@ -671,10 +423,9 @@ if (explainPanel && explainToggle) {
 
 const COLOR_WRITE_RED = 0x1;
 const COLOR_WRITE_ALL = 0xf;
-const UNIFORM_FLOATS = 76;
+const UNIFORM_FLOATS = 80;
 const UNIFORM_BYTES = UNIFORM_FLOATS * 4;
 const DENSITY_FORMAT = "rgba16float";
-
 const uniformData = new Float32Array(UNIFORM_FLOATS);
 const uniformBuffer = device.createBuffer({
   label: "main uniforms",
@@ -686,51 +437,78 @@ const trailUniformBuffer = device.createBuffer({
   size: UNIFORM_BYTES,
   usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
-const infoOverlayUniformData = new Float32Array(8);
-const infoOverlayUniformBuffer = device.createBuffer({
-  label: "info overlay uniforms",
-  size: infoOverlayUniformData.byteLength,
-  usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-});
-const infoOverlayTexture = device.createTexture({
-  label: "info overlay texture",
-  size: [INFO_OVERLAY_TEXTURE_WIDTH, INFO_OVERLAY_TEXTURE_HEIGHT],
-  format: "rgba8unorm",
-  usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
-});
-const infoOverlayTextureView = infoOverlayTexture.createView();
-const infoOverlaySampler = device.createSampler({
-  magFilter: "linear",
-  minFilter: "linear",
-});
 
-const {
-  WAVE_INIT_WGSL,
-  WAVE_STEP_WGSL,
-  PARTICLE_UPDATE_WGSL,
-  CLOUD_WGSL,
-  PARTICLE_RENDER_WGSL,
-  DENSITY_WGSL,
-  BOX_SHELL_WGSL,
-  AXIS_ARROW_WGSL,
-  FIELD_LINE_WGSL,
-  EQUIPOTENTIAL_WGSL,
-  EQUIPOTENTIAL_LEVELSET_WGSL,
-  INFO_OVERLAY_WGSL,
-} = await createShaderSources({ WAVE_WORKGROUP_SIZE, PARTICLE_WORKGROUP_SIZE });
+const SHADER_FILES = {
+  common: "./shaders/common.wgsl",
+  palette: "./shaders/palette.wgsl",
+  waveInit: "./shaders/wave-init.wgsl",
+  waveStep: "./shaders/wave-step.wgsl",
+  particleUpdate: "./shaders/particle-update.wgsl",
+  cloud: "./shaders/cloud.wgsl",
+  particleRender: "./shaders/particle-render.wgsl",
+  density: "./shaders/density.wgsl",
+  boxShell: "./shaders/box-shell.wgsl",
+  line: "./shaders/line.wgsl",
+  fieldLine: "./shaders/field-line.wgsl",
+  detectorPlate: "./shaders/detector-plate.wgsl",
+};
+
+function applyShaderConstants(source) {
+  return source
+    .replaceAll("${WAVE_WORKGROUP_SIZE}", String(WAVE_WORKGROUP_SIZE))
+    .replaceAll("${PARTICLE_WORKGROUP_SIZE}", String(PARTICLE_WORKGROUP_SIZE));
+}
+
+async function fetchShader(path) {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error(`Could not load shader ${path}: ${response.status} ${response.statusText}`);
+  return applyShaderConstants(await response.text());
+}
+
+async function loadShaders() {
+  const entries = await Promise.all(
+    Object.entries(SHADER_FILES).map(async ([name, path]) => [name, await fetchShader(path)])
+  );
+  const parts = Object.fromEntries(entries);
+  return {
+    waveInit: parts.common + parts.waveInit,
+    waveStep: parts.common + parts.waveStep,
+    particleUpdate: parts.common + parts.particleUpdate,
+    cloud: parts.common + parts.palette + parts.cloud,
+    particleRender: parts.common + parts.particleRender,
+    density: parts.common + parts.density,
+    boxShell: parts.common + parts.boxShell,
+    line: parts.common + parts.line,
+    fieldLine: parts.common + parts.fieldLine,
+    detectorPlate: parts.common + parts.detectorPlate,
+  };
+}
+
+const SHADERS = await loadShaders();
+const WAVE_INIT_WGSL = SHADERS.waveInit;
+const WAVE_STEP_WGSL = SHADERS.waveStep;
+const PARTICLE_UPDATE_WGSL = SHADERS.particleUpdate;
+const CLOUD_WGSL = SHADERS.cloud;
+const PARTICLE_RENDER_WGSL = SHADERS.particleRender;
+const DENSITY_WGSL = SHADERS.density;
+const BOX_SHELL_WGSL = SHADERS.boxShell;
+const LINE_WGSL = SHADERS.line;
+const FIELD_LINE_WGSL = SHADERS.fieldLine;
+const DETECTOR_PLATE_WGSL = SHADERS.detectorPlate;
 let pipelineWaveInit, pipelineWaveStep, pipelineParticleUpdate;
-let pipelineCloud, pipelineEquipotential, pipelineLevelsets, pipelineBoxShell, pipelineAxisArrow, pipelineFieldLine;
+let pipelineCloud, pipelineBoxShell, pipelineLine, pipelineFieldLine, pipelineDetectorPlate;
 let pipelineParticleRender, pipelineParticleStamp;
 let pipelineDensityFade, pipelineDensityRenderAdd, pipelineDensityRenderScreen, pipelineDensityRenderGlow;
-let pipelineInfoOverlay;
 let nearestSampler = device.createSampler({ magFilter: "nearest", minFilter: "nearest" });
 
+let simW = 0, simH = 0, simD = 0;
+let voxelCount = 0;
 let waveBufferA = null, waveBufferB = null, flip = 0;
 let simTime = 0;
 
 let particleSrc = null, particleDst = null, particleFlip = 0;
+let boxBuffer = null, boxVertexCount = 0;
 let boxShellBuffer = null, boxShellVertexCount = 0;
-let axisArrowBuffer = null, axisArrowVertexCount = 0;
 let fieldLineBuffer = null, fieldLineVertexCount = 0;
 
 let densW = 0, densH = 0;
@@ -740,17 +518,15 @@ let trailClearPending = false;
 let waveInitBindGroups = [];
 let waveStepBindGroups = [];
 let cloudBindGroups = [];
-let equipotentialBindGroups = [];
-let levelsetBindGroups = [];
 let particleUpdateBindGroups = [];
 let particleRenderBindGroups = [];
 let particleStampBindGroups = [];
 let densityFadeBindGroups = [];
 let densityRenderBindGroups = [];
 let boxShellBindGroup = null;
-let axisArrowBindGroup = null;
+let lineBindGroup = null;
 let fieldLineBindGroup = null;
-let infoOverlayBindGroup = null;
+let detectorPlateBindGroup = null;
 
 function shaderModule(label, code) {
   return device.createShaderModule({ label, code });
@@ -795,8 +571,6 @@ function deleteWaveTargets() {
   waveInitBindGroups = [];
   waveStepBindGroups = [];
   cloudBindGroups = [];
-  equipotentialBindGroups = [];
-  levelsetBindGroups = [];
   particleUpdateBindGroups = [];
 }
 
@@ -823,11 +597,9 @@ function buildPipelines() {
   const particleModule = shaderModule("particle render", PARTICLE_RENDER_WGSL);
   const densityModule = shaderModule("density", DENSITY_WGSL);
   const boxShellModule = shaderModule("box shell", BOX_SHELL_WGSL);
-  const axisArrowModule = shaderModule("coordinate axis arrows", AXIS_ARROW_WGSL);
-  const fieldLineModule = shaderModule("uniform magnetic field lines", FIELD_LINE_WGSL);
-  const equipotentialModule = shaderModule("equipotential", EQUIPOTENTIAL_WGSL);
-  const levelsetModule = shaderModule("equipotential levelsets", EQUIPOTENTIAL_LEVELSET_WGSL);
-  const infoOverlayModule = shaderModule("info overlay", INFO_OVERLAY_WGSL);
+  const lineModule = shaderModule("line", LINE_WGSL);
+  const fieldLineModule = shaderModule("SG field lines", FIELD_LINE_WGSL);
+  const detectorPlateModule = shaderModule("detector plate", DETECTOR_PLATE_WGSL);
 
   pipelineWaveInit = device.createComputePipeline({
     label: "wave init pipeline",
@@ -953,31 +725,31 @@ function buildPipelines() {
     },
     primitive: { topology: "triangle-list" },
   });
-  pipelineAxisArrow = device.createRenderPipeline({
-    label: "coordinate axis arrow pipeline",
+
+  pipelineLine = device.createRenderPipeline({
+    label: "box line pipeline",
     layout: "auto",
     vertex: {
-      module: axisArrowModule,
+      module: lineModule,
       entryPoint: "vs",
       buffers: [{
-        arrayStride: 40,
+        arrayStride: 16,
         attributes: [
           { shaderLocation: 0, offset: 0, format: "float32x3" },
-          { shaderLocation: 1, offset: 12, format: "float32x3" },
-          { shaderLocation: 2, offset: 24, format: "float32x4" },
+          { shaderLocation: 1, offset: 12, format: "float32" },
         ],
       }],
     },
     fragment: {
-      module: axisArrowModule,
+      module: lineModule,
       entryPoint: "fs",
       targets: [{ format: presentationFormat, blend: blendState("src-alpha", "one-minus-src-alpha"), writeMask: COLOR_WRITE_ALL }],
     },
-    primitive: { topology: "triangle-list", cullMode: "back" },
+    primitive: { topology: "line-list" },
   });
 
   pipelineFieldLine = device.createRenderPipeline({
-    label: "uniform magnetic field line pipeline",
+    label: "SG field line pipeline",
     layout: "auto",
     vertex: {
       module: fieldLineModule,
@@ -1001,34 +773,12 @@ function buildPipelines() {
     primitive: { topology: "triangle-list" },
   });
 
-  pipelineEquipotential = device.createRenderPipeline({
-    label: "equipotential pipeline",
+  pipelineDetectorPlate = device.createRenderPipeline({
+    label: "detector plate pipeline",
     layout: "auto",
-    vertex: { module: equipotentialModule, entryPoint: "vs" },
+    vertex: { module: detectorPlateModule, entryPoint: "vs" },
     fragment: {
-      module: equipotentialModule,
-      entryPoint: "fs",
-      targets: [{ format: presentationFormat, blend: blendState("src-alpha", "one-minus-src-alpha"), writeMask: COLOR_WRITE_ALL }],
-    },
-    primitive: { topology: "triangle-list" },
-  });
-  pipelineLevelsets = device.createRenderPipeline({
-    label: "equipotential levelset pipeline",
-    layout: "auto",
-    vertex: { module: levelsetModule, entryPoint: "vs" },
-    fragment: {
-      module: levelsetModule,
-      entryPoint: "fs",
-      targets: [{ format: presentationFormat, blend: blendState("src-alpha", "one-minus-src-alpha"), writeMask: COLOR_WRITE_ALL }],
-    },
-    primitive: { topology: "triangle-list" },
-  });
-  pipelineInfoOverlay = device.createRenderPipeline({
-    label: "info overlay pipeline",
-    layout: "auto",
-    vertex: { module: infoOverlayModule, entryPoint: "vs" },
-    fragment: {
-      module: infoOverlayModule,
+      module: detectorPlateModule,
       entryPoint: "fs",
       targets: [{ format: presentationFormat, blend: blendState("src-alpha", "one-minus-src-alpha"), writeMask: COLOR_WRITE_ALL }],
     },
@@ -1036,13 +786,9 @@ function buildPipelines() {
   });
 
   boxShellBindGroup = bindGroup(pipelineBoxShell, [{ binding: 0, resource: { buffer: uniformBuffer } }]);
-  axisArrowBindGroup = bindGroup(pipelineAxisArrow, [{ binding: 0, resource: { buffer: uniformBuffer } }]);
+  lineBindGroup = bindGroup(pipelineLine, [{ binding: 0, resource: { buffer: uniformBuffer } }]);
   fieldLineBindGroup = bindGroup(pipelineFieldLine, [{ binding: 0, resource: { buffer: uniformBuffer } }]);
-  infoOverlayBindGroup = bindGroup(pipelineInfoOverlay, [
-    { binding: 0, resource: { buffer: infoOverlayUniformBuffer } },
-    { binding: 1, resource: infoOverlayTextureView },
-    { binding: 2, resource: infoOverlaySampler },
-  ]);
+  detectorPlateBindGroup = bindGroup(pipelineDetectorPlate, [{ binding: 0, resource: { buffer: uniformBuffer } }]);
 }
 
 function makeBuffer(label, data, usage) {
@@ -1106,26 +852,6 @@ function rebuildWaveBindGroups() {
       { binding: 1, resource: { buffer: waveBufferB } },
     ]),
   ];
-  equipotentialBindGroups = [
-    bindGroup(pipelineEquipotential, [
-      { binding: 0, resource: { buffer: uniformBuffer } },
-      { binding: 1, resource: { buffer: waveBufferA } },
-    ]),
-    bindGroup(pipelineEquipotential, [
-      { binding: 0, resource: { buffer: uniformBuffer } },
-      { binding: 1, resource: { buffer: waveBufferB } },
-    ]),
-  ];
-  levelsetBindGroups = [
-    bindGroup(pipelineLevelsets, [
-      { binding: 0, resource: { buffer: uniformBuffer } },
-      { binding: 1, resource: { buffer: waveBufferA } },
-    ]),
-    bindGroup(pipelineLevelsets, [
-      { binding: 0, resource: { buffer: uniformBuffer } },
-      { binding: 1, resource: { buffer: waveBufferB } },
-    ]),
-  ];
   rebuildParticleBindGroups();
 }
 
@@ -1169,46 +895,46 @@ function dispatchCount(count, groupSize) {
   return Math.ceil(count / groupSize);
 }
 
-function selectedEigenEnergy(mode = selectedEigenMode()) {
-  const sx = simW || Math.floor(params.simRes);
-  const sy = simH || Math.floor(params.simRes);
-  const sz = simD || Math.floor(params.simRes);
-  const lx = Math.max(1, sx - 1);
-  const ly = Math.max(1, sy - 1);
-  const lz = Math.max(1, sz - 1);
-  const scale = params.hbar * params.hbar * Math.PI * Math.PI / (2 * Math.max(1e-6, params.mass));
-  return scale * (
-    (mode.nx * mode.nx) / (lx * lx) +
-    (mode.ny * mode.ny) / (ly * ly) +
-    (mode.nz * mode.nz) / (lz * lz)
-  );
-}
-
 function writeUniforms(buffer, camera, viewportW, viewportH, densityFade = 1.0, densitySizeScale = 1.0) {
   uniformData.fill(0);
-  const mode = selectedEigenMode();
-  const fieldActive = params.bFieldStrength > 0 ? 1 : 0;
-  const stationaryPhase = fieldActive
-    ? 0
-    : (simTime * selectedEigenEnergy(mode) / Math.max(1e-6, params.hbar)) % (2 * Math.PI);
   uniformData.set([simW, simH, simD, voxelCount], 0);
-  uniformData.set([params.hbar, params.mass, stationaryPhase, params.dt], 4);
-  uniformData.set([params.cloudGain, params.cloudGamma, params.cloudLowBoost, params.cloudCutoff], 8);
-  uniformData.set([params.cloudPointSize, params.showPhase, 0, params.boxScale], 12);
-  uniformData.set([params.dotSize, params.dotSigma, params.dotGain, params.spinS], 16);
-  uniformData.set([params.rhoMin, params.velClamp, Math.floor(params.nParticles), params.trailWidth], 20);
-  uniformData.set([camera.eye[0], camera.eye[1], camera.eye[2], camera.distance], 24);
-  uniformData.set([viewportW, viewportH, params.cameraProjection | 0, params.trailStampGain], 28);
-  uniformData.set([EQUIPOTENTIAL_LEVEL_COUNT, EQUIPOTENTIAL_SUBDIV, EQUIPOTENTIAL_LOG_RHO_MAX, EQUIPOTENTIAL_LOG_RHO_STEP], 32);
-  uniformData.set([params.rhoMin, 0.0, EQUIPOTENTIAL_LINE_WIDTH_PX, params.trailVisGain], 36);
-  uniformData.set([params.trailVisGamma, params.trailBlendMode | 0, densityFade, densitySizeScale], 40);
-  uniformData.set(fieldActive ? [0.82, 0.34, 0.28, 0.30] : [0.38, 0.72, 0.68, 0.22], 44);
+  uniformData.set([params.hbar, params.mass, params.p0, params.dt], 4);
+  uniformData.set([params.packetX, params.packetY, params.packetZ, params.packetSigma], 8);
+  uniformData.set([params.cloudGain, params.cloudGamma, params.cloudLowBoost, params.cloudCutoff], 12);
+  uniformData.set([params.cloudPointSize, params.showPhase, params.paletteId | 0, params.boxScale], 16);
+  uniformData.set([params.dotSize, params.dotSigma, params.dotGain, params.spinS], 20);
+  uniformData.set([params.rhoMin, params.velClamp, Math.floor(params.nParticles), params.trailWidth], 24);
+  uniformData.set([camera.eye[0], camera.eye[1], camera.eye[2], camera.distance], 28);
+  uniformData.set([viewportW, viewportH, params.cameraProjection | 0, params.trailStampGain], 32);
+  uniformData.set([detectorPlateXGrid(), 1.0, 0.0, 0.0], 36);
+  uniformData.set([0.0, 0.0, 0.0, params.trailVisGain], 40);
+  uniformData.set([params.trailVisGamma, params.trailBlendMode | 0, densityFade, densitySizeScale], 44);
+  const sgTint = params.sgFieldOn && params.sgGradient > 0 ? 1 : 0;
+  uniformData.set(sgTint ? [0.82, 0.34, 0.28, 0.30] : [0.38, 0.72, 0.68, 0.22], 48);
   const boxCenter = boxCenterWorld();
-  uniformData.set([boxCenter[0], boxCenter[1], boxCenter[2], 0.0], 48);
-  uniformData.set([params.bFieldStrength, fieldActive, params.initialSpin | 0, params.bFieldAxis | 0], 52);
-  uniformData.set([0.0, mode.nx, mode.ny, mode.nz], 56);
-  uniformData.set(camera.viewProj, 60);
+  uniformData.set([boxCenter[0], boxCenter[1], boxCenter[2], 0.0], 52);
+  const sgStrength = params.sgFieldOn ? params.sgGradient : 0.0;
+  uniformData.set([sgStrength, params.sgFieldOn ? 1.0 : 0.0, params.initialSpin | 0, 0.0], 56);
+  uniformData.set([visualPacketCenterX(), 0.0, 0.0, 0.0], 60);
+  uniformData.set(camera.viewProj, 64);
   device.queue.writeBuffer(buffer, 0, uniformData);
+}
+
+function effectivePeriodicP0() {
+  if (simW <= 1 || params.hbar <= 0) return params.p0;
+  const period = simW - 1;
+  const mode = Math.round((params.p0 / params.hbar) * period / (2 * Math.PI));
+  return params.hbar * mode * 2 * Math.PI / period;
+}
+
+function visualPacketCenterX() {
+  if (simW <= 1) return 0;
+  const x0 = params.packetX * (simW - 1);
+  return x0 + (effectivePeriodicP0() / Math.max(1e-6, params.mass)) * simTime;
+}
+
+function detectorPlateXGrid() {
+  return 2.0 * Math.max(1, simW - 1);
 }
 
 function worldFromGrid(p) {
@@ -1313,15 +1039,23 @@ function boxCenterWorld() {
   ]);
 }
 
+function cameraLookAtWorld() {
+  return worldFromGrid([
+    simW - 1,
+    0.5 * (simH - 1),
+    0.5 * (simD - 1),
+  ]);
+}
+
 const cameraOrbit = {
-  yaw: -2.22 + Math.PI * 0.5,
+  yaw: -2.22,
   pitch: 0.43,
   distance: 1,
 };
 const KEYBOARD_YAW_CENTER = -Math.PI * 0.5;
 const KEYBOARD_YAW_LIMIT = Math.PI * 0.5;
-const KEYBOARD_ORBIT_SPEED = .5;
-const KEYBOARD_ZOOM_SPEED = .3;
+const KEYBOARD_ORBIT_SPEED = .6;
+const KEYBOARD_ZOOM_SPEED = .5;
 const cameraTarget = {
   yaw: cameraOrbit.yaw,
   pitch: cameraOrbit.pitch,
@@ -1355,7 +1089,7 @@ function cameraDistanceBounds() {
   const n = Math.max(simW, simH, simD) * params.boxScale;
   return {
     n,
-    min: 0.65 * n,
+    min: 0.325 * n,
     max: 5.0 * n,
   };
 }
@@ -1367,7 +1101,7 @@ function clampCameraDistance(distance) {
 }
 
 function syncCameraUi() {
-  cameraProjectionControl.sync();
+  cameraProjectionControl?.sync();
   for (const [key, btn] of Object.entries(viewButtons)) {
     if (!btn) continue;
     btn.classList.toggle("selected", params.cameraProjection === 1 && activeOrthoView === key);
@@ -1499,7 +1233,7 @@ function hasActiveCameraKeys() {
 function updateCameraKeyMotion(dtSeconds) {
   if (!hasActiveCameraKeys() || dtSeconds <= 0) return false;
 
-  const horizontal = -(pressedCameraKeys.has("KeyA") ? 1 : 0) + (pressedCameraKeys.has("KeyD") ? 1 : 0);
+  const horizontal = -(pressedCameraKeys.has("KeyA") ? 1 : 0) +(pressedCameraKeys.has("KeyD") ? 1 : 0);
   const vertical = -(pressedCameraKeys.has("KeyS") ? 1 : 0) + (pressedCameraKeys.has("KeyW") ? 1 : 0);
   const zoom = -(pressedCameraKeys.has("KeyE") ? 1 : 0) + (pressedCameraKeys.has("KeyQ") ? 1 : 0);
 
@@ -1549,20 +1283,13 @@ canvas.addEventListener("pointercancel", (e) => {
 });
 
 canvas.addEventListener("wheel", (e) => {
+  if (isEmbedded) return;
   e.preventDefault();
-  if (isEmbedded) {
-    try {
-      window.top.scrollBy(e.deltaX, e.deltaY);
-    } catch {
-      // Cross-origin hosts retain the browser's default iframe behavior.
-    }
-    return;
-  }
   applyCameraZoomDelta(e.deltaY);
 }, { passive: false });
 
 function cameraFrame() {
-  const target = boxCenterWorld();
+  const target = cameraLookAtWorld();
   const n = Math.max(simW, simH, simD) * params.boxScale;
   cameraOrbit.distance = clampCameraDistance(cameraOrbit.distance);
   cameraTarget.distance = clampCameraDistance(cameraTarget.distance);
@@ -1581,7 +1308,7 @@ function cameraFrame() {
   ];
   const aspect = Math.max(1e-3, canvas.width / Math.max(1, canvas.height));
   const view = mat4LookAt(eye, target, up);
-  const fovy = 36 * Math.PI / 180;
+  const fovy = 40 * Math.PI / 180;
   let proj;
   if ((params.cameraProjection | 0) === 1) {
     const halfH = Math.tan(fovy * 0.5) * cameraOrbit.distance;
@@ -1590,8 +1317,7 @@ function cameraFrame() {
   } else {
     proj = mat4Perspective(fovy, aspect, 0.04 * n, 8.0 * n);
   }
-  const screenOffsetX = CENTER_CUBE_IN_SCREENSPACE ? 0 : UI_SCENE_SCREEN_OFFSET_X;
-  const viewProj = mat4Mul(mat4ClipOffset(screenOffsetX, 0), mat4Mul(proj, view));
+  const viewProj = mat4Mul(mat4ClipOffset(SCENE_SCREEN_OFFSET_X, 0), mat4Mul(proj, view));
   return {
     viewProj,
     eye,
@@ -1709,40 +1435,11 @@ function waveStep(pass) {
   flip = 1 - flip;
 }
 
-function shouldUpdateWave() {
-  return params.bFieldStrength > 0;
-}
-
-function shouldUpdateParticles() {
-  return Math.floor(params.nParticles) > 0 && (params.spinS > 0 || params.bFieldStrength > 0);
-}
-
-function eigenDensityAtGrid(x, y, z, mode) {
-  const lx = Math.max(1, simW - 1);
-  const ly = Math.max(1, simH - 1);
-  const lz = Math.max(1, simD - 1);
-  if (x <= 0 || y <= 0 || z <= 0 || x >= lx || y >= ly || z >= lz) return 0;
-  const sx = Math.sin(Math.PI * mode.nx * x / lx);
-  const sy = Math.sin(Math.PI * mode.ny * y / ly);
-  const sz = Math.sin(Math.PI * mode.nz * z / lz);
-  return sx * sx * sy * sy * sz * sz;
-}
-
-function sampleEigenParticle(mode) {
-  const lx = Math.max(1, simW - 1);
-  const ly = Math.max(1, simH - 1);
-  const lz = Math.max(1, simD - 1);
-  for (let attempt = 0; attempt < 10000; attempt++) {
-    const x = Math.random() * lx;
-    const y = Math.random() * ly;
-    const z = Math.random() * lz;
-    if (Math.random() <= eigenDensityAtGrid(x, y, z, mode)) return [x, y, z];
-  }
-  return [
-    (0.1 + 0.8 * Math.random()) * lx,
-    (0.1 + 0.8 * Math.random()) * ly,
-    (0.1 + 0.8 * Math.random()) * lz,
-  ];
+function randn() {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 
 function rebuildParticles() {
@@ -1752,10 +1449,16 @@ function rebuildParticles() {
   destroyGpuResource(particleDst);
 
   const data = new Float32Array(n * 4);
-  const eigenMode = selectedEigenMode();
+
+  const sigma1D = params.packetSigma / Math.sqrt(2);
+  const x0 = params.packetX * (simW - 1);
+  const y0 = params.packetY * (simH - 1);
+  const z0 = params.packetZ * (simD - 1);
 
   for (let i = 0; i < n; i++) {
-    let [x, y, z] = sampleEigenParticle(eigenMode);
+    let x = x0 + randn() * sigma1D;
+    let y = y0 + randn() * sigma1D;
+    let z = z0 + randn() * sigma1D;
     x = Math.max(0, Math.min(simW - 1, x));
     y = Math.max(0, Math.min(simH - 1, y));
     z = Math.max(0, Math.min(simD - 1, z));
@@ -1773,7 +1476,7 @@ function rebuildParticles() {
 
 function particleUpdate(pass) {
   const n = Math.floor(params.nParticles);
-  if (!shouldUpdateParticles()) return;
+  if (n <= 0) return;
   pass.setPipeline(pipelineParticleUpdate);
   pass.setBindGroup(0, particleUpdateBindGroups[flip][particleFlip]);
   pass.dispatchWorkgroups(dispatchCount(n, PARTICLE_WORKGROUP_SIZE));
@@ -1852,176 +1555,7 @@ function densityStepAndStamp(encoder, camera) {
   densFlip = 1 - densFlip;
 }
 
-function equipotentialVertexCount(sliceCount = 1) {
-  if (simW < 2 || simH < 2) return 0;
-  const subcellsPerCell = EQUIPOTENTIAL_SUBDIV * EQUIPOTENTIAL_SUBDIV;
-  return (simW - 1) * (simH - 1) * subcellsPerCell * EQUIPOTENTIAL_LEVEL_COUNT * sliceCount * 12;
-}
-
-function levelsetVertexCount() {
-  return equipotentialVertexCount(selectedEigenMode().nz);
-}
-
-async function loadInfoOverlayFont() {
-  if (typeof FontFace === "undefined" || !document.fonts) return;
-  try {
-    const font = new FontFace(INFO_OVERLAY_FONT_FAMILY, `url("${INFO_OVERLAY_FONT_FILE}")`);
-    document.fonts.add(await font.load());
-  } catch (error) {
-    console.warn("Could not load info overlay font:", error);
-  }
-}
-
-function roundedRectPath(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  if (typeof ctx.roundRect === "function") {
-    ctx.roundRect(x, y, w, h, r);
-    return;
-  }
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-}
-
-function drawInfoStatusPill(ctx, text, x, y, active) {
-  const s = INFO_OVERLAY_SIZE_MULTIPLIER;
-  const w = 44 * s;
-  const h = 18 * s;
-  roundedRectPath(ctx, x, y - h + 3 * s, w, h, 9 * s);
-  ctx.fillStyle = active ? "rgba(255, 185, 52, 0.20)" : "rgba(116, 134, 143, 0.18)";
-  ctx.fill();
-  ctx.strokeStyle = active ? "rgba(255, 203, 88, 0.72)" : "rgba(140, 160, 170, 0.34)";
-  ctx.lineWidth = 1 * s;
-  ctx.stroke();
-  ctx.fillStyle = active ? "rgb(255, 226, 126)" : "rgb(154, 170, 178)";
-  ctx.font = `${10 * s}px ${INFO_OVERLAY_FONT_FAMILY}, system-ui, sans-serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(text, x + w * 0.5, y - h * 0.5 + 3 * s);
-}
-
-function drawInfoEigenstate(ctx, mode, xRight, y, s) {
-  const parts = [
-    { text: "n=(", color: "rgb(255, 222, 128)" },
-    { text: `${mode.nx}`, color: infoAxisColor("X") },
-    { text: ",", color: "rgb(255, 222, 128)" },
-    { text: `${mode.ny}`, color: infoAxisColor("Y") },
-    { text: ",", color: "rgb(255, 222, 128)" },
-    { text: `${mode.nz}`, color: infoAxisColor("Z") },
-    { text: ")", color: "rgb(255, 222, 128)" },
-  ];
-  ctx.font = `${13 * s}px ${INFO_OVERLAY_FONT_FAMILY}, system-ui, sans-serif`;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  const totalWidth = parts.reduce((sum, part) => sum + ctx.measureText(part.text).width, 0);
-  let x = xRight - totalWidth;
-  for (const part of parts) {
-    ctx.fillStyle = part.color;
-    ctx.fillText(part.text, x, y);
-    x += ctx.measureText(part.text).width;
-  }
-}
-
-function infoAxisColor(value) {
-  const axis = String(value).replace(/[^XYZ]/g, "");
-  if (axis === "X") return "rgb(255, 91, 91)";
-  if (axis === "Y") return "rgb(88, 210, 111)";
-  if (axis === "Z") return "rgb(88, 166, 255)";
-  return "rgb(255, 222, 128)";
-}
-
-function updateInfoOverlayTexture() {
-  if (!infoOverlayCtx) return;
-
-  const mode = selectedEigenMode();
-  const spinCurrentOn = params.spinS > 0;
-  const magneticFieldOn = params.bFieldStrength > 0;
-  const spinDirection = INITIAL_SPIN_NAMES[params.initialSpin | 0] || INITIAL_SPIN_NAMES[0];
-  const magneticFieldDirection = B_FIELD_AXIS_NAMES[params.bFieldAxis | 0] || B_FIELD_AXIS_NAMES[2];
-  const rows = [
-    ["SPIN CURRENT", spinCurrentOn ? "ON" : "OFF", spinCurrentOn],
-    ["SPIN DIRECTION", spinDirection, "axis"],
-    ["MAGNETIC FIELD", magneticFieldOn ? "ON" : "OFF", magneticFieldOn],
-    ["B DIRECTION", magneticFieldDirection, "axis"],
-    ["EIGENSTATE", mode, "eigenstate"],
-  ];
-
-  const ctx = infoOverlayCtx;
-  const w = INFO_OVERLAY_WIDTH_CSS;
-  const h = INFO_OVERLAY_HEIGHT_CSS;
-  const s = INFO_OVERLAY_SIZE_MULTIPLIER;
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, infoOverlayCanvas.width, infoOverlayCanvas.height);
-  ctx.scale(INFO_OVERLAY_SCALE, INFO_OVERLAY_SCALE);
-
-  const panelGrad = ctx.createLinearGradient(0, 0, 0, h);
-  panelGrad.addColorStop(0, "rgba(8, 18, 23, 0.84)");
-  panelGrad.addColorStop(1, "rgba(5, 10, 15, 0.66)");
-  roundedRectPath(ctx, 0.5 * s, 0.5 * s, w - 1 * s, h - 1 * s, 14 * s);
-  ctx.fillStyle = panelGrad;
-  ctx.fill();
-  ctx.strokeStyle = "rgba(244, 185, 84, 0.34)";
-  ctx.lineWidth = 1.2 * s;
-  ctx.stroke();
-
-  const accentGrad = ctx.createLinearGradient(16 * s, 0, w - 16 * s, 0);
-  accentGrad.addColorStop(0, "rgba(255, 133, 43, 0.0)");
-  accentGrad.addColorStop(0.35, "rgba(255, 185, 63, 0.74)");
-  accentGrad.addColorStop(1, "rgba(102, 226, 214, 0.34)");
-  ctx.fillStyle = accentGrad;
-  ctx.fillRect(18 * s, 12 * s, w - 36 * s, 1.4 * s);
-
-  let y = 34 * s;
-  for (const [label, value, active] of rows) {
-    ctx.fillStyle = "rgba(178, 195, 195, 0.82)";
-    ctx.font = `${10 * s}px ${INFO_OVERLAY_FONT_FAMILY}, system-ui, sans-serif`;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    ctx.fillText(label, 22 * s, y);
-    if (active === "eigenstate") {
-      drawInfoEigenstate(ctx, value, w - 24 * s, y, s);
-    } else if (active === "axis") {
-      ctx.fillStyle = infoAxisColor(value);
-      ctx.font = `${13 * s}px ${INFO_OVERLAY_FONT_FAMILY}, system-ui, sans-serif`;
-      ctx.textAlign = "right";
-      ctx.fillText(value, w - 24 * s, y);
-    } else if (active === null) {
-      ctx.fillStyle = "rgb(255, 222, 128)";
-      ctx.font = `${13 * s}px ${INFO_OVERLAY_FONT_FAMILY}, system-ui, sans-serif`;
-      ctx.textAlign = "right";
-      ctx.fillText(value, w - 24 * s, y);
-    } else {
-      drawInfoStatusPill(ctx, value, w - 68 * s, y + 6 * s, active);
-    }
-    y += 19 * s;
-  }
-
-  const dpr = Math.max(1, canvas.width / Math.max(1, canvas.clientWidth || canvas.width));
-  const overlayW = INFO_OVERLAY_WIDTH_CSS * dpr;
-  const overlayH = INFO_OVERLAY_HEIGHT_CSS * dpr;
-  const margin = INFO_OVERLAY_MARGIN_CSS * dpr;
-  infoOverlayUniformData.set([
-    canvas.width, canvas.height, 0, 0,
-    canvas.width - overlayW - margin, margin, overlayW, overlayH,
-  ]);
-  if (DRAW_INFO_OVERLAY_IN_WEBGPU && infoOverlayBindGroup) {
-    device.queue.writeBuffer(infoOverlayUniformBuffer, 0, infoOverlayUniformData);
-    device.queue.copyExternalImageToTexture(
-      { source: infoOverlayCanvas },
-      { texture: infoOverlayTexture },
-      [INFO_OVERLAY_TEXTURE_WIDTH, INFO_OVERLAY_TEXTURE_HEIGHT]
-    );
-  }
-}
-
 function render(encoder, camera) {
-  updateInfoOverlayTexture();
   const currentTexture = gpuContext.getCurrentTexture();
   const pass = encoder.beginRenderPass({
     label: "main render pass",
@@ -2054,48 +1588,28 @@ function render(encoder, camera) {
     pass.draw(boxShellVertexCount);
   }
 
-  if (DRAW_COORDINATE_AXES && axisArrowBuffer && axisArrowVertexCount > 0) {
-    pass.setPipeline(pipelineAxisArrow);
-    pass.setBindGroup(0, axisArrowBindGroup);
-    pass.setVertexBuffer(0, axisArrowBuffer);
-    pass.draw(axisArrowVertexCount);
+  if (boxBuffer && boxVertexCount > 0) {
+    pass.setPipeline(pipelineLine);
+    pass.setBindGroup(0, lineBindGroup);
+    pass.setVertexBuffer(0, boxBuffer);
+    pass.draw(boxVertexCount);
   }
 
-  if (params.showFieldLines && params.bFieldStrength > 0 && fieldLineBuffer && fieldLineVertexCount > 0) {
+  pass.setPipeline(pipelineDetectorPlate);
+  pass.setBindGroup(0, detectorPlateBindGroup);
+  pass.draw(6);
+
+  if (params.sgFieldOn && params.sgGradient > 0 && fieldLineBuffer && fieldLineVertexCount > 0) {
     pass.setPipeline(pipelineFieldLine);
     pass.setBindGroup(0, fieldLineBindGroup);
     pass.setVertexBuffer(0, fieldLineBuffer);
     pass.draw(fieldLineVertexCount);
   }
 
-  if (params.showProjectedContour) {
-    const vertexCount = equipotentialVertexCount();
-    if (vertexCount > 0) {
-      pass.setPipeline(pipelineEquipotential);
-      pass.setBindGroup(0, equipotentialBindGroups[flip]);
-      pass.draw(vertexCount);
-    }
-  }
-
-  if (params.showLevelsets) {
-    const vertexCount = levelsetVertexCount();
-    if (vertexCount > 0) {
-      pass.setPipeline(pipelineLevelsets);
-      pass.setBindGroup(0, levelsetBindGroups[flip]);
-      pass.draw(vertexCount);
-    }
-  }
-
   if (params.showParticles) {
     pass.setPipeline(pipelineParticleRender);
     pass.setBindGroup(0, particleRenderBindGroups[particleFlip]);
     pass.draw(6, Math.floor(params.nParticles));
-  }
-
-  if (DRAW_INFO_OVERLAY_IN_WEBGPU && infoOverlayBindGroup) {
-    pass.setPipeline(pipelineInfoOverlay);
-    pass.setBindGroup(0, infoOverlayBindGroup);
-    pass.draw(6);
   }
 
   pass.end();
@@ -2105,50 +1619,62 @@ function guidingModeLabel() {
   return `${GUIDING_MODE_NAMES[0]} ${INITIAL_SPIN_NAMES[params.initialSpin | 0] || INITIAL_SPIN_NAMES[0]}`;
 }
 
-function bFieldAxisName() {
-  return B_FIELD_AXIS_NAMES[params.bFieldAxis | 0] || B_FIELD_AXIS_NAMES[2];
-}
-
 function updateStats() {
-  const mode = selectedEigenMode();
-  const waveText = `box n=(${mode.nx},${mode.ny},${mode.nz}), E=${fmt(selectedEigenEnergy(mode))}`;
-  statsEl.innerHTML = `<b>Physics</b>: ${guidingModeLabel()} &nbsp; <b>B${bFieldAxisName()}</b>: ${fmt(params.bFieldStrength)} &nbsp; <b>Wave</b>: ${waveText} &nbsp; <b>Grid</b>: ${simW}^3 &nbsp; <b>Particles</b>: ${Math.floor(params.nParticles)}`;
+  const pPeriodic = effectivePeriodicP0();
+  const lambda = pPeriodic > 1e-6 ? (2 * Math.PI * params.hbar / pPeriodic) : Infinity;
+  const lambdaText = Number.isFinite(lambda) ? fmt(lambda) : "inf";
+  const quality = lambda < 8 ? ` <span style="color:#ffb347">under-resolved</span>` : "";
+  const sgText = params.sgFieldOn && params.sgGradient > 0 ? fmt(params.sgGradient) : "off";
+  statsEl.innerHTML = `<b>Physics</b>: ${guidingModeLabel()} &nbsp; <b>SG grad</b>: ${sgText} &nbsp; <b>Grid</b>: ${simW}x${simH}x${simD} &nbsp; <b>Particles</b>: ${Math.floor(params.nParticles)} &nbsp; <b>lambda</b>: ${lambdaText}${quality}`;
 }
 
 function rebuildBoxGeometry() {
+  destroyGpuResource(boxBuffer);
   destroyGpuResource(boxShellBuffer);
 
   const x0 = 0, y0 = 0, z0 = 0;
   const x1 = simW - 1, y1 = simH - 1, z1 = simD - 1;
-  const shellVerts = [];
-  const corners = [
-    [x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0],
-    [x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1],
+  const edges = [
+    0, 1, 3, 2,
+    4, 5, 7, 6,
   ];
-
-  const faceUv = (corner, normal) => {
-    const ax = Math.abs(normal[0]);
-    const ay = Math.abs(normal[1]);
-    const az = Math.abs(normal[2]);
-    if (ax >= ay && ax >= az) {
-      return [
-        (corner[1] - y0) / Math.max(1, y1 - y0),
-        (corner[2] - z0) / Math.max(1, z1 - z0),
-      ];
-    }
-    if (ay >= az) {
-      return [
-        (corner[0] - x0) / Math.max(1, x1 - x0),
-        (corner[2] - z0) / Math.max(1, z1 - z0),
-      ];
-    }
+  const copyOffsets = [-1, 0, 1];
+  const corridorFade = (copy) => {
+    const d = Math.abs(copy);
+    if (d <= 2) return 1.0;
+    return 0.18;
+  };
+  const periodX = Math.max(1, simW - 1);
+  const lineVerts = [];
+  const shellVerts = [];
+  const copyCorners = (copy) => {
+    const dx = copy * periodX;
     return [
-      (corner[0] - x0) / Math.max(1, x1 - x0),
-      (corner[1] - y0) / Math.max(1, y1 - y0),
+      [x0 + dx, y0, z0], [x1 + dx, y0, z0], [x1 + dx, y1, z0], [x0 + dx, y1, z0],
+      [x0 + dx, y0, z1], [x1 + dx, y0, z1], [x1 + dx, y1, z1], [x0 + dx, y1, z1],
     ];
   };
-  const pushShellVertex = (corner, normal, fade) => {
-    const uv = faceUv(corner, normal);
+  for (const copy of copyOffsets) {
+    const fade = corridorFade(copy);
+    const corners = copyCorners(copy);
+    for (let i = 0; i < edges.length; i++) {
+      const p = corners[edges[i]];
+      lineVerts.push(p[0] * params.boxScale, p[1] * params.boxScale, p[2] * params.boxScale, fade);
+    }
+  }
+
+  boxVertexCount = lineVerts.length / 4;
+  boxBuffer = makeBuffer("box wireframe vertices", new Float32Array(lineVerts), GPUBufferUsage.VERTEX);
+
+  const faceUv = (corner, normal, copy) => {
+    const localX = (corner[0] - copy * periodX) / Math.max(1, x1 - x0);
+    const cross = Math.abs(normal[1]) > Math.abs(normal[2])
+      ? corner[2] / Math.max(1, z1 - z0)
+      : corner[1] / Math.max(1, y1 - y0);
+    return [localX, cross];
+  };
+  const pushShellVertex = (corner, normal, fade, copy) => {
+    const uv = faceUv(corner, normal, copy);
     shellVerts.push(
       corner[0] * params.boxScale,
       corner[1] * params.boxScale,
@@ -2161,136 +1687,41 @@ function rebuildBoxGeometry() {
       fade
     );
   };
-  const pushFace = (a, b, c, d, normal, fade = 1.0) => {
-    pushShellVertex(corners[a], normal, fade);
-    pushShellVertex(corners[b], normal, fade);
-    pushShellVertex(corners[c], normal, fade);
-    pushShellVertex(corners[a], normal, fade);
-    pushShellVertex(corners[c], normal, fade);
-    pushShellVertex(corners[d], normal, fade);
+  const pushFace = (corners, copy, a, b, c, d, normal, fade) => {
+    pushShellVertex(corners[a], normal, fade, copy);
+    pushShellVertex(corners[b], normal, fade, copy);
+    pushShellVertex(corners[c], normal, fade, copy);
+    pushShellVertex(corners[a], normal, fade, copy);
+    pushShellVertex(corners[c], normal, fade, copy);
+    pushShellVertex(corners[d], normal, fade, copy);
   };
 
-  pushFace(0, 3, 7, 4, [-1, 0, 0]);
-  pushFace(1, 5, 6, 2, [1, 0, 0]);
-  pushFace(0, 1, 2, 3, [0, 0, -1]);
-  pushFace(4, 7, 6, 5, [0, 0, 1]);
-  pushFace(0, 4, 5, 1, [0, -1, 0]);
-  pushFace(3, 2, 6, 7, [0, 1, 0]);
+  for (const copy of copyOffsets) {
+    const fade = corridorFade(copy);
+    const corners = copyCorners(copy);
+    pushFace(corners, copy, 0, 1, 2, 3, [0, 0, -1], fade);
+    pushFace(corners, copy, 4, 7, 6, 5, [0, 0, 1], fade);
+    pushFace(corners, copy, 0, 4, 5, 1, [0, -1, 0], fade);
+    pushFace(corners, copy, 3, 2, 6, 7, [0, 1, 0], fade);
+  }
 
   boxShellVertexCount = shellVerts.length / 9;
   boxShellBuffer = makeBuffer("box shell vertices", new Float32Array(shellVerts), GPUBufferUsage.VERTEX);
 }
 
-function pushAxisArrowVertex(verts, position, normal, color) {
-  verts.push(
-    position[0], position[1], position[2],
-    normal[0], normal[1], normal[2],
-    color[0], color[1], color[2], color[3]
-  );
-}
-
-function pushAxisArrowTriangle(verts, a, na, b, nb, c, nc, color) {
-  pushAxisArrowVertex(verts, a, na, color);
-  pushAxisArrowVertex(verts, b, nb, color);
-  pushAxisArrowVertex(verts, c, nc, color);
-}
-
-function axisArrowBasis(dir) {
-  const helper = Math.abs(dir[2]) > 0.82 ? [0, 1, 0] : [0, 0, 1];
-  const u = vec3Normalize(vec3Cross(helper, dir));
-  const v = vec3Normalize(vec3Cross(dir, u));
-  return [u, v];
-}
-
-function pushCoordinateAxisArrow(verts, origin, dir, length, color) {
-  const d = vec3Normalize(dir);
-  const [u, v] = axisArrowBasis(d);
-  const segments = Math.max(8, COORDINATE_AXIS_SEGMENTS | 0);
-  const shaftRadius = Math.max(0.0005, length * COORDINATE_AXIS_SHAFT_RADIUS_FRACTION);
-  const headRadius = Math.max(shaftRadius * 2.0, length * COORDINATE_AXIS_HEAD_RADIUS_FRACTION);
-  const headLength = Math.min(length * 0.4, Math.max(headRadius * 2.6, length * COORDINATE_AXIS_HEAD_LENGTH_FRACTION));
-  const shaftLength = Math.max(length * 0.1, length - headLength);
-  const shaftEnd = [
-    origin[0] + d[0] * shaftLength,
-    origin[1] + d[1] * shaftLength,
-    origin[2] + d[2] * shaftLength,
-  ];
-  const tip = [
-    origin[0] + d[0] * length,
-    origin[1] + d[1] * length,
-    origin[2] + d[2] * length,
-  ];
-  const negD = [-d[0], -d[1], -d[2]];
-  const radialUnit = (angle) => [
-    u[0] * Math.cos(angle) + v[0] * Math.sin(angle),
-    u[1] * Math.cos(angle) + v[1] * Math.sin(angle),
-    u[2] * Math.cos(angle) + v[2] * Math.sin(angle),
-  ];
-  const offset = (center, radial, radius) => [
-    center[0] + radial[0] * radius,
-    center[1] + radial[1] * radius,
-    center[2] + radial[2] * radius,
-  ];
-  const coneNormal = (radial) => vec3Normalize([
-    radial[0] * headLength + d[0] * headRadius,
-    radial[1] * headLength + d[1] * headRadius,
-    radial[2] * headLength + d[2] * headRadius,
-  ]);
-
-  for (let i = 0; i < segments; i++) {
-    const a0 = (i / segments) * Math.PI * 2;
-    const a1 = ((i + 1) / segments) * Math.PI * 2;
-    const r0 = radialUnit(a0);
-    const r1 = radialUnit(a1);
-    const shaft0 = offset(origin, r0, shaftRadius);
-    const shaft1 = offset(origin, r1, shaftRadius);
-    const shaftEnd0 = offset(shaftEnd, r0, shaftRadius);
-    const shaftEnd1 = offset(shaftEnd, r1, shaftRadius);
-    const coneBase0 = offset(shaftEnd, r0, headRadius);
-    const coneBase1 = offset(shaftEnd, r1, headRadius);
-    const coneN0 = coneNormal(r0);
-    const coneN1 = coneNormal(r1);
-    const tipNormal = vec3Normalize([
-      coneN0[0] + coneN1[0],
-      coneN0[1] + coneN1[1],
-      coneN0[2] + coneN1[2],
-    ]);
-
-    pushAxisArrowTriangle(verts, shaft0, r0, shaft1, r1, shaftEnd0, r0, color);
-    pushAxisArrowTriangle(verts, shaft1, r1, shaftEnd1, r1, shaftEnd0, r0, color);
-    pushAxisArrowTriangle(verts, origin, negD, shaft1, negD, shaft0, negD, color);
-    pushAxisArrowTriangle(verts, coneBase0, coneN0, coneBase1, coneN1, tip, tipNormal, color);
-    pushAxisArrowTriangle(verts, shaftEnd, negD, coneBase1, negD, coneBase0, negD, color);
-  }
-}
-
-function rebuildCoordinateAxes() {
-  destroyGpuResource(axisArrowBuffer);
-  axisArrowBuffer = null;
-  axisArrowVertexCount = 0;
-  if (!DRAW_COORDINATE_AXES || simW < 2 || simH < 2 || simD < 2) return;
-
-  const edgeLength = Math.max(1, simW - 1) * params.boxScale;
-  const origin = [0, 0, 0];
-  const colors = [
-    [1.0, 0.357, 0.357, COORDINATE_AXIS_OPACITY],
-    [0.345, 0.824, 0.435, COORDINATE_AXIS_OPACITY],
-    [0.345, 0.651, 1.0, COORDINATE_AXIS_OPACITY],
-  ];
-  const verts = [];
-  pushCoordinateAxisArrow(verts, origin, [1, 0, 0], edgeLength, colors[0]);
-  pushCoordinateAxisArrow(verts, origin, [0, 1, 0], edgeLength, colors[1]);
-  pushCoordinateAxisArrow(verts, origin, [0, 0, 1], edgeLength, colors[2]);
-
-  axisArrowVertexCount = verts.length / 10;
-  if (axisArrowVertexCount > 0) {
-    axisArrowBuffer = makeBuffer("coordinate axis arrow vertices", new Float32Array(verts), GPUBufferUsage.VERTEX);
-  }
+function sgFieldDirectionGrid(p) {
+  const centerY = 0.5 * (simH - 1);
+  const centerZ = 0.5 * (simD - 1);
+  const scale = Math.max(1, centerZ);
+  const by = -(p[1] - centerY) / scale;
+  const bz = 0.5 + (p[2] - centerZ) / scale;
+  const len = Math.hypot(by, bz);
+  if (len < 1e-5) return null;
+  return [0, by / len, bz / len];
 }
 
 function isInsideFieldLineBox(p, margin) {
-  return p[0] >= margin && p[0] <= simW - 1 - margin &&
-    p[1] >= margin && p[1] <= simH - 1 - margin &&
+  return p[1] >= margin && p[1] <= simH - 1 - margin &&
     p[2] >= margin && p[2] <= simD - 1 - margin;
 }
 
@@ -2312,6 +1743,22 @@ function pushFieldLineSegment(verts, a, b, fade) {
   pushVertex(1, 1);
 }
 
+function traceSgFieldLine(verts, start, sign, fade, step, maxSteps, margin) {
+  let p = start.slice();
+  for (let i = 0; i < maxSteps; i++) {
+    const dir = sgFieldDirectionGrid(p);
+    if (!dir) break;
+    const q = [
+      p[0],
+      p[1] + sign * dir[1] * step,
+      p[2] + sign * dir[2] * step,
+    ];
+    if (!isInsideFieldLineBox(q, margin)) break;
+    pushFieldLineSegment(verts, p, q, fade);
+    p = q;
+  }
+}
+
 function rebuildMagneticFieldLines() {
   destroyGpuResource(fieldLineBuffer);
   fieldLineBuffer = null;
@@ -2319,34 +1766,36 @@ function rebuildMagneticFieldLines() {
   if (simW < 4 || simH < 4 || simD < 4) return;
 
   const verts = [];
-  const maxP = [simW - 1, simH - 1, simD - 1];
+  const periodX = Math.max(1, simW - 1);
+  const yMax = simH - 1;
+  const zMax = simD - 1;
   const margin = 1.35;
-  const axis = Math.max(0, Math.min(2, params.bFieldAxis | 0));
-  const planeA = (axis + 1) % 3;
-  const planeB = (axis + 2) % 3;
-  const fracs = [0.20, 0.38, 0.62, 0.80];
-  const lo = margin;
-  const hi = maxP[axis] - margin;
+  const step = Math.max(0.75, Math.max(simH, simD) / 112);
+  const maxSteps = Math.ceil(3.2 * Math.max(simH, simD) / step);
+  const copyOffsets = [-1, 0, 1];
+  const xFracs = [0.12, 0.32, 0.5, 0.68, 0.88];
+  const yFracs = [0.22, 0.78];
+  const zFracs = [0.30, 0.50];
 
-  for (const fa of fracs) {
-    for (const fb of fracs) {
-      const radial = Math.hypot(fa - 0.5, fb - 0.5) / Math.SQRT1_2;
-      const fade = 1.0 - 0.42 * Math.min(1.0, radial);
-      const start = [0, 0, 0];
-      const end = [0, 0, 0];
-      start[axis] = lo;
-      end[axis] = hi;
-      start[planeA] = end[planeA] = fa * maxP[planeA];
-      start[planeB] = end[planeB] = fb * maxP[planeB];
-      if (isInsideFieldLineBox(start, margin) && isInsideFieldLineBox(end, margin)) {
-        pushFieldLineSegment(verts, start, end, fade);
+  for (const copy of copyOffsets) {
+    const copyFade = Math.abs(copy) <= 1 ? 0.88 : 0.52;
+    for (const xf of xFracs) {
+      const x = copy * periodX + xf * periodX;
+      const xFade = 1.0 - 0.18 * Math.abs(xf - 0.5) / 0.5;
+      const fade = copyFade * xFade;
+      for (const zf of zFracs) {
+        for (const yf of yFracs) {
+          const start = [x, yf * yMax, zf * zMax];
+          traceSgFieldLine(verts, start, 1, fade, step, maxSteps, margin);
+          traceSgFieldLine(verts, start, -1, fade, step, maxSteps, margin);
+        }
       }
     }
   }
 
   fieldLineVertexCount = verts.length / 9;
   if (fieldLineVertexCount > 0) {
-    fieldLineBuffer = makeBuffer("uniform magnetic field line vertices", new Float32Array(verts), GPUBufferUsage.VERTEX);
+    fieldLineBuffer = makeBuffer("SG magnetic field line vertices", new Float32Array(verts), GPUBufferUsage.VERTEX);
   }
 }
 
@@ -2357,9 +1806,8 @@ function rebuildSimulation() {
   params.simRes = n;
   simW = n;
   simH = n;
-  simD = n;
+  simD = zResolutionForBase(n);
   voxelCount = simW * simH * simD;
-  eigenQuantumPicker.sync();
   cameraOrbit.distance = 2.15 * Math.max(simW, simH, simD) * params.boxScale;
   cameraTarget.distance = cameraOrbit.distance;
 
@@ -2373,7 +1821,6 @@ function rebuildSimulation() {
   resetWave();
   rebuildParticles();
   rebuildBoxGeometry();
-  rebuildCoordinateAxes();
   rebuildMagneticFieldLines();
   rebuildDensity();
 }
@@ -2393,7 +1840,6 @@ window.addEventListener("resize", () => {
 });
 
 async function main() {
-  await loadInfoOverlayFont();
   configureCanvas();
   buildPipelines();
   rebuildSimulation();
@@ -2403,7 +1849,8 @@ async function main() {
 
   let lastFrameTime = performance.now();
   requestAnimationFrame(function loop(now = performance.now()) {
-    const dtSeconds = Math.min(0.05, Math.max(0, (now - lastFrameTime) / 1000));
+    const wallDtSeconds = Math.min(0.05, Math.max(0, (now - lastFrameTime) / 1000));
+    const dtSeconds = wallDtSeconds;
     lastFrameTime = now;
     const resized = resizeCanvas();
     if (resized) rebuildDensity();
@@ -2429,19 +1876,13 @@ async function main() {
 
     if (!paused) {
       const steps = Math.floor(params.stepsPerFrame);
-      const updateWave = shouldUpdateWave();
-      const updateParticles = shouldUpdateParticles();
-      if (updateWave || updateParticles) {
-        const compute = encoder.beginComputePass({ label: "simulation compute pass" });
-        for (let i = 0; i < steps; i++) {
-          if (updateWave) waveStep(compute);
-          if (updateParticles) particleUpdate(compute);
-          simTime += params.dt;
-        }
-        compute.end();
-      } else {
-        simTime += params.dt * steps;
+      const compute = encoder.beginComputePass({ label: "simulation compute pass" });
+      for (let i = 0; i < steps; i++) {
+        waveStep(compute);
+        particleUpdate(compute);
+        simTime += params.dt;
       }
+      compute.end();
       if (params.showTrail) densityStepAndStamp(encoder, camera);
     }
 
