@@ -31,6 +31,8 @@ if [[ "$NO_BUILD" == false ]]; then
   done
 fi
 
+python3 "$REPO_ROOT/scripts/build-catalog.py"
+
 # ── 2. Assemble _site/ ───────────────────────────────────────────────────────
 echo "→ Assembling _site/…"
 rm -rf "$SITE"

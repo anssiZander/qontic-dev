@@ -20,11 +20,14 @@ if [[ "$1" != "--no-commit" ]]; then
   git push
 fi
 
+# Build the production catalog from per-app app.json files.
+python3 "$REPO_ROOT/scripts/build-catalog.py"
+
 # ── 2. Deploy to production (/bm/) ────────────────────────────────────────
 echo "→ Deploying production landing: $REMOTE_HOST:$PROD_PATH/"
 rsync -az --info=progress2 \
   "$REPO_ROOT/index.html" \
-  "$REPO_ROOT/apps.json" \
+  "$REPO_ROOT/catalog.json" \
   "$REPO_ROOT/collaborators.html" \
   "$REPO_ROOT/images/" \
   "$REMOTE_HOST:$PROD_PATH/"
