@@ -56,7 +56,7 @@ const params = {
   wavePreset: 1,
   initDistribution: 2,
   initRectangleSize: 0.10,
-  nParticles: 100000,
+  nParticles: 50000,
   rhoMin: 1e-14,
   velClamp: 100.0,
   guidingMode: 1,
@@ -289,7 +289,7 @@ addSlider("visGamma", "density gamma", 0.25, 1.4, 0.05);
 addToggleInt("showPhase", "show phase");
 
 addToggleInt("showParticles", "show particles");
-addSlider("nParticles", "particle count", 10000, 200000, 10000, () => resetAll());
+addSlider("nParticles", "particle count", 10000, 100000, 10000, () => resetAll());
 addSlider("dotSize", "particle size", 2.0, 16.0, 0.5);
 addSlider("dotGain", "particle gain", 0.1, 3.0, 0.1);
 addToggleInt("showTrail", "draw trails");

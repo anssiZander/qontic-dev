@@ -93,9 +93,9 @@ const params = {
   showCloud: 1,
 
   showParticles: 1,
-  dotSize: 10.0,
+  dotSize: 20.0,
   dotSigma: 0.28,
-  dotGain: 2.0,
+  dotGain: 3.0,
 
   showTrail: 1,
   trailHalfLife: 0.5,
@@ -1061,7 +1061,7 @@ const cameraTarget = {
   pitch: cameraOrbit.pitch,
   distance: cameraOrbit.distance,
 };
-const CAMERA_EASE = 0.1;
+const CAMERA_EASE = 0.2;
 const ORTHO_VIEWS = {
   XY: { yaw: -Math.PI * 0.5, pitch: Math.PI * 0.5 },
   XZ: { yaw: -Math.PI * 0.5, pitch: 0 },

@@ -30,7 +30,7 @@ const params = {
 
   absorbPx: 40.0,
   absorbStrength: 3.,
-  particleKillMargin: 12.0,
+  particleKillMargin: 0.0,
 
   nParticles: 200,
   rhoMin: 1e-6,
@@ -67,7 +67,7 @@ const embeddedBasePreset = {
   stepsPerFrame: 10,
   dt: 0.01,
   packetSigma: 30.0,
-  absorbPx: 25.0,
+  absorbPx: 20.0,
   spinMagnitude: 0.5,
   guidingMode: 0,
   spinSign: 1,
@@ -89,7 +89,7 @@ const PRESETS = {
       ...embeddedBasePreset,
       p0: 4.5,
       V0: 5.0,
-      absorbPx: 29.0,
+      absorbPx: 25.0,
       barrierThick: 50.0,
       nParticles: 250,
     },
