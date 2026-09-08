@@ -7,7 +7,7 @@
 const hbar      = 1.054e-25;
 const mElectron = 9.109e-31;
 const mNeutron  = 1.67492749804e-27;
-const c_light   = 300;
+const c_light   = 299792458; // nm/ns
 const epsilon   = 1;
 const psiAmp    = 1;
 
@@ -217,6 +217,7 @@ self.onmessage = function(e) {
 
    // Run all precomputations
    const result = {
+      detectorArrayFull: precomputeYArrayWithFixedX(detectorXWorld, 0, 4000),
       phiArraySlit1:     precomputePhiArrayWithFixedR(slit1XWorld, slit1YWorld, 0, radiusPre, 5000),
       phiArraySlit2:     precomputePhiArrayWithFixedR(slit2XWorld, slit2YWorld, 0, radiusPre, 5000),
       detectorArray1:    precomputeYArrayWithFixedX(detectorXWorld, 1, 2000),
@@ -234,5 +235,6 @@ self.onmessage = function(e) {
       result[key].cdf = Array.from(result[key].cdf);
    }
 
+   result.seq = p.seq;
    self.postMessage(result);
 };

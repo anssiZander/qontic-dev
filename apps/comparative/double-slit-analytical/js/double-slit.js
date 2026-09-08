@@ -102,7 +102,9 @@ function runPrecomputeAsync() {
       return;
    }
    var seq = ++precomputeSeq;
+   precomputePending = true;
    precomputeWorker.postMessage({
+      seq: seq,
       k: k, omega: omega,
       wallXWorld: wallXWorld, sourceXWorld: sourceXWorld, sourceYWorld: sourceYWorld,
       slit1XWorld: slit1XWorld, slit1YWorld: slit1YWorld,
@@ -113,11 +115,13 @@ function runPrecomputeAsync() {
       radiusPre: radiusPre
    });
    precomputeWorker.onmessage = function(e) {
-      if (seq !== precomputeSeq) return; // stale result, discard
+      if (e.data.seq !== precomputeSeq) return; // reject obsolete geometry results
+      precomputePending = false;
       var r = e.data;
       // Restore Float64Arrays from transferred arrays
       phiArraySlit1     = { bins: r.phiArraySlit1.bins,     cdf: new Float64Array(r.phiArraySlit1.cdf) };
       phiArraySlit2     = { bins: r.phiArraySlit2.bins,     cdf: new Float64Array(r.phiArraySlit2.cdf) };
+      detectorArrayFull = { bins: r.detectorArrayFull.bins, cdf: new Float64Array(r.detectorArrayFull.cdf) };
       detectorArray1    = { bins: r.detectorArray1.bins,    cdf: new Float64Array(r.detectorArray1.cdf) };
       detectorArray2    = { bins: r.detectorArray2.bins,    cdf: new Float64Array(r.detectorArray2.cdf) };
       singleSlitArray1  = { bins: r.singleSlitArray1.bins,  cdf: new Float64Array(r.singleSlitArray1.cdf) };
@@ -129,6 +133,7 @@ function runPrecomputeAsync() {
    };
 }
 
+var detectorArrayFull;
 var detectorArray1;
 var detectorArray2;
 // Single-slit detector arrays (no interference) for which-path detector mode
@@ -157,7 +162,8 @@ var hitMax=0;
 var hitWidth=0;
 var altBranchHits = null;   // holds the alternative-branch hit histogram
 var showAltBranch = false;  // whether to overlay the alt-branch ghost
-var interpretation="Copenhagen";
+var interpretation="copenhagen";
+var precomputePending = false;
 var viewLocked = false; // true when URL ?mode= locks to a single view
 var isAnimating = false; // Track the animation state
 let sliderDragInProgress = false;     // true while a live slider is being dragged
@@ -233,7 +239,7 @@ var xPre=10;
 var yToBinWorld;
 var yToBinCanvas;
 
-const c = 300; // Speed of light in mm/ns
+const c = 299792458; // Speed of light in nm/ns
 //const hbar = 1.054e-25; // Reduced Planck constant in mm^2*kg/ns
 const hbar = 1.054e-25; // Reduced Planck constant in nm^2*kg/ns (1.054e-34 J*s converted to nm^2*kg/ns)
 //const hbar = 6.582119e-13; // MeV*s
@@ -1923,7 +1929,7 @@ function getSlitPosition(traj, detectorArray, slitNum) {
    var tl = time;
    for ( var iss = 0 ; iss < nSubSteps ; iss++ ) {
       var bv = computeBohmianVelocity( xn, yn, tl, slitNum ) ;
-      var bv2 = Math.sqrt(bv.vx*bv.vx+bv.vy*bv.vy) || epsilon ;
+      var bv2 = Math.hypot(bv.vx, bv.vy) || epsilon ;
       var dtl = stepSize/bv2;
       xn = xn - bv.vx * dtl;
       yn = yn - bv.vy * dtl;
@@ -2137,7 +2143,7 @@ function precomputePhiArrayWithFixedR( x0, y0, t, r, nPhi) {
 //
 //==============================================================================================================
 // State version: increment when defaults/units change to clear old saved state
-const SIMULATION_STATE_VERSION = 13;
+const SIMULATION_STATE_VERSION = 14;
 
 function getSimulationState() {
   paletteName = window.paletteModule.getCurrentPaletteName();
@@ -2396,6 +2402,9 @@ function setupGeo(doPrecompute) {
       phiArraySlit1 = precomputePhiArrayWithFixedR(slit1XWorld, slit1YWorld, 0, radiusPre, 5000) ;
       phiArraySlit2 = precomputePhiArrayWithFixedR(slit2XWorld, slit2YWorld, 0, radiusPre, 5000) ;
 
+      precomputeSeq++; // invalidate any in-flight worker result
+      precomputePending = false;
+      detectorArrayFull = precomputeYArrayWithFixedX(detectorXWorld, 0, 4000);
       detectorArray1 = precomputeYArrayWithFixedX(detectorXWorld, 1, 2000) ;
       detectorArray2 = precomputeYArrayWithFixedX(detectorXWorld, 2, 2000) ;
 
@@ -2919,6 +2928,7 @@ async function updateSimulationState() {
 //
 //==================================================================================================================
 async function evolveParticles() {
+   if (precomputePending) { lastRealTime = performance.now() / 1000; return; }
 
    var trajectoriesToBeDeleted = [];
    const waveContinous = $('#wave-continous').prop('checked');
@@ -3002,7 +3012,7 @@ async function evolveParticles() {
          stop = 0 ;
          for ( var iss = 0 ; iss < nSubSteps ; iss++ ) {
             var bv = computeBohmianVelocity( xl, yl, tl, traj.slitNum ) ;
-            var bv2 = Math.sqrt(bv.vx*bv.vx+bv.vy*bv.vy) || epsilon;
+            var bv2 = Math.hypot(bv.vx, bv.vy) || epsilon;
             var dtl = stepSize/bv2;
             dtlSum = dtlSum + dtl;
             if ( dtlSum > deltaT ) {
@@ -3090,12 +3100,10 @@ async function evolveParticles() {
                      }
                   }
                   else {
-                     // Symmetric phi range covering the right side of screen (-π/2 to π/2)
-                     var phiMin = -Math.PI/2;
-                     var phiMax = Math.PI/2;
-                     var phi = phiMin+Math.random()*(phiMax-phiMin);
-                     var xn  = slit1XWorld + 1 * Math.cos(phi);
-                     var yn  = slit1YWorld + 1 * Math.sin(phi);
+                     slitPos = getSlitPosition(traj, singleSlitArray1, 1);
+                     var xn = slitPos.x;
+                     var yn = slitPos.y;
+                     traj.slitNum = 1;
                   }
                   traj.del=2;  
                }
@@ -3122,12 +3130,10 @@ async function evolveParticles() {
                      }
                   }
                   else {
-                     // Symmetric phi range covering the right side of screen (-π/2 to π/2)
-                     var phiMin = -Math.PI/2;
-                     var phiMax = Math.PI/2;
-                     var phi = phiMin+Math.random()*(phiMax-phiMin);
-                     var xn = slit2XWorld + 1. * Math.cos(phi);
-                     var yn = slit2YWorld + 1. * Math.sin(phi);
+                     slitPos = getSlitPosition(traj, singleSlitArray2, 2);
+                     var xn = slitPos.x;
+                     var yn = slitPos.y;
+                     traj.slitNum = 2;
                   }
                  traj.del=2;  
                }
@@ -3239,7 +3245,7 @@ async function evolveParticles() {
          if (iBin >= nDetectorPixels) iBin = nDetectorPixels - 1;
 
          nHits++;
-         logNBranches=logNBranches+logNDetectorPixels;
+         logNBranches=logNBranches+Math.log10(nDetectorPixels);
          // Update branch display approximately every second (handled by timestamp in evolveSystem)
 
          hits[iBin]++;;
@@ -3294,13 +3300,7 @@ async function evolveParticles() {
       // the precomputed CDF.  This gives immediate visual feedback
       // instead of a dead period while hidden particles traverse.
       if (interpretation !== 'bohmian') {
-         // Pick the right CDF (which-path vs interference)
-         let detectorArray;
-         if (whichPathDetector !== 'none') {
-            detectorArray = (Math.random() < 0.5) ? singleSlitArray1 : singleSlitArray2;
-         } else {
-            detectorArray = (Math.random() < 0.5) ? detectorArray1 : detectorArray2;
-         }
+         const detectorArray = getDetectionDistribution();
          if (detectorArray && detectorArray.cdf) {
             var yn = sampleFromCDF(detectorArray);
             var iBin = Math.floor(yn * yToBinWorld);
@@ -3310,7 +3310,7 @@ async function evolveParticles() {
             hits[iBin]++;
             if (hits[iBin] > hitMax) hitMax = hits[iBin];
             if (interpretation === 'manyworlds') {
-               logNBranches += logNDetectorPixels;
+               logNBranches += Math.log10(nDetectorPixels);
             }
          }
          nParticles++;
@@ -3499,34 +3499,28 @@ async function renderDetectorAndHistogram() {
 //==================================================================================================================
 //
 //==================================================================================================================
+function getDetectionDistribution() {
+   if (!slit1Open && !slit2Open) return null;
+   if (!slit2Open) return singleSlitArray1;
+   if (!slit1Open) return singleSlitArray2;
+   if (whichPathDetector === 'none') return detectorArrayFull;
+   return Math.random() < 0.5 ? singleSlitArray1 : singleSlitArray2;
+}
+
 function resampleHitsFromPsi() {
+  if (precomputePending) return;
   hits.fill(0);
+  hitMax = 0;
 
   for (let i = 0; i < nHits; i++) {
-    let detectorArray;
-    
-    // When which-path detector is active, use single-slit distributions (no interference)
-    if (whichPathDetector !== 'none') {
-       // Randomly choose which slit the particle goes through (50/50)
-       if (Math.random() < 0.5) {
-          detectorArray = singleSlitArray1;
-       } else {
-          detectorArray = singleSlitArray2;
-       }
-    } else {
-       // Normal mode: use interference pattern distributions
-       if (Math.random() < 0.5) {
-          detectorArray = detectorArray1;
-       } else {
-          detectorArray = detectorArray2;
-       }
-    }
-
+    const detectorArray = getDetectionDistribution();
+    if (!detectorArray || precomputePending) return;
     yn = sampleFromCDF(detectorArray);
     var iBin = Math.floor(yn * yToBinWorld);
     if ( iBin < 0 ) iBin = 0;
     if ( iBin >= nDetectorPixels ) iBin = nDetectorPixels - 1;
     hits[iBin]++;
+    hitMax = Math.max(hitMax, hits[iBin]);
   }
   renderDetectorAndHistogram() ;
 }
@@ -3782,7 +3776,7 @@ function invalidateAllCaches() {
 // Lightweight simulation reset: clear particles/hits but skip precompute
 function lightweightReset() {
    renderSetupFlag = 1;
-   hits.fill(0);
+   if (hits) hits.fill(0);
    trajectories.length = 0;
    nParticles = 0;
    logNBranches = 0;
@@ -3793,6 +3787,9 @@ function lightweightReset() {
    lastRealTime = 0;
    particleAccum = 0;
    startRealTime = performance.now() / 1000;
+   $('#nhits, #shownParticles, #systemTime').text('0');
+   $('#infoBranchCount').text('1');
+   $('#realTime').text('0.0 s');
    // Clear alt-branch ghost
    if (showAltBranch) { altBranchHits = null; }
 }
@@ -3816,11 +3813,36 @@ function updateWhichPathButton() {
 //==================================================================================================================
 //
 //==================================================================================================================
+function updateModeExplanation() {
+   const descriptions = {
+      copenhagen: 'Orthodox: the wave gives outcome probabilities; individual screen detections are sampled. No path between preparation and detection is assigned.',
+      bohmian: 'Pilot-Wave: particles have definite positions guided by the wave. Red paths show the guidance field; detector-conditioned paths use sampled endpoints and backtracking.',
+      manyworlds: 'Many-Worlds: the wave evolves without collapse. The curve represents outcome weights; dots follow one sampled branch. Each detection splits every branch into N sensor outcomes, giving N^m branches after m detections.'
+   };
+   $('#modeExplanation').text(descriptions[interpretation]);
+   $('#recordMeaning').text(interpretation === 'manyworlds'
+      ? 'Screen statistics: one sampled branch history; the curve gives sensor-outcome weights.'
+      : 'Screen statistics: accumulated detections compared with the model probability curve.');
+}
+
+function changeInterpretation(mode) {
+   if (viewLocked || !['copenhagen', 'bohmian', 'manyworlds'].includes(mode)) return;
+   if (interpretation !== mode) lightweightReset();
+   interpretation = mode;
+   updateViewButton();
+   updateInterpretationDisplay();
+   updateMathFormulas();
+   syncMathButtons();
+   invalidateWaveCache();
+   if (!isAnimating) drawSystem(0);
+}
+
 function updateViewButton() {
-   const labels = { copenhagen: 'Collapse', bohmian: 'Pilot-Wave', manyworlds: 'Many-Worlds' };
-   var label = labels[interpretation] || 'Collapse';
+   const labels = { copenhagen: 'Orthodox', bohmian: 'Pilot-Wave', manyworlds: 'Many-Worlds' };
+   var label = labels[interpretation] || 'Orthodox';
    $('#toggleView').text(label);
    $('#view-label').text(label);
+   updateModeExplanation();
 }
 //==================================================================================================================
 // Render KaTeX math formulas in the Math tab based on current state
@@ -3944,7 +3966,6 @@ function updateInterpretationDisplay() {
     $("#plot_trajectories").prop("checked", false);
     $("#plot_particles").prop("checked", false);
    if ( $("#waveFunctionOption").val() == "QPotential" ) $("#waveFunctionOption").val("Phase");
-   $("#waveFunctionOption").val("Phase");
     $("#manyBranchesInfo").hide();
 
     $("#waveFunctionOption option[value='QPotential']").remove();
@@ -3976,8 +3997,9 @@ function updateInterpretationDisplay() {
   else if (interpretation === "manyworlds") {
     $("#plot_trajectories").prop("checked", false);
     $("#plot_particles").prop("checked", false);
-    $("#waveFunctionOption").val("Phase");
-    $("#basicsWaveFunctionOption").val("Phase");
+    if ($("#waveFunctionOption").val() === "QPotential") $("#waveFunctionOption").val("Phase");
+    $("#waveFunctionOption option[value='QPotential'], #basicsWaveFunctionOption option[value='QPotential']").remove();
+    $("#basicsWaveFunctionOption").val($("#waveFunctionOption").val());
     $("#manyBranchesInfo").show();
 	
   }
@@ -4821,12 +4843,7 @@ $(document).ready(function() {
          if (viewLocked) return;
          const modes = ['copenhagen', 'bohmian', 'manyworlds'];
          const idx = modes.indexOf(interpretation);
-         interpretation = modes[(idx + 1) % 3];
-         updateViewButton();
-         updateInterpretationDisplay();
-         updateMathFormulas();
-         syncMathButtons();
-         if (!isAnimating) drawSystem(0);
+         changeInterpretation(modes[(idx + 1) % 3]);
       });
       
       $('#openPaletteBtn').on('click', function () {
@@ -4891,12 +4908,7 @@ $(document).ready(function() {
          e.preventDefault();
          var mode = $(this).data('view');
          // Switch interpretation
-         interpretation = mode;
-         updateInterpretationDisplay();
-         updateViewButton();
-         updateMathFormulas();
-         syncMathButtons();
-         if (!isAnimating) drawSystem(0);
+         changeInterpretation(mode);
          // Switch to Simulation tab (index 0)
          $('#superContainer').tabs('option', 'active', 0);
       });
