@@ -161,7 +161,9 @@ body {
 #leftPanel {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
+  align-self: flex-start;
+  height: auto;
   gap: 12px;
   width: 380px;
   min-width: 250px;
@@ -477,7 +479,7 @@ button[data-tip]:hover::after {
 #psiTabs {
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   background: var(--bg-panel);

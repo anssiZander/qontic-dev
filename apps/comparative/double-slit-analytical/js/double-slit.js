@@ -4406,15 +4406,11 @@ $(document).ready(function() {
           if (window.innerWidth <= 900) return;
           
           const savedLeftPanelWidth = localStorage.getItem('leftPanelWidth');
-          const savedLeftPanelHeight = localStorage.getItem('leftPanelHeight');
           const savedCanvasWidth = localStorage.getItem('canvasWidth');
           const savedCanvasHeight = localStorage.getItem('canvasHeight');
           
           if (savedLeftPanelWidth) {
               $("#leftPanel").css('width', savedLeftPanelWidth + 'px');
-          }
-          if (savedLeftPanelHeight) {
-              $("#leftPanel").css('height', savedLeftPanelHeight + 'px');
           }
           if (savedCanvasWidth && savedCanvasHeight) {
               const w = parseInt(savedCanvasWidth);
@@ -4449,15 +4445,12 @@ $(document).ready(function() {
           }
       })();
       
-      // Make left panel resizable (width and height) - no max width limit
+      // Keep controls content-sized vertically; allow horizontal resizing.
       $("#leftPanel").resizable({
-          handles: "e, s, se",
+          handles: "e",
           minWidth: 250,
-          minHeight: 400,
-          maxHeight: 900,
           stop: function(event, ui) {
               localStorage.setItem('leftPanelWidth', ui.size.width);
-              localStorage.setItem('leftPanelHeight', ui.size.height);
           }
       });
       
