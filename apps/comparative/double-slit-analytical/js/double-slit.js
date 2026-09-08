@@ -84,15 +84,27 @@ function sampleFromCDF(dist) {
 // Web Worker for off-main-thread precomputation
 //==================================================================================================
 var precomputeWorker = null;
+var precomputeTimeout = null;
 var precomputeSeq = 0; // sequence number to discard stale results
 
 function initPrecomputeWorker() {
    if (precomputeWorker) return;
    try {
-      precomputeWorker = new Worker('js/precompute-worker.js');
+      precomputeWorker = new Worker('js/precompute-worker.js?v=20260908-pw2');
+      precomputeWorker.onerror = recoverPrecompute;
    } catch(e) {
       console.warn('Web Worker not available, falling back to main thread precompute');
    }
+}
+
+function recoverPrecompute() {
+   clearTimeout(precomputeTimeout);
+   precomputeTimeout = null;
+   if (precomputeWorker) precomputeWorker.terminate();
+   precomputeWorker = null;
+   precomputePending = false;
+   // A worker is an optimization, never a prerequisite for particle emission.
+   setupGeo(true);
 }
 
 function runPrecomputeAsync() {
@@ -102,6 +114,10 @@ function runPrecomputeAsync() {
       return;
    }
    var seq = ++precomputeSeq;
+   clearTimeout(precomputeTimeout);
+   precomputeTimeout = setTimeout(function () {
+      if (seq === precomputeSeq && precomputePending) recoverPrecompute();
+   }, 8000);
    precomputePending = true;
    precomputeWorker.postMessage({
       seq: seq,
@@ -115,8 +131,11 @@ function runPrecomputeAsync() {
       radiusPre: radiusPre
    });
    precomputeWorker.onmessage = function(e) {
+      if (e.data.seq === undefined) { recoverPrecompute(); return; }
       if (e.data.seq !== precomputeSeq) return; // reject obsolete geometry results
       precomputePending = false;
+      clearTimeout(precomputeTimeout);
+      precomputeTimeout = null;
       var r = e.data;
       // Restore Float64Arrays from transferred arrays
       phiArraySlit1     = { bins: r.phiArraySlit1.bins,     cdf: new Float64Array(r.phiArraySlit1.cdf) };

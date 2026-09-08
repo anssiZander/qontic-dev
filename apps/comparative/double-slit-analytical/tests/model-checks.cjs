@@ -4,7 +4,7 @@ const vm = require('node:vm');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'js/double-slit.js'), 'utf8');
-const ctx = vm.createContext({console, Float64Array, Math, performance, document:{}, $:()=>({ready(){}})});
+const ctx = vm.createContext({console, Float64Array, Math, performance, setTimeout, clearTimeout, document:{}, $:()=>({ready(){}})});
 vm.runInContext(source, ctx);
 vm.runInContext(`k=2*Math.PI/100; omega=1; wallXWorld=0; sourceXWorld=-500; sourceYWorld=600;
 slit1XWorld=0; slit2XWorld=0; slit1YWorld=350; slit2YWorld=850; worldCanvasDy=1200;
@@ -51,3 +51,10 @@ assert.equal(vm.runInContext('logNBranches',ctx),0);
 assert.equal(ctx.trajectories.length,0);
 assert.equal(vm.runInContext('interpretation',ctx),'manyworlds');
 console.log('PASS: open-slit sampling, full-screen CDF, symmetry, photon units, worker parity, stale results, and clean mode transitions.');
+
+// Worker failure must restore synchronous sampling instead of blocking particles.
+vm.runInContext(`precomputePending=true; precomputeWorker={terminate(){}};
+setupGeo=()=>{precomputePending=false;}; recoverPrecompute();`,ctx);
+assert.equal(vm.runInContext('precomputePending',ctx),false);
+assert.equal(ctx.precomputeWorker,null);
+console.log('PASS: worker recovery cannot leave particle generation waiting.');
