@@ -51,12 +51,12 @@ const updatedDetails = `
   <h2>Finite interaction duration</h2>
   <p>The X–Y coupling may be impulsive or have finite duration τ. For finite τ, a characteristic can cross a detector boundary while the interaction is active. Its final translation is the exact time average of the region values encountered along x(s) = ξ + v<sub>x</sub>s, and the horizontal smearing scale is v<sub>x</sub>τ. The later Y–Z readout is explicitly impulsive.</p>
   <h2>Marginal and conditional displays</h2>
-  <p>Each marginal display is a projection of the same unitary three-coordinate ensemble state in all three interpretation views. The hidden coordinate is integrated out:</p>
+  <p>Before the readout, each marginal display is a projection of the same unitary three-coordinate state in all three interpretation views. The hidden coordinate is integrated out:</p>
   <div class="math-display"><strong>ρ<sub>XY</sub>(x,y,t) = ∫dz |Ψ(x,y,z,t)|² &nbsp; · &nbsp; ρ<sub>XZ</sub>(x,z,t) = ∫dy |Ψ(x,y,z,t)|² &nbsp; · &nbsp; ρ<sub>YZ</sub>(y,z,t) = ∫dx |Ψ(x,y,z,t)|²</strong></div>
   <p>In the Pilot-wave view, the conditional display replaces that integration by a slice through the actual hidden coordinate. For example, the conditional X–Z density is proportional to |Ψ(x,Y(t),z,t)|², while the conditional X–Y density is proportional to |Ψ(x,y,Z(t),t)|². The evolution is analytical; the displayed curves and shaded fields are rasterized and smoothed only for rendering. Multiple markers represent independently prepared runs, never many interacting particles in one experiment.</p>
   <p>Each genuinely new run draws a fresh initial configuration from |Ψ(x,y,z,0)|². Pausing, changing parameters, or switching interpretations preserves that run's standardized Born coordinates, so Orthodox, Pilot-wave, and Many-Worlds compare the same selected realization. After a run finishes, the New run button draws a different configuration.</p>
   <h2>Interpretation views and collapse</h2>
-  <p>The Marginal option always shows the same unitary ensemble distribution, independent of interpretation. In the Orthodox view, the recorded outcome identifies the branch selected in the displayed run, but it does not replace an ensemble marginal with a single postselected branch. In the Many-Worlds view every recorded branch remains and, after readout, may be displayed in separate labeled subcanvases with its Born weight. Pilot-wave additionally permits conditional slices through the actual configuration.</p>
+  <p>Before the readout, the marginal density is identical in all interpretations. At the second measurement, the Orthodox display collapses to the recorded Y–Z branch and then shows the marginals of that collapsed state. The Pilot-wave display retains the full wave and permits either its marginals or conditional slices through the actual configuration. In the Many-Worlds display every recorded branch remains and may be shown in a separate labeled subcanvas with its Born weight. Thus the interpretations agree on the pre-readout distribution and outcome statistics, while representing the post-readout state differently.</p>
   <h2>Optional X–Y–Z view</h2>
   <p>The 3D option opens an interactive perspective WebGL configuration-space canvas. Drag to rotate and use the mouse wheel to zoom. Marginal mode shows a sample of the full joint ensemble density. In Pilot-wave Conditional mode, it shows the three mutually compatible planes XY at Z(t), XZ at Y(t), and YZ at X(t); the attached one-dimensional curves slice through the other two actual coordinates. The bright marker is the actual Bohmian configuration (X(t),Y(t),Z(t)); the density samples are not additional particles in the same experiment.</p>
   <p class="scope"><b>Scope:</b> The complete X–Y coupling and impulsive Y–Z readout form one weak measurement of X and are analytical solutions of the stated idealized heavy-pointer Hamiltonian. The app evaluates the corresponding characteristic translations directly and does not time-step Schrödinger’s equation. Rasterization, density sampling, and display smoothing affect only the visualization.</p>
@@ -101,11 +101,11 @@ const sendModelControl = (type, value) => document.querySelector('.lab iframe')?
 
 function ensureThemedMeasurementFrame(root = document) {
   const frame = root.querySelector?.('.lab iframe') ?? (root.matches?.('.lab iframe') ? root : null);
-  if (!frame || frame.dataset.templateFrameVersion === '1.57') return;
+  if (!frame || frame.dataset.templateFrameVersion === '1.58') return;
   const url = new URL(frame.getAttribute('src') || frame.src, location.href);
   if (!url.pathname.endsWith('/measurement.html')) return;
-  frame.dataset.templateFrameVersion = '1.57';
-  url.searchParams.set('v', '1.57');
+  frame.dataset.templateFrameVersion = '1.58';
+  url.searchParams.set('v', '1.58');
   frame.src = url.href;
 }
 
@@ -320,7 +320,7 @@ function syncAxisControls(root = document) {
   group.querySelectorAll('button').forEach((button) => {
     const isMarginal = button.textContent.includes('Marginal');
     button.disabled = !isMarginal && (!localProjectionPilot || !localProjectionSingle);
-    button.title = isMarginal ? 'Show the same unitary ensemble density in every interpretation.' : in3D ? 'Show the three conditional planes through the actual Bohmian configuration.' : 'Show a conditional plane and one-dimensional slices through the actual Bohmian configuration.';
+    button.title = isMarginal ? 'Show marginals of the current state; after Orthodox readout this is the collapsed branch.' : in3D ? 'Show the three conditional planes through the actual Bohmian configuration.' : 'Show a conditional plane and one-dimensional slices through the actual Bohmian configuration.';
     button.classList.toggle('active', button.textContent.toLowerCase().includes(localAxisMode));
   });
   group.setAttribute('aria-disabled', 'false');
