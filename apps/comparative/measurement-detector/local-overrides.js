@@ -51,14 +51,14 @@ const updatedDetails = `
   <h2>Finite interaction duration</h2>
   <p>The X–Y coupling may be impulsive or have finite duration τ. For finite τ, a characteristic can cross a detector boundary while the interaction is active. Its final translation is the exact time average of the region values encountered along x(s) = ξ + v<sub>x</sub>s, and the horizontal smearing scale is v<sub>x</sub>τ. The later Y–Z readout is explicitly impulsive.</p>
   <h2>Marginal and conditional displays</h2>
-  <p>Each 2D density is a projection of the same exact three-coordinate state. The hidden coordinate is integrated out:</p>
+  <p>Each marginal display is a projection of the same unitary three-coordinate ensemble state in all three interpretation views. The hidden coordinate is integrated out:</p>
   <div class="math-display"><strong>ρ<sub>XY</sub>(x,y,t) = ∫dz |Ψ(x,y,z,t)|² &nbsp; · &nbsp; ρ<sub>XZ</sub>(x,z,t) = ∫dy |Ψ(x,y,z,t)|² &nbsp; · &nbsp; ρ<sub>YZ</sub>(y,z,t) = ∫dx |Ψ(x,y,z,t)|²</strong></div>
   <p>In the Pilot-wave view, the conditional display replaces that integration by a slice through the actual hidden coordinate. For example, the conditional X–Z density is proportional to |Ψ(x,Y(t),z,t)|², while the conditional X–Y density is proportional to |Ψ(x,y,Z(t),t)|². The evolution is analytical; the displayed curves and shaded fields are rasterized and smoothed only for rendering. Multiple markers represent independently prepared runs, never many interacting particles in one experiment.</p>
   <p>Each genuinely new run draws a fresh initial configuration from |Ψ(x,y,z,0)|². Pausing, changing parameters, or switching interpretations preserves that run's standardized Born coordinates, so Orthodox, Pilot-wave, and Many-Worlds compare the same selected realization. After a run finishes, the New run button draws a different configuration.</p>
   <h2>Interpretation views and collapse</h2>
-  <p>In the Orthodox view, the readout samples one Y–Z channel with its Born probability and projects the state onto that channel. All other branches are removed from the 2D and 3D wave displays. This is a collapse onto a pointer interval B(y), not a retroactive measurement of one exact earlier X region. With the impulsive interaction selected, A(x) has sharp detector-bin boundaries, so the postselected X curve can contain sharp steps at those boundaries. They are a feature of this idealized hard-bin model, not a plotting cutoff; a finite interaction duration softens them physically. In the Many-Worlds view every branch remains; at readout the display separates into one labeled subcanvas per recorded outcome, with that branch's Born weight. When Perspective 3D is selected, every world receives its own independently rotatable WebGL configuration-space view. Marginal and conditional axis displays are configuration-dependent comparison tools and are therefore enabled only in the Pilot-wave view.</p>
+  <p>The Marginal option always shows the same unitary ensemble distribution, independent of interpretation. In the Orthodox view, the recorded outcome identifies the branch selected in the displayed run, but it does not replace an ensemble marginal with a single postselected branch. In the Many-Worlds view every recorded branch remains and, after readout, may be displayed in separate labeled subcanvases with its Born weight. Pilot-wave additionally permits conditional slices through the actual configuration.</p>
   <h2>Optional X–Y–Z view</h2>
-  <p>The 3D option opens an interactive perspective WebGL configuration-space canvas. Drag to rotate and use the mouse wheel to zoom. Stacked translucent density slices visualize the exact translated packet structure; the finite slabs and opacity sampling are a rendering approximation, not a numerical approximation to the dynamics. The bright marker is the actual Bohmian configuration (X(t),Y(t),Z(t)); the volume is the wave distribution, not additional particles in the same experiment. Its visibility can be adjusted under Visual controls.</p>
+  <p>The 3D option opens an interactive perspective WebGL configuration-space canvas. Drag to rotate and use the mouse wheel to zoom. Marginal mode shows a sample of the full joint ensemble density. In Pilot-wave Conditional mode, it shows the three mutually compatible planes XY at Z(t), XZ at Y(t), and YZ at X(t); the attached one-dimensional curves slice through the other two actual coordinates. The bright marker is the actual Bohmian configuration (X(t),Y(t),Z(t)); the density samples are not additional particles in the same experiment.</p>
   <p class="scope"><b>Scope:</b> The complete X–Y coupling and impulsive Y–Z readout form one weak measurement of X and are analytical solutions of the stated idealized heavy-pointer Hamiltonian. The app evaluates the corresponding characteristic translations directly and does not time-step Schrödinger’s equation. Rasterization, density sampling, and display smoothing affect only the visualization.</p>
 `;
 
@@ -101,11 +101,11 @@ const sendModelControl = (type, value) => document.querySelector('.lab iframe')?
 
 function ensureThemedMeasurementFrame(root = document) {
   const frame = root.querySelector?.('.lab iframe') ?? (root.matches?.('.lab iframe') ? root : null);
-  if (!frame || frame.dataset.templateFrameVersion === '1.56') return;
+  if (!frame || frame.dataset.templateFrameVersion === '1.57') return;
   const url = new URL(frame.getAttribute('src') || frame.src, location.href);
   if (!url.pathname.endsWith('/measurement.html')) return;
-  frame.dataset.templateFrameVersion = '1.56';
-  url.searchParams.set('v', '1.56');
+  frame.dataset.templateFrameVersion = '1.57';
+  url.searchParams.set('v', '1.57');
   frame.src = url.href;
 }
 
@@ -319,14 +319,14 @@ function syncAxisControls(root = document) {
   const in3D = localViewMode === '3d';
   group.querySelectorAll('button').forEach((button) => {
     const isMarginal = button.textContent.includes('Marginal');
-    button.disabled = in3D || !localProjectionPilot || (!isMarginal && !localProjectionSingle);
-    button.title = in3D ? 'The 3D view shows the full joint density and actual configuration.' : localProjectionPilot ? (isMarginal ? 'Show densities integrated over the hidden coordinate.' : 'Show a conditional plane and one-dimensional slices through the actual configuration.') : 'Marginal and conditional choices are available only in Pilot-wave mode.';
-    button.classList.toggle('active', !in3D && localProjectionPilot && button.textContent.toLowerCase().includes(localAxisMode));
+    button.disabled = !isMarginal && (!localProjectionPilot || !localProjectionSingle);
+    button.title = isMarginal ? 'Show the same unitary ensemble density in every interpretation.' : in3D ? 'Show the three conditional planes through the actual Bohmian configuration.' : 'Show a conditional plane and one-dimensional slices through the actual Bohmian configuration.';
+    button.classList.toggle('active', button.textContent.toLowerCase().includes(localAxisMode));
   });
-  group.setAttribute('aria-disabled', String(in3D || !localProjectionPilot));
+  group.setAttribute('aria-disabled', 'false');
   let note = group.nextElementSibling?.classList.contains('axis-mode-note') ? group.nextElementSibling : null;
   if (!note) { note = document.createElement('small'); note.className = 'axis-mode-note'; note.style.cssText = 'display:block;margin-top:5px;color:var(--muted,#789);line-height:1.3'; group.after(note); }
-  note.textContent = in3D ? '3D: full joint density |Ψ(x,y,z)|² plus the actual configuration.' : localAxisMode === 'conditional' && localProjectionPilot ? 'Conditional plane; side curves are slices through the actual configuration.' : 'Marginal plane; side curves are integrated one-dimensional marginals.';
+  note.textContent = in3D && localAxisMode === 'conditional' && localProjectionPilot ? 'Conditional 3D: the XY, XZ, and YZ planes through the actual configuration.' : in3D ? 'Marginal 3D: full joint ensemble density |Ψ(x,y,z)|².' : localAxisMode === 'conditional' && localProjectionPilot ? 'Conditional plane; side curves are slices through the actual configuration.' : 'Marginal plane; side curves are integrated one-dimensional marginals.';
 }
 function installAxisModeListeners(root = document) {
   const group = root.querySelector?.('.projection-toggle[aria-label="Axis wave-function display"]');
