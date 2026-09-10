@@ -101,11 +101,11 @@ const sendModelControl = (type, value) => document.querySelector('.lab iframe')?
 
 function ensureThemedMeasurementFrame(root = document) {
   const frame = root.querySelector?.('.lab iframe') ?? (root.matches?.('.lab iframe') ? root : null);
-  if (!frame || frame.dataset.templateFrameVersion === '1.54') return;
+  if (!frame || frame.dataset.templateFrameVersion === '1.55') return;
   const url = new URL(frame.getAttribute('src') || frame.src, location.href);
   if (!url.pathname.endsWith('/measurement.html')) return;
-  frame.dataset.templateFrameVersion = '1.54';
-  url.searchParams.set('v', '1.54');
+  frame.dataset.templateFrameVersion = '1.55';
+  url.searchParams.set('v', '1.55');
   frame.src = url.href;
 }
 
@@ -160,6 +160,7 @@ function installPermanentControls(root = document) {
       localViewMode = button.dataset.view;
       panel.querySelectorAll('[data-view]').forEach((candidate) => candidate.classList.toggle('active', candidate === button));
       sendModelControl('viewMode', localViewMode);
+      syncAxisControls();
     }));
     panel.querySelector('[data-playback]').addEventListener('click',()=>sendModelControl('toggle'));
     const menuButton=panel.querySelector('[data-playback-menu]'), menu=panel.querySelector('.playback-menu');
@@ -315,13 +316,17 @@ let localAxisMode = "conditional", localProjectionPilot = true, localProjectionS
 function syncAxisControls(root = document) {
   const group = root.querySelector?.('.projection-toggle[aria-label="Axis wave-function display"]') ?? document.querySelector('.projection-toggle[aria-label="Axis wave-function display"]');
   if (!group) return;
+  const in3D = localViewMode === '3d';
   group.querySelectorAll('button').forEach((button) => {
     const isMarginal = button.textContent.includes('Marginal');
-    button.disabled = !localProjectionPilot || (!isMarginal && !localProjectionSingle);
-    button.title = localProjectionPilot ? (isMarginal ? 'Show projected marginal densities.' : 'Available for a single Pilot-wave configuration.') : 'Marginal and conditional wave-function choices are available only in Pilot-wave mode.';
-    button.classList.toggle('active', localProjectionPilot && button.textContent.toLowerCase().includes(localAxisMode));
+    button.disabled = in3D || !localProjectionPilot || (!isMarginal && !localProjectionSingle);
+    button.title = in3D ? 'The 3D view shows the full joint density and actual configuration.' : localProjectionPilot ? (isMarginal ? 'Show densities integrated over the hidden coordinate.' : 'Show a conditional plane and one-dimensional slices through the actual configuration.') : 'Marginal and conditional choices are available only in Pilot-wave mode.';
+    button.classList.toggle('active', !in3D && localProjectionPilot && button.textContent.toLowerCase().includes(localAxisMode));
   });
-  group.setAttribute('aria-disabled', String(!localProjectionPilot));
+  group.setAttribute('aria-disabled', String(in3D || !localProjectionPilot));
+  let note = group.nextElementSibling?.classList.contains('axis-mode-note') ? group.nextElementSibling : null;
+  if (!note) { note = document.createElement('small'); note.className = 'axis-mode-note'; note.style.cssText = 'display:block;margin-top:5px;color:var(--muted,#789);line-height:1.3'; group.after(note); }
+  note.textContent = in3D ? '3D: full joint density |Ψ(x,y,z)|² plus the actual configuration.' : localAxisMode === 'conditional' && localProjectionPilot ? 'Conditional plane; side curves are slices through the actual configuration.' : 'Marginal plane; side curves are integrated one-dimensional marginals.';
 }
 function installAxisModeListeners(root = document) {
   const group = root.querySelector?.('.projection-toggle[aria-label="Axis wave-function display"]');
