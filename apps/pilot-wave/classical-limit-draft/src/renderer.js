@@ -1,3 +1,4 @@
+import { VelocityField } from './velocity-field.js';
 import { BOX, clamp, classicalPosition } from './physics.js';
 
 export const TRAIL_WIDTH_RATIO = 0.6;
@@ -314,6 +315,7 @@ export class Renderer {
     const debug = gl.getExtension('WEBGL_debug_renderer_info');
     this.gpu = debug ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
     this.recordingSize = null;
+    this.velocityField = new VelocityField(gl, program);
   }
   resize() {
     this.dpr = this.recordingScale ?? Math.min(2, window.devicePixelRatio || 1);
@@ -411,13 +413,14 @@ export class Renderer {
     gl.uniform1f(this.wave.uniform('phaseAmount'), options.showPhase ? Math.pow(1 - experiment.params.classicality, 0.7) : 0);
     gl.uniform1i(this.wave.uniform('visible'), options.showWave ? 1 : 0); gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    if (options.showVelocity) this.velocityField.draw(this, experiment);
     if (options.showParticles && options.showTrails) this.drawTrails(history.lines(experiment.time, options.trailSeconds), options.dotSize);
     if (options.showParticles) this.drawPoints(experiment.positions, PARTICLE_COLOR, options.dotSize);
-    if (options.showReference && options.showParticles) {
+    if (options.showReference) {
       // Draw the outlined reference last so yellow particles and trails cannot cover it.
       const data = [], initial = experiment.initialPositions, p = experiment.params;
       const referenceAt = t => experiment.classicalAt ? experiment.classicalAt(t) : [classicalPosition(initial[0], p.vx, t, BOX.width), classicalPosition(initial[1], p.vy, t, BOX.height)];
-      const start = Math.max(0, options.trailStartTime || 0, experiment.time - options.trailSeconds);
+      const start = Math.max(0, experiment.time - options.trailSeconds);
       const referenceWidth = options.dotSize * TRAIL_WIDTH_RATIO * this.dpr * Math.sqrt(this.zoom);
       const pixelSpeed = Math.hypot(p.vx * this.canvas.width / BOX.width, p.vy * this.canvas.height / BOX.height) * this.zoom;
       const dashPeriod = Math.max(0.08, 4.5 * referenceWidth / pixelSpeed);
@@ -431,12 +434,13 @@ export class Renderer {
           }
         }
       }
-      if (options.showTrails) this.drawTrails(new Float32Array(data), options.dotSize, REFERENCE_COLOR, false, true);
+      this.drawTrails(new Float32Array(data), options.dotSize, REFERENCE_COLOR, false, true);
       this.drawPoints(referenceAt(experiment.time), REFERENCE_COLOR, options.dotSize, true);
     }
     gl.bindVertexArray(null); gl.disable(gl.BLEND);
   }
   dispose() {
+    this.velocityField.dispose();
     const gl = this.gl;
     for (const t of this.textures) gl.deleteTexture(t);
     gl.deleteTexture(this.trailMask); gl.deleteFramebuffer(this.trailFramebuffer);

@@ -22,7 +22,7 @@ const settings = {
   count: clamp(Math.floor(numericQuery('count', 1)), 1, 256),
 };
 const appearance = {
-  showWave: true, showPhase: true, showParticles: true, showTrails: true,
+  showWave: true, showPhase: true, showVelocity: true, showParticles: true, showTrails: true,
   trailStartTime: 0,
   showReference: true, dotSize: 15, trailSeconds: 5, brightness: 1, playback: 1,
 };
@@ -176,13 +176,14 @@ for (const scene of Object.keys(SCENES)) {
 }
 
 function syncVisibility() {
+  appearance.showVelocity = $('show-velocity').checked;
   appearance.showWave = appearance.showPhase = $('show-wave').checked;
   appearance.showParticles = appearance.showTrails = $('show-particles').checked;
   appearance.showReference = $('show-reference').checked;
-  $('reference-legend').hidden = !appearance.showReference || !appearance.showParticles;
+  $('reference-legend').hidden = !appearance.showReference;
   drawingDirty = true;
 }
-for (const id of ['show-wave', 'show-reference']) $(id).addEventListener('change', syncVisibility);
+for (const id of ['show-wave', 'show-velocity', 'show-reference']) $(id).addEventListener('change', syncVisibility);
 $('show-particles').addEventListener('change', () => {
   syncVisibility();
   appearance.trailStartTime = experiment.time;

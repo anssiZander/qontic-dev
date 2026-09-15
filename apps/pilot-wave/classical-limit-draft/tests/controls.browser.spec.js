@@ -30,21 +30,27 @@ for (const scene of ['free', 'barrier']) {
     await page.locator('#show-particles').uncheck();
     hidden = await snapshot(page);
     expect(hidden.appearance.showParticles).toBe(false); expect(hidden.appearance.showTrails).toBe(false);
-    await expect(page.locator('#reference-legend')).toBeHidden();
-    // Intercept actual drawing to verify the comparison cannot remain visible.
-    const draws = await page.evaluate(async () => {
+    await expect(page.locator('#reference-legend')).toBeVisible();
+    // Verify only the independent classical particle and trail are drawn.
+    const captureDraws = () => page.evaluate(async () => {
       const { Renderer } = await import('/src/renderer.js');
       const calls = [], originals = {};
       for (const name of ['drawPoints', 'drawTrails']) {
         originals[name] = Renderer.prototype[name];
-        Renderer.prototype[name] = function (...args) { calls.push(name); return originals[name].apply(this, args); };
+        Renderer.prototype[name] = function (...args) { calls.push({ name, reference: name === 'drawPoints' ? args[3] : args[4] }); return originals[name].apply(this, args); };
       }
       try { window.__classicalLimit.run(.2); } finally {
         for (const name of Object.keys(originals)) Renderer.prototype[name] = originals[name];
       }
       return calls;
     });
-    expect(draws).toEqual([]);
+    expect(await captureDraws()).toEqual([
+      { name: 'drawTrails', reference: true }, { name: 'drawPoints', reference: true },
+    ]);
+    await page.locator('#show-reference').uncheck();
+    expect(await captureDraws()).toEqual([]);
+    await expect(page.locator('#reference-legend')).toBeHidden();
+    await page.locator('#show-reference').check();
     expect((await snapshot(page)).historyLength).toBe(1);
     await page.locator('#show-wave').check(); await page.locator('#show-particles').check();
     const visible = await snapshot(page);
