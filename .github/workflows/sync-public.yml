@@ -1,0 +1,118 @@
+name: Sync public qontic repository
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out qontic-dev
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check out public qontic
+        uses: actions/checkout@v4
+        with:
+          repository: qontic/qontic
+          token: ${{ secrets.QONTIC_SYNC_TOKEN }}
+          path: public-qontic
+          fetch-depth: 0
+
+      - name: Validate publication statuses
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          app_json_files = sorted(Path('.').glob('notebooks/*/app.json'))
+          app_json_files += sorted(Path('.').glob('apps/*/*/app.json'))
+
+          missing = []
+          invalid = []
+          allowed = {'draft', 'review', 'published'}
+
+          for app_json in app_json_files:
+              data = json.loads(app_json.read_text(encoding='utf-8'))
+              status = data.get('status')
+              if status is None:
+                  missing.append(str(app_json))
+              elif status not in allowed:
+                  invalid.append((str(app_json), status))
+
+          if missing or invalid:
+              if missing:
+                  print('Missing status field:')
+                  for path in missing:
+                      print(f'  {path}')
+              if invalid:
+                  print('Invalid status value:')
+                  for path, status in invalid:
+                      print(f'  {path}: {status!r}')
+              raise SystemExit('Publication statuses are not fully initialized. Run the Initialize publication statuses workflow first.')
+
+          print(f'Validated {len(app_json_files)} publication statuses.')
+          PY
+
+      - name: Copy qontic-dev into qontic, excluding GitHub workflows
+        run: |
+          rsync -a --delete \
+            --exclude='.git/' \
+            --exclude='public-qontic/' \
+            --exclude='.github/workflows/' \
+            ./ public-qontic/
+
+      - name: Remove unpublished notebooks and apps
+        run: |
+          python3 - <<'PY'
+          import json
+          import shutil
+          from pathlib import Path
+
+          dev_root = Path('.')
+          public_root = Path('public-qontic')
+          kept = []
+          removed = []
+
+          app_json_files = sorted(dev_root.glob('notebooks/*/app.json'))
+          app_json_files += sorted(dev_root.glob('apps/*/*/app.json'))
+
+          for app_json in app_json_files:
+              rel_dir = app_json.parent.relative_to(dev_root)
+              data = json.loads(app_json.read_text(encoding='utf-8'))
+              status = data['status']
+
+              if status == 'published':
+                  kept.append(str(rel_dir))
+                  continue
+
+              target = public_root / rel_dir
+              if target.exists():
+                  shutil.rmtree(target)
+              removed.append((str(rel_dir), status))
+
+          print('Published for production:')
+          for path in kept:
+              print(f'  KEEP {path}')
+          print('Not published:')
+          for path, status in removed:
+              print(f'  SKIP {path} [{status}]')
+          PY
+
+      - name: Commit and push changes
+        working-directory: public-qontic
+        run: |
+          git config user.name "qontic-sync"
+          git config user.email "qontic-sync@users.noreply.github.com"
+
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No changes to sync."
+            exit 0
+          fi
+
+          SOURCE_SHA=$(git -C .. rev-parse --short HEAD)
+          git commit -m "Sync published public qontic from qontic-dev (${SOURCE_SHA})"
+          git push origin main

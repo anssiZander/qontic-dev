@@ -1,0 +1,18 @@
+{
+  "id": "quantum-measurement-barrier-simulation",
+  "title": "Quantum Measurement: Barrier Model",
+  "type": "app",
+  "category": "comparative",
+  "module": "measurement",
+  "topics": ["measurement", "detectors", "measurement-back-action"],
+  "interpretations": ["orthodox", "pilot-wave", "many-worlds"],
+  "level": "intermediate",
+  "description": "Explore quantum measurement through a tunneling barrier model across orthodox, pilot-wave, and many-worlds views.",
+  "tags": [
+    "Multiview",
+    "Measurement",
+    "Barrier"
+  ],
+  "entry": "index.html",
+  "status": "published"
+}

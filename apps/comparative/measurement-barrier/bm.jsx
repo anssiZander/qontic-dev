@@ -33,10 +33,15 @@ function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 function lerp(a, b, t)    { return a + (b - a) * t; }
 
 // Box-Muller Gaussian sample  N(0,1)
-function sampleGauss() {
+function sampleGauss(random = Math.random) {
   let u;
-  do { u = Math.random(); } while (u <= 0);
-  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random());
+  do { u = random(); } while (u <= 0);
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * random());
+}
+
+function nextRunRandom(state) {
+  state.rngState = (1664525 * state.rngState + 1013904223) >>> 0;
+  return state.rngState / 4294967296;
 }
 
 // Exact rectangular-barrier |T|² (ℏ=m=1)
@@ -318,7 +323,7 @@ function computeTraj(k0, V0, lam, sigX, sigY, y0, isT) {
 }
 
 // Compute N trajectories with Born-rule initial positions
-function computeMultiTraj(k0, V0, lam, sigX, sigY, n) {
+function computeMultiTraj(k0, V0, lam, sigX, sigY, n, random = Math.random) {
   const trajs = [];
   const Tprob = clamp(exactT(k0, V0), 0, 1);
   for (let i = 0; i < n; i++) {
@@ -326,8 +331,8 @@ function computeMultiTraj(k0, V0, lam, sigX, sigY, n) {
     // drawn with Born-rule probability P(T). This is the Bohmian non-crossing rule:
     // the top T_prob fraction of x-initial-positions transmit, the rest reflect.
     // The pointer initial position y0 is drawn independently from N(0, σ_p).
-    const isT = Math.random() < Tprob;
-    const y0 = sigY * sampleGauss();  // independent of branch — pointer starts anywhere in N(0,σ_p)
+    const isT = random() < Tprob;
+    const y0 = sigY * sampleGauss(random);  // independent of branch — pointer starts anywhere in N(0,σ_p)
     const pts = computeTraj(k0, V0, lam, sigX, sigY, y0, isT);
     // isTransmit comes from the x trajectory (particle moved right = transmitted)
     const isTransmit = pts[pts.length - 1].x > 0;
@@ -553,7 +558,7 @@ function ShowDesc({ text }) {
 // ── Floating pointer readout distribution ─────────────────────────────────────
 function PointerDistFloat({ needleHistory, deltaY, sigY, Tp }) {
   const [minimized, setMinimized] = React.useState(false);
-  const posRef = React.useRef({ x: 10, y: 215 });
+  const posRef = React.useRef({ x: 10, y: 300 });
   const [pos, setPos] = React.useState(posRef.current);
   const cvRef = React.useRef(null);
   const Rp = 1 - Tp;
@@ -810,7 +815,7 @@ function PointerDistFloat({ needleHistory, deltaY, sigY, Tp }) {
 function HistogramFloat({ histT, histR, histTotal, Tp }) {
   const [minimized, setMinimized] = React.useState(false);
   // Use a ref to track position so drag closures never go stale
-  const posRef = React.useRef({ x: 10, y: 70 });
+  const posRef = React.useRef({ x: 10, y: 150 });
   const [pos, setPos] = React.useState(posRef.current);
 
   // Drag starts only from the title bar div
@@ -952,42 +957,65 @@ const SimPanel = React.memo(({
   showCoarse, setShowCoarse,
   fixedT, setFixedT,
   running, setRunning,
+  autoRun, setAutoRun,
   barrierOn, setBarrierOn,
   detectorOn, setDetectorOn,
   histT, histR, histTotal,
   isMobile,
-  advMode,
 }) => {
-  const adv = !!advMode;
+  const [controlTab, setControlTab] = useState("core");
+  const adv = controlTab === "advanced";
+  const display = controlTab === "display";
   const vc  = VIEW_COLOR[interp];
   const p   = isMobile ? "8px 8px" : "10px 9px";
   const fs  = isMobile ? 10 : 12;
+  const commonControlsRef = useRef(null);
+  useEffect(() => {
+    const controls = commonControlsRef.current;
+    if (!controls) return;
+    const onInterpretation = event => setInterp(event.detail.interpretation);
+    const onStart = () => setRunning(true);
+    const onStop = () => setRunning(false);
+    const onAutorun = event => setAutoRun(event.detail.autoRun);
+    const onSpeed = event => setSpeed(event.detail.speed);
+    const onTab = event => setControlTab(event.detail.tab);
+    controls.addEventListener("qontic:interpretation", onInterpretation);
+    controls.addEventListener("qontic:start", onStart);
+    controls.addEventListener("qontic:stop", onStop);
+    controls.addEventListener("qontic:autorun", onAutorun);
+    controls.addEventListener("qontic:speed", onSpeed);
+    controls.addEventListener("qontic:tab", onTab);
+    return () => {
+      controls.removeEventListener("qontic:interpretation", onInterpretation);
+      controls.removeEventListener("qontic:start", onStart);
+      controls.removeEventListener("qontic:stop", onStop);
+      controls.removeEventListener("qontic:autorun", onAutorun);
+      controls.removeEventListener("qontic:speed", onSpeed);
+      controls.removeEventListener("qontic:tab", onTab);
+    };
+  }, [setInterp, setRunning, setAutoRun, setSpeed]);
+
 
   return (
     <div style={{ display:"flex", flexDirection:"column",
       width:"100%",
-      fontFamily:"'JetBrains Mono','Courier New',monospace", color:"#e8f2ff" }}>
+      fontFamily:"Inter,Arial,sans-serif", color:"#e8f2ff" }}>
 
       <div style={{ display:"flex", flexDirection:"column", gap: isMobile ? 5 : 7,
         padding: isMobile ? "6px 8px" : "8px 18px 8px 9px" }}>
 
-        {/* View switcher — always visible */}
-        <SL label="View" tip="Click to cycle: Orthodox → Pilot-Wave → Many Worlds&#10;&#10;Orthodox QM: collapse fires when pointer overlap drops below 1% (von Neumann criterion). Outcome random with Born-rule probabilities.&#10;&#10;Pilot-Wave (de Broglie–Bohm): particle has a definite trajectory guided by the wavefunction. No collapse; randomness comes from unknown initial positions.&#10;&#10;Many Worlds (Everett): wavefunction never collapses. All outcomes happen in branching worlds.">
-          <Tip text={VIEW_TIP[interp]}>
-            <button onClick={() => setInterp(VIEWS[(VIEWS.indexOf(interp)+1)%VIEWS.length])}
-              style={{
-                display:"block", width:"100%", padding:"7px 10px", marginBottom:5,
-                background:`rgba(${interp==="cpn"?"200,80,40":"30,160,220"},0.18)`,
-                border:`2px solid ${vc}`, borderRadius:6, color:vc,
-                cursor:"pointer", fontSize:13,
-                fontFamily:"'JetBrains Mono','Courier New',monospace",
-                fontWeight:700, textAlign:"center",
-              }}>{">"} {VIEW_LABEL[interp]}</button>
-          </Tip>
-          <ShowDesc text={interp === "cpn" ? VIEW_DESC.cpn : VIEW_DESC[interp]} />
-        </SL>
+        <qontic-controls
+          ref={commonControlsRef}
+          interpretation={interp}
+          running={running ? "true" : "false"}
+          auto-run={autoRun ? "true" : "false"}
+          speed={speed}
+          active-tab={controlTab}
+          accent={vc}
+        ></qontic-controls>
+        <div className="qontic-tab-panel" role="tabpanel" aria-label={`${controlTab} controls`}>
 
-        <SL label={`Transmission  ${barrierOn ? Math.round(tTarget*100)+"%" : "100% (barrier off)"}`}
+        {controlTab === "core" && <SL label={`Transmission  ${barrierOn ? Math.round(tTarget*100)+"%" : "100% (barrier off)"}`}
           tip={"Fraction of the wave that passes through the barrier.\n0% = total reflection,  100% = total transmission.\n(Sets the barrier height internally.)"}>
           <input type="range" min={0} max={100} step={1}
             defaultValue={Math.round(tTarget*100)}
@@ -999,9 +1027,9 @@ const SimPanel = React.memo(({
             <span style={{color:"#ff7744"}}>← all reflected</span>
             <span style={{color:"#44ee88"}}>all transmitted →</span>
           </div>
-        </SL>
+        </SL>}
 
-        {adv && <SL label={`Coupling  ${detectorOn ? Math.round(lam/3*100)+"%" : "off (detector off)"}`}
+        {controlTab === "core" && <SL label={`Coupling  ${detectorOn ? Math.round(lam/3*100)+"%" : "off (detector off)"}`}
           tip={"How far the pointer deflects after the interaction.\n0 = pointer does not move (no measurement).\nHigh = pointer clearly separates the two branches."}>
           <input type="range" min={0} max={3} step={0.05} value={lam}
             ref={lamRef} onChange={e => setLam(+e.target.value)}
@@ -1074,14 +1102,6 @@ const SimPanel = React.memo(({
           );
         })()}
 
-        <SL label="Speed" tip="Playback speed">
-          <input type="range" min={0.1} max={4} step={0.05} defaultValue={0.5}
-            ref={speedRef} onInput={e => setSpeed(+e.target.value)}
-            style={{ width:"100%", accentColor:"#ffcc44" }} />
-          <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"#506080" }}>
-            <span>×{speed.toFixed(1)}</span></div>
-        </SL>
-
         {adv && <SL label={`Cycle pause  ${(pauseHoldMs/1000).toFixed(1)} s`} tip="How long the simulation pauses at the end of each cycle before restarting.\n\nIncrease this to have more time to observe the final state before the next particle is fired.">
           <input type="range" min={0} max={5000} step={100} defaultValue={1000}
             ref={pauseHoldMsRef} onInput={e => setPauseHoldMs(+e.target.value)}
@@ -1090,85 +1110,52 @@ const SimPanel = React.memo(({
             <span>0 s</span><span>5 s</span></div>
         </SL>}
 
-        {adv && (
+        {display && (
           <Tip text="Toggle the potential barrier. Off = 100% transmission (free particle).">
-            <button onClick={() => setBarrierOn(!barrierOn)} style={{
-              width:"100%", padding:"5px 0", marginBottom:4,
-              background: barrierOn ? "rgba(40,80,180,0.5)" : "rgba(15,30,70,0.5)",
-              border:"1px solid " + (barrierOn ? "#5588cc" : "#334466"),
-              borderRadius:5, color: barrierOn ? "#c8e8ff" : "#7090b8",
-              cursor:"pointer", fontSize:12,
-              fontFamily:"'JetBrains Mono','Courier New',monospace",
-            }}>{barrierOn ? "◉" : "○"} Barrier</button>
+            <button className={`qontic-app-toggle qontic-app-toggle--wide${barrierOn ? " active" : ""}`}
+              aria-pressed={barrierOn} onClick={() => setBarrierOn(!barrierOn)}>
+              {barrierOn ? "●" : "○"} Barrier
+            </button>
           </Tip>
         )}
 
-        {adv && <SL label="Detector">
-          <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+        {display && <SL label="Detector">
+          <div className="qontic-app-toggle-group">
             {[
               { key:"detector", label:"Fine",       on:detectorOn, fn:setDetectorOn, tip:"Toggle the fine detector (gauge dial).\nOff = no coupling, pointer stays at rest." },
               { key:"coarse",   label:"Coarse",     on:showCoarse, fn:setShowCoarse, tip:"Show a second coarse-grained detector (binary T/R).\n\nThe fine detector shows the quantum pointer — a continuous Gaussian wavepacket.\nThe coarse detector amplifies that reading into a definite T or R click.\n\nIn weak regime the fine pointer is ambiguous; the coarse register makes the outcome definite." },
               { key:"fixedT",   label:"Fix T",     on:fixedT,     fn:setFixedT,     tip:"Lock the T pointer position on the gauge dial.\n\nOff: the T tick on the dial moves as coupling λ changes (scale fixed at λ_max range).\nOn: the dial scale adjusts so T always sits at the same height on the gauge. The y-value labels change to reflect the actual pointer separation.\n\nThe y-panel always matches the 2D canvas regardless of this setting." },
             ].map(({ key, label, on, fn, tip }) => (
               <Tip key={key} text={tip}>
-                <button onClick={() => fn(!on)} style={{
-                  padding:"5px 10px",
-                  background: on ? "rgba(40,80,180,0.5)" : "rgba(15,30,70,0.5)",
-                  border:"1px solid " + (on ? "#5588cc" : "#334466"),
-                  borderRadius:5, color: on ? "#c8e8ff" : "#7090b8",
-                  cursor:"pointer", fontSize:12,
-                  fontFamily:"'JetBrains Mono','Courier New',monospace",
-                }}>{on ? "◉" : "○"} {label}</button>
+                <button className={`qontic-app-toggle${on ? " active" : ""}`}
+                  aria-pressed={on} onClick={() => fn(!on)}>
+                  {on ? "●" : "○"} {label}
+                </button>
               </Tip>
             ))}
           </div>
         </SL>}
 
-        {adv && interp === "pw" && (
+        {display && interp === "pw" && (
         <SL label="Toggles">
-          <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+          <div className="qontic-app-toggle-group">
             {[
               { key:"wave", label:"Wave",  on:showWave, fn:setShowWave, tip:"Show/hide 2D |Ψ|² heatmap" },
               { key:"traj", label:"Paths",  on:showTraj, fn:setShowTraj, tip:"Show/hide Bohmian trajectories" },
               { key:"proj", label:"Proj",  on:showProj, fn:setShowProj, tip:"Also overlay global projections ρ(x), ρ(y) on the CWF panels" },
             ].map(({ key, label, on, fn, tip }) => (
               <Tip key={key} text={tip}>
-                <button onClick={() => fn(!on)} style={{
-                  padding:"5px 10px",
-                  background: on ? "rgba(40,80,180,0.5)" : "rgba(15,30,70,0.5)",
-                  border:"1px solid " + (on ? "#5588cc" : "#334466"),
-                  borderRadius:5, color: on ? "#c8e8ff" : "#7090b8",
-                  cursor:"pointer", fontSize:12,
-                  fontFamily:"'JetBrains Mono','Courier New',monospace",
-                }}>{on ? "◉" : "○"} {label}</button>
+                <button className={`qontic-app-toggle${on ? " active" : ""}`}
+                  aria-pressed={on} onClick={() => fn(!on)}>
+                  {on ? "●" : "○"} {label}
+                </button>
               </Tip>
             ))}
-            <Tip text="Pause / resume">
-              <button onClick={() => setRunning(!running)} style={{
-                padding:"5px 10px",
-                background: running ? "rgba(20,55,130,0.6)" : "rgba(25,80,40,0.6)",
-                border:"1px solid " + (running ? "rgba(70,130,255,0.4)" : "rgba(60,200,80,0.35)"),
-                borderRadius:5, color: running ? "#88bbff" : "#66dd88",
-                cursor:"pointer", fontSize:12,
-                fontFamily:"'JetBrains Mono','Courier New',monospace",
-              }}>{running ? "⏸" : "▶"}</button>
-            </Tip>
           </div>
         </SL>
         )}
 
-        {!(adv && interp === "pw") && (
-          <Tip text="Start / stop simulation">
-            <button onClick={() => setRunning(!running)} style={{
-              width:"100%", padding:"6px 0",
-              background: running ? "rgba(60,70,90,0.6)" : "rgba(25,80,40,0.6)",
-              border:"1px solid " + (running ? "rgba(130,150,190,0.4)" : "rgba(60,200,80,0.35)"),
-              borderRadius:5, color: running ? "#a0aec0" : "#66dd88",
-              cursor:"pointer", fontSize:12,
-              fontFamily:"'JetBrains Mono','Courier New',monospace",
-            }}>{running ? "Stop" : "Start"}</button>
-          </Tip>
-        )}
+        </div>
 
         {!isMobile && <div style={{ fontSize:10, color:"#506080",
           borderTop:"1px solid rgba(50,80,180,0.15)", paddingTop:8 }}>
@@ -2176,8 +2163,8 @@ export default function App() {
   }, []);
   // Sidebar: on mobile-portrait stacks below; on mobile-landscape stays right (compact)
   const sidebarBelow = isMobile && !isLandscape;
-  const [sidebarDragW, setSidebarDragW] = useState(275);
-  const sidebarW     = isLandscape ? 200 : (isMobile ? "100%" : sidebarDragW);
+  const [sidebarDragW, setSidebarDragW] = useState(303);
+  const sidebarW     = isLandscape ? 220 : (isMobile ? "100%" : sidebarDragW);
   const onSidebarDragStart = useCallback((e) => {
     if (sidebarBelow) return;
     e.preventDefault();
@@ -2196,8 +2183,9 @@ export default function App() {
     detWidth: 2.0,
     speed:0.5,
     collapseThreshold:0.01, // von Neumann criterion — fixed, not user-adjustable
-    showWave:true, showTraj:true, showProj:false, showCoarse:false, fixedT:false, running:true,
+    showWave:true, showTraj:true, showProj:false, showCoarse:false, fixedT:false, running:false, autoRun:true,
     tick:0, dirty:true,
+    runSeed:0x51f15e, rngState:0x51f15e,
     pauseUntil:0,  // wall-clock ms to hold before restarting cycle
     pauseHoldMs:1000, // duration of end-of-cycle pause in ms
     camX:0, camY:0, camZ:14,
@@ -2240,7 +2228,8 @@ export default function App() {
   const [showProj, setShowProjUI] = useState(false);
   const [showCoarse, setShowCoarseUI] = useState(false);
   const [fixedT,     setFixedTUI]     = useState(false);
-  const [running,  setRunningUI]  = useState(true);
+  const [running,  setRunningUI]  = useState(false);
+  const [autoRun, setAutoRunUI] = useState(true);
   const [barrierOn,  setBarrierOnUI]  = useState(true);
   const [detectorOn, setDetectorOnUI] = useState(true);
   const [Tp,       setTpUI]       = useState(0.5);
@@ -2296,6 +2285,7 @@ export default function App() {
   const setShowCoarse = v => { S.current.showCoarse=v; setShowCoarseUI(v); };
   const setFixedT     = v => { S.current.fixedT=v;    setFixedTUI(v); };
   const setRunning   = v => { S.current.running=v;  setRunningUI(v);  };
+  const setAutoRun = v => { S.current.autoRun=v; setAutoRunUI(v); };
   const setBarrierOn  = v => { S.current.barrierOn=v;  S.current.dirty=true; setBarrierOnUI(v);  };
   const setDetectorOn = v => { S.current.detectorOn=v; S.current.dirty=true; setDetectorOnUI(v); };
   const setCollapseThreshold = v => { S.current.collapseThreshold=v; setCollapseThresholdUI(v); if(collapseThresholdRef.current) collapseThresholdRef.current.value=Math.round(v*100); };
@@ -2497,7 +2487,7 @@ export default function App() {
         fGlows.forEach(g => g.visible = false);
         return;
       }
-      trajs = computeMultiTraj(s.k0, effV0, effLam, s.sigX, s.sigY, 1);
+      trajs = computeMultiTraj(s.k0, effV0, effLam, s.sigX, s.sigY, 1, () => nextRunRandom(s));
       const tScat_rb = Math.abs(X0) / s.k0;
       const dt_rb    = (tScat_rb + 9.0) / STEPS;
       const mid = Math.round(STEPS*0.4);
@@ -2623,9 +2613,9 @@ export default function App() {
             let mwWeakSample = null, mwWeakIsT = false;
             if (isMW_rec && effLam_rec > 0 && !isStrong_rec) {
               const yT_mw = yRF + 4 * effLam_rec * gW_rec;
-              const u1 = Math.max(1e-10, Math.random()), v1 = Math.random();
+              const u1 = Math.max(1e-10, nextRunRandom(s)), v1 = nextRunRandom(s);
               const g1 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * v1);
-              const yMixed = (Math.random() < Tprob_now ? yT_mw : yRF) + g1 * s.sigY;
+              const yMixed = (nextRunRandom(s) < Tprob_now ? yT_mw : yRF) + g1 * s.sigY;
               mwWeakSample = yMixed;
               mwWeakIsT = yMixed >= (yT_mw + yRF) / 2;
             }
@@ -2670,7 +2660,13 @@ export default function App() {
             s.sampledPointerY_T = null;
             s.sampledPointerY_R = null;
             s.coarseIsT = null;        // reset coarse outcome
+            s.runSeed = (Math.random()*0x100000000)>>>0;
+            s.rngState = s.runSeed;
             s.dirty = true;  // rebuild trajectory with new random initial conditions
+            if (!s.autoRun) {
+              s.running = false;
+              setRunningUI(false);
+            }
           }
           // else: don't advance tick
         } else {
@@ -2785,10 +2781,10 @@ export default function App() {
           // This is physically correct: the pointer state is an entangled superposition;
           // collapse picks the branch based on where the pointer reading lands.
           const yT_final = yRFixed + 4 * effLam * gWindow;
-          const u1 = Math.max(1e-10, Math.random()), v1 = Math.random();
+          const u1 = Math.max(1e-10, nextRunRandom(s)), v1 = nextRunRandom(s);
           const g1 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * v1);
           // Choose which Gaussian to sample from with amplitude² weight
-          const sampleFromT = Math.random() < Tprob;
+          const sampleFromT = nextRunRandom(s) < Tprob;
           const yMixed = (sampleFromT ? yT_final : yRFixed) + g1 * s.sigY;
           s.sampledPointerY = yMixed;
           // Classify outcome: pointer above midpoint → T, below → R
@@ -3076,10 +3072,10 @@ export default function App() {
         if (pointerHit && s.sampledPointerY === null) {
           const yT_final = yRFixed + 4 * effLam * gWindow;
           const randn = () => {
-            const u = Math.max(1e-10, Math.random()), v = Math.random();
+            const u = Math.max(1e-10, nextRunRandom(s)), v = nextRunRandom(s);
             return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
           };
-          const branch = Math.random() < Tprob ? yT_final : yRFixed;
+          const branch = nextRunRandom(s) < Tprob ? yT_final : yRFixed;
           s.sampledPointerY = branch + randn() * s.sigY;
           // Per-world samples: each drawn independently from its own χ²
           s.sampledPointerY_T = yT_final + randn() * s.sigY;
@@ -3190,8 +3186,7 @@ export default function App() {
     };
   }, []);
 
-  const [canvasTab, setCanvasTab] = useState("sim"); // "sim" | "math"
-  const [advMode,   setAdvMode]   = useState(false); // false = beginner, true = advanced
+  const [canvasTab, setCanvasTab] = useState("sim"); // "sim" | "math" | "about"
 
   return (
     <div style={{ display:"flex", flexDirection: sidebarBelow ? "column" : "row",
@@ -3211,8 +3206,7 @@ export default function App() {
         {/* Tab strip */}
         <div style={{ display:"flex", flexShrink:0, background:"rgba(4,10,30,0.9)",
           borderBottom:"1px solid rgba(40,80,180,0.35)", height:28, alignItems:"center" }}>
-          {[["sim","Simulation"],["math","Math"],["about","About"]].map(([key,label]) => {
-            if (key === "math" && !advMode) return null;
+          {[["sim","Simulation"],["math","Math"],["about","Physics"]].map(([key,label]) => {
             return (
             <button key={key} onClick={() => setCanvasTab(key)} style={{
               padding:"0 16px", fontSize:11, cursor:"pointer", border:"none",
@@ -3225,25 +3219,6 @@ export default function App() {
             }}>{label}</button>
             );
           })}
-          {/* Beginner / Advanced toggle — pinned to the right */}
-          <button onClick={() => {
-              const goingBeginner = advMode;
-              setAdvMode(a => !a);
-              // if switching to beginner while on math tab, go back to sim
-              if (goingBeginner && canvasTab === "math") setCanvasTab("sim");
-            }}
-            style={{
-              marginLeft:"auto", padding:"0 12px", height:"100%",
-              fontSize:14, cursor:"pointer", border:"none",
-              fontFamily:"'JetBrains Mono','Courier New',monospace",
-              letterSpacing:"0.06em", textTransform:"uppercase",
-              background: advMode ? "rgba(80,40,160,0.35)" : "rgba(0,60,120,0.25)",
-              color: advMode ? "#cc99ff" : "#4a8ac0",
-              borderLeft:"1px solid rgba(60,80,180,0.25)",
-              borderBottom:"2px solid transparent",
-            }}>
-            {advMode ? "▼ Advanced" : "▶ Beginner"}
-          </button>
         </div>
 
         {/* Simulation view */}
@@ -3270,8 +3245,8 @@ export default function App() {
                 </div>
               );
             })()}
-            {/* Outcome histogram + pointer distribution — floating panels, expert only */}
-            {canvasTab === "sim" && advMode && (<>
+            {/* Outcome histogram + pointer distribution — floating result panels */}
+            {canvasTab === "sim" && (<>
               <HistogramFloat histT={histT} histR={histR} histTotal={histTotal} Tp={Tp} />
               <PointerDistFloat
                 needleHistory={needleHistory}
@@ -3415,11 +3390,11 @@ export default function App() {
           showCoarse={showCoarse} setShowCoarse={setShowCoarse}
           fixedT={fixedT} setFixedT={setFixedT}
           running={running} setRunning={setRunning}
+          autoRun={autoRun} setAutoRun={setAutoRun}
           barrierOn={barrierOn} setBarrierOn={setBarrierOn}
           detectorOn={detectorOn} setDetectorOn={setDetectorOn}
           histT={histT} histR={histR} histTotal={histTotal}
           isMobile={isMobile}
-          advMode={advMode}
         />
       </div>
     </div>

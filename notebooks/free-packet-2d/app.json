@@ -1,8 +1,21 @@
 {
+  "id": "free-particle-pilot-wave-2d-notebook",
   "title": "Pilot-Wave 2D Free Particle — Notebook",
   "type": "notebook",
   "category": "pilot-wave",
+  "module": "free-particle",
+  "topics": ["free-particle", "wave-packets", "pilot-wave"],
+  "interpretations": ["pilot-wave"],
+  "level": "introductory",
   "description": "Introduction to free particle quantum dynamics with pilot-wave visualization.",
-  "tags": ["Notebook", "Pilot-wave", "GPU", "2D", "Spin", "Free particle"],
-  "entry": "index.html"
+  "tags": [
+    "Notebook",
+    "Pilot-wave",
+    "GPU",
+    "2D",
+    "Spin",
+    "Free particle"
+  ],
+  "entry": "index.html",
+  "status": "published"
 }

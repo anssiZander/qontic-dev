@@ -1,4 +1,4 @@
-import { effectiveDt, effectiveStepsPerFrame, initSimulationSpeedControl, setSimulationFrameDuration } from "../simulation-speed.js";
+import { initSimulationSpeedControl, setSimulationFrameDuration } from "../simulation-speed.js";
 
 const canvas = document.getElementById("c");
 const gl = canvas.getContext("webgl2", { antialias: false, alpha: false, depth: false, stencil: false });
@@ -68,7 +68,8 @@ const DEFAULT_AUTO_RESTART_MOMENTUM = params.p0;
 const urlParams = new URLSearchParams(window.location.search);
 const isEmbedded = urlParams.get("embed") === "1";
 const preset = urlParams.get("preset");
-initSimulationSpeedControl({ visible: !isEmbedded });
+let playbackSpeed = 1;
+initSimulationSpeedControl({ onChange: speed => { playbackSpeed = speed; } });
 const oneParticlePreset = {
   dt: 0.02,
   simScale: 0.5,
@@ -178,11 +179,12 @@ function fmt(v) {
 }
 
 function simulationDt() {
-  return effectiveDt(params.dt);
+  // Playback speed must not alter the physical integration time step.
+  return params.dt;
 }
 
 function simulationStepsPerFrame() {
-  return effectiveStepsPerFrame(params.stepsPerFrame);
+  return Math.max(1, Math.round(params.stepsPerFrame * playbackSpeed));
 }
 
 function trailFadeFrameDt() {
@@ -193,11 +195,14 @@ function particleTrailWidth() {
   return params.dotSize * 0.7;
 }
 
+let currentControlTab = "core";
+const controlTabForKey = key => key === "nParticles" ? "core" : currentControlTab;
 function addSlider(key, label, min, max, step, onChange = null) {
   if (isControlFixed(key)) return;
 
   const row = document.createElement("div");
   row.className = "row";
+  row.dataset.controlTab = controlTabForKey(key);
 
   const lab = document.createElement("label");
   lab.textContent = label;
@@ -231,10 +236,12 @@ function addToggleInt(key, label) {
 
   const row = document.createElement("div");
   row.className = "row";
+  row.dataset.controlTab = controlTabForKey(key);
   const lab = document.createElement("label");
   lab.textContent = label;
 
   const btn = document.createElement("button");
+  btn.className = "qontic-app-toggle";
   btn.style.flex = "1";
   btn.textContent = params[key] ? "ON" : "OFF";
   btn.addEventListener("click", () => {
@@ -257,11 +264,13 @@ function addCycleButton(key, label, values, onChange = null) {
 
   const row = document.createElement("div");
   row.className = "row";
+  row.dataset.controlTab = controlTabForKey(key);
 
   const lab = document.createElement("label");
   lab.textContent = label;
 
   const btn = document.createElement("button");
+  btn.className = "qontic-app-toggle";
   btn.style.flex = "1";
 
   const sync = () => {
@@ -290,6 +299,7 @@ function addChoiceButtons(key, label, values, onChange = null) {
 
   const row = document.createElement("div");
   row.className = "row";
+  row.dataset.controlTab = controlTabForKey(key);
 
   const lab = document.createElement("label");
   lab.textContent = label;
@@ -300,6 +310,7 @@ function addChoiceButtons(key, label, values, onChange = null) {
   const buttons = values.map((value, index) => {
     const btn = document.createElement("button");
     btn.type = "button";
+    btn.className = "qontic-app-toggle";
     btn.textContent = value;
     btn.addEventListener("click", () => {
       if ((params[key] | 0) === index) return;
@@ -314,7 +325,7 @@ function addChoiceButtons(key, label, values, onChange = null) {
   function sync() {
     const selected = params[key] | 0;
     buttons.forEach((btn, index) => {
-      btn.classList.toggle("is-active", index === selected);
+      btn.classList.toggle("active", index === selected);
     });
   }
 
@@ -325,8 +336,10 @@ function addChoiceButtons(key, label, values, onChange = null) {
 }
 
 function addSectionHeader(label) {
+  currentControlTab = label === "Performance" ? "advanced" : label === "Visual Parameters" ? "display" : "core";
   const header = document.createElement("div");
   header.className = "section-header";
+  header.dataset.controlTab = currentControlTab;
   header.style.marginTop = "12px";
   header.style.marginBottom = "8px";
   header.style.fontSize = "11px";
@@ -394,12 +407,30 @@ addSlider("trailHalfLife", "trail half-life", 1.0, 150.0, 1.0);
 removeEmptySectionHeaders();
 
 const pauseButton = document.getElementById("pause");
+const sharedControls = document.getElementById("shared-controls");
+function syncSharedRunState() {
+  sharedControls?.setAttribute("running", String(!paused));
+}
 function togglePause() {
   paused = !paused;
   pauseButton.textContent = paused ? "Resume" : "Pause";
+  syncSharedRunState();
 }
+function showControlTab(tab) {
+  controls.querySelectorAll("[data-control-tab]").forEach(element => {
+    element.hidden = element.dataset.controlTab !== tab;
+  });
+  document.querySelectorAll(".btns[data-control-tab]").forEach(element => {
+    element.hidden = element.dataset.controlTab !== tab;
+  });
+}
+sharedControls?.addEventListener("qontic:start", () => { paused = false; syncSharedRunState(); });
+sharedControls?.addEventListener("qontic:stop", () => { paused = true; syncSharedRunState(); });
+sharedControls?.addEventListener("qontic:reset", () => resetAll());
+sharedControls?.addEventListener("qontic:speed", event => { playbackSpeed = event.detail.speed; });
+sharedControls?.addEventListener("qontic:tab", event => showControlTab(event.detail.tab));
+showControlTab("core");
 
-document.getElementById("reset").onclick = () => resetAll();
 pauseButton.onclick = () => togglePause();
 
 if (isEmbedded) {

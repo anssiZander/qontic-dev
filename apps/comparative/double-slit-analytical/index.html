@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quantum Double-Slit Experiment Simulator</title>
+    <link rel="icon" type="image/svg+xml" href="../../../shared/favicon.svg">
     <link rel="stylesheet" href="../../../shared/back-home.css" />
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
@@ -14,8 +15,8 @@
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="js/palette.js"></script>
-    <script src="js/double-slit.js"></script>
-    <link rel="stylesheet" href="css/qsf-style.css">
+    <script src="js/double-slit.js?v=20260908-layout3"></script>
+    <link rel="stylesheet" href="css/qsf-style.css?v=20260908-layout3">
     <script defer src="../../../shared/back-home.js"></script>
 </head>
 <body>
@@ -57,7 +58,7 @@
         <div id="experiment-bar">
             <button id="toggleSlits" data-tip="Click to cycle: Both slits open → Slit 1 only → Slit 2 only.">Both Slits</button>
             <button id="toggleWhichPath" data-tip="Click to toggle a which-path detector at one of the slits. Destroys interference.">No Detector</button>
-            <button id="toggleView" data-tip="Cycle view: Collapse (standard detection) → Pilot-Wave (guided trajectories) → Many-Worlds (branching outcomes).">Collapse</button>
+            <button id="toggleView" data-tip="Cycle view: Orthodox (sampled detections) → Pilot-Wave (guided trajectories) → Many-Worlds (outcome weights and one record). Changing mode resets the run.">Orthodox</button>
             <div id="setupBtnStatus" class="btn-status-line">&nbsp;</div>
         </div>
         <ul>
@@ -69,7 +70,7 @@
                   <span class="material-icons tab-icon" aria-hidden="true">functions</span>
                   <span class="tab-label">Math</span>
                 </a></li>
-      	    <li class="tab-physics advanced-tab"><a href="#particle-parameter-container" title="Physics">
+       	    <li class="tab-physics advanced-tab"><a href="#particle-parameter-container" title="Physics">
                   <svg class="tab-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
                     <!-- nucleus -->
                     <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.3" stroke="currentColor" stroke-width="1.1"/>
@@ -92,7 +93,7 @@
                   <span class="material-icons tab-icon" aria-hidden="true">bar_chart</span>
                   <span class="tab-label">Graph</span>
                 </a></li>
-      	    <!-- Views tab removed; view cycling is in Basics and Setup tabs -->
+       	    <!-- Views tab removed; view cycling is in Basics and Setup tabs -->
         </ul>
         <!-- ===== BASICS TAB ===== -->
         <div id="basics-container" style="padding-top: 12px;">
@@ -186,8 +187,8 @@
 
         <div id="particle-parameter-container">
           <div id="manyBranchesInfo" style="margin-bottom: 6px;">
-            <button id="resampleHitsButton" class="branch-button" style="font-size: 12px; padding: 5px 10px;">Resample</button>
-            <button id="resetBranches" class="branch-button" style="font-size: 12px; padding: 5px 10px;">Reset</button>
+            <button id="resampleHitsButton" class="branch-button" style="font-size: 12px; padding: 5px 10px;">Sample another branch</button>
+            <button id="resetBranches" title="Restart the branch count only" class="branch-button" style="font-size: 12px; padding: 5px 10px;">Reset branches</button>
           </div>
           <div class="wave-range-box">
             <div class="input-group">
@@ -207,8 +208,8 @@
           </div>
 
           <div class="input-group bohmian-only">
-            <label data-tip="If checked, particles are effectively generated from detector-wall hits so all trajectories terminate on the wall. If unchecked, particles are emitted from the source and can reach the detector or escape through the upper/lower boundaries." for="onlyWallMode">Only wall hits:</label>
-            <input id="onlyWallMode" type="checkbox">
+            <label data-tip="Checked: sample detector endpoints and backtrack to seed guided paths. Unchecked: also use top/bottom boundary endpoints; this exploratory view is not an independently predicted detector distribution." for="onlyWallMode">Detector-conditioned:</label>
+            <input id="onlyWallMode" type="checkbox" checked>
           </div>
 
           <div class="input-group particle-second-line bohmian-only">
@@ -321,7 +322,7 @@
                <td class="label">Particles:</td>
                <td align=right class="value"><span id="shownParticles">0</span> / <span id="maxParticlesDisplay">100</span></td> 
            </tr>
-           <tr class="info-box manyworlds-only info-highlight" data-tip="Number of branches produced since the beginning of the simulation">
+           <tr class="info-box manyworlds-only info-highlight" data-tip="Finite detector model: each detection splits every existing branch into N sensor-outcome branches. After m detections the count is N^m; weights need not be equal.">
                <td class="label">Branches:</td>
                <td align=right class="value"><span id="infoBranchCount">1</span></td> 
            </tr>
@@ -347,7 +348,8 @@
              </div><!-- end leftPanel -->
 
              <div id="canvas-wrapper">
-             <div id="view-label">Collapse</div>
+             <div id="view-label">Orthodox</div>
+             <p id="modeExplanation" class="mode-explanation" aria-live="polite"></p>
              <div id="canvas-container">
            <canvas id="setupCanvas" width="800" height="600"></canvas>
            <canvas id="waveCanvas" width="800" height="600"></canvas>
@@ -358,6 +360,12 @@
            <span id="waveRangeLabel" style="position: absolute; left: 60px; bottom: 50px; z-index: 11; font-size: 10px; color: var(--text-muted); writing-mode: vertical-rl; text-orientation: mixed; pointer-events: none; height: 200px; display: flex; align-items: center; justify-content: center;"></span>
            <canvas id="paletteScaleCanvas2" width="40" height="100" data-tip="Wave 2 (slit 2) color palette scale" style="position: absolute; left: 0px; bottom: 50px; z-index: 10; display: none;"></canvas>
            <canvas id="paletteScaleCanvas1" width="40" height="100" data-tip="Wave 1 (slit 1) color palette scale" style="position: absolute; left: 0px; bottom: 150px; z-index: 10; display: none;"></canvas>
+             </div>
+             <div class="comparison-caption">
+               <p id="recordMeaning"></p>
+               <p>Curve: model probability density. Points and bars: sampled frequencies and approximate √n count uncertainties. Palette: the selected wave quantity, not particle density unless |Ψ|² is selected.</p>
+               <p class="manyworlds-only">Each detection splits every existing branch into N sensor-outcome branches. After m detections: N^m branches. N is the number of detector sensors. Branch weights follow the Born rule; the histogram follows one sampled branch.</p>
+               <p>Switching interpretation starts a fresh run with the same geometry and wave display. <a href="#rationale" id="compareHelp">Compare the three accounts</a>.</p>
              </div>
              <div id="shortcut-hint">Space: play/pause · R: reset · S: screenshot · V: cycle view · W: cycle wave display</div>
              </div>
@@ -386,20 +394,24 @@
     </header>
 
 
-    <p>The double-slit experiment was first performed by Thomas Young in 1801 to demonstrate the wave behavior of visible light. In 1927, at the advent of quantum mechanics, the experiment was reproduced with electrons, and since then, with atoms and ever larger molecules. The observations are qualitatively the same.</p>
-
-    <p>A beam of particles is directed at a plate with two small, parallel slits. On a detector screen behind, one observes an interference pattern, alternating bands of high and low intensity. Crucially, this interference pattern is created by the statistical distribution of individual impact points. If one sends in a single particle at a time, each produces a small dot on the screen in a seemingly random position. A large number of particles build up the interference pattern: alternating regions where many particles are detected and regions where few or none are.</p>
-
-    <p>Interference is a typical wave phenomenon: when two waves overlap, their amplitudes combine, so that in some places, the waves reinforce each other (<strong>constructive interference</strong>), while in others, they reduce or cancel each other (<strong>destructive interference</strong>). On the other hand, the individual dots appearing on the screen suggest the impact of localized particles rather than extended waves.</p>
-
-    <p>The double-slit experiment is therefore a key demonstration of the so-called <em>wave-particle duality</em>. The microscopic constituents of light and matter, photons, electrons, atoms, etc., exhibit both wave-like and particle-like properties.</p>
-
-<p>Different representational approaches motivate different explanatory narratives about the same interference pattern. This demo includes (i)&nbsp;<a href="#" class="view-link" data-view="bohmian">trajectory-based visualizations</a>, (ii)&nbsp;<a href="#" class="view-link" data-view="copenhagen">measurement-centered renderings</a>, and (iii)&nbsp;<a href="#" class="view-link" data-view="manyworlds">wave-only views</a>. These modes are intended to support comparison of explanatory strategies rather than to endorse a single interpretation.
-
-    <p style="font-size: 0.85em; color: var(--text-muted);">
-    <strong>Note:</strong> The screen must interact with the particles in order to detect them. The simulation ignores the effect of this interaction on the particle&lsquo;s wave function and trajectories. In most cases, this effect is small, but in principle, it could alter the trajectories, especially in situations where the detector screen is placed very close to the slits.</p>
-
-
+    <p>Individual localized detections accumulate into an interference pattern. This tool compares three accounts of that process using one analytical wave model and a common detector probability prescription.</p>
+    <h2>Three accounts, one experimental arrangement</h2>
+    <div class="comparison-table-scroll"><table class="comparison-table">
+      <thead><tr><th>Mode</th><th>Physical account</th><th>What the tool displays</th><th>Question to discuss</th></tr></thead>
+      <tbody>
+        <tr><th><a href="#" class="view-link" data-view="copenhagen">Orthodox</a></th><td>The wave evolves between measurements; the Born rule assigns probabilities and a measurement yields one outcome.</td><td>The wave and sampled screen detections, without paths. The reset between trials is not a dynamical collapse calculation.</td><td>What does an observed spot tell us, and what path has the theory specified?</td></tr>
+        <tr><th><a href="#" class="view-link" data-view="bohmian">Pilot-Wave</a></th><td>Particles have definite positions guided by the wave. In the symmetric coherent setup, the wave uses both slits while each particle uses one.</td><td>Guided red paths and screen statistics. In the default detector-conditioned view, endpoints are sampled and backtracked; matching statistics are not an independent derivation of the Born rule.</td><td>How can the other open slit influence a particle that passes through one slit?</td></tr>
+        <tr><th><a href="#" class="view-link" data-view="manyworlds">Many-Worlds</a></th><td>Unitary evolution correlates different detector and observer records with different outcomes, without collapse.</td><td>The wave and outcome-weight curve, plus one sampled record. The branch counter is N^m: N detector sensors and m detections. All sensor outcomes are retained in this finite branching model; only one sampled branch history is displayed. Separate detector/observer wavefunctions are not propagated.</td><td>How do all possible records differ from the one record an observer experiences?</td></tr>
+      </tbody>
+    </table></div>
+    <h2>A short comparison activity</h2>
+    <ol><li>Choose electrons, both slits, no which-path detector, and |Ψ|². Run each interpretation at the same geometry. Compare patterns after similar numbers of detections, not equal animation times.</li><li>In Pilot-Wave, inspect a path near a dark fringe. Explain the role of the full wave in guiding it.</li><li>Close one slit, then restore both and enable the which-path detector. Compare the two ways interference disappears.</li><li>In Many-Worlds, sample another branch. Explain why its fluctuations can change while the outcome weights remain the same.</li></ol>
+    <h2>Model and limits</h2>
+    <p>The analytical field is a sum of outgoing point-source waves exp[i(kr−ωt)]/r from the open slits. It is a stationary model shown in a plane, not a numerical solution of a finite-width slit boundary problem or a propagating localized wave packet. The source and post-slit fields are joined schematically. A 10 nm source-distance cutoff regularizes the displayed amplitude; the model is not resolved inside that core.</p>
+    <p>Screen probabilities are normalized |Ψ|² along the finite detector. This is a prescribed spatial detection model, not a calculation of arrival times, absorption, or detector back-action. Default guided paths are reconstructed using sampled endpoints and then propagated forward. Their numerical agreement is subject to integration error. The optional top/bottom-boundary view is exploratory.</p>
+    <p>The which-path setting assumes perfectly distinguishable detector records. The screen density becomes |ψ₁|² + |ψ₂|²; separate colors show the two contributions. A detector at either slit supplies ideal path information, including its complementary no-click record. The detector interaction and decoherence are represented by this assumption rather than explicitly evolved.</p>
+    <p>Electron and neutron paths use v = (ℏ/m) Im(∇Ψ/Ψ). Photon mode normalizes the scalar phase-flow direction to c and is a visualization analogy, not a photon-position theory. The paper's guidance-equation discussion concerns massive nonrelativistic particles.</p>
+    <p>The symmetric Pilot-Wave paths do not cross the midline. Inferring a slit from a later position is conditional on that model and geometry; the display is not an operational which-way measurement protocol.</p>
   </article>
 
 
@@ -425,7 +437,7 @@
   <button id="closePopup2Btn" onclick="$('#palettePopup2').hide()">Close</button>
 </div>
 
-<div id="versionInfo" style="text-align: center; font-size: 0.85em; color: var(--text-muted); margin-top: 16px; padding: 12px; border-top: 1px solid var(--border-color);"> Quantum Simulation Framework v1.0</div>
+<div id="versionInfo" style="text-align: center; font-size: 0.85em; color: var(--text-muted); margin-top: 16px; padding: 12px; border-top: 1px solid var(--border-color);"> Q-Ontic analytical double slit · Paper alignment revision 3</div>
 <!-- Visitor counter removed to avoid browser warnings about
   parser-blocking cross-site scripts injected via document.write. -->
 
@@ -517,5 +529,9 @@
   })();
 </script>
 
+<script>
+  document.getElementById('compareHelp').addEventListener('click', function (event) {
+    event.preventDefault(); $('#superContainer').tabs('option', 'active', 1);
+  });
+</script>
 </body>
-</html>
