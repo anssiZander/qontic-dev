@@ -87,7 +87,7 @@ export async function renderVideo({ settings, appearance, view, width = 2560, du
       renderer.render(experiment, history, appearance, true);
       if (gl.isContextLost() || gl.getError() !== gl.NO_ERROR) throw new Error('The GPU could not render a video frame. Try a smaller video size.');
       context.drawImage(canvas, 0, 0, width, height);
-      context.drawImage(legend, width - legend.width - legendMargin, height - legend.height - legendMargin);
+      if (appearance.showWave && appearance.showPhase) context.drawImage(legend, width - legend.width - legendMargin, height - legend.height - legendMargin);
       await onFrame?.(outputCanvas, frame, experiment.diagnostics());
       await source.add(frame / EXPORT_FPS, 1 / EXPORT_FPS);
       onProgress({ stage: 'Rendering', completed: frame + 1, total });

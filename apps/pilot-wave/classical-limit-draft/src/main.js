@@ -178,6 +178,7 @@ for (const scene of Object.keys(SCENES)) {
 function syncVisibility() {
   appearance.showVelocity = $('show-velocity').checked;
   appearance.showWave = appearance.showPhase = $('show-wave').checked;
+  $('phase-legend').hidden = !(appearance.showWave && appearance.showPhase);
   appearance.showParticles = appearance.showTrails = $('show-particles').checked;
   appearance.showReference = $('show-reference').checked;
   $('reference-legend').hidden = !appearance.showReference;
