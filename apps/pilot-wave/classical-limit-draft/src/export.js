@@ -39,7 +39,7 @@ export async function renderVideo({ settings, appearance, view, width = 2560, du
   const trailStartTime = startTime > 0 ? Math.min(startTime, Math.max(0, appearance.trailStartTime || 0)) : 0;
   let renderer, experiment, output;
   const report = { width, height, fps: EXPORT_FPS, frames: 0, duration: total / EXPORT_FPS,
-    startTime, trailStartTime, playback: appearance.playback, codec, bitrate, scene: sceneKey(settings.obstacle), settings: { ...settings } };
+    startTime, trailStartTime, playback: appearance.playback, codec, bitrate, scene: sceneKey(settings), settings: { ...settings } };
   try {
     renderer = new Renderer(canvas);
     const gl = renderer.gl;

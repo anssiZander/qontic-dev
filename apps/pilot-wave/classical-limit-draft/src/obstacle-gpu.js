@@ -1,4 +1,5 @@
 import { guidanceFieldGLSL } from './guidance-field.js';
+import { diskParameters, diskPotentialGLSL, ClassicalDiskTrajectory } from './disk-physics.js';
 import { BOX } from './physics.js';
 import { KNIFE_EDGE, PACKET_CENTER, obstacleParameters, initialParticles, besselJ, classicalObstaclePosition } from './obstacle-physics.js';
 
@@ -34,6 +35,10 @@ void main(){
 // This is Hermitian, eighth order away from the corner, and has no connection
 // through the edge. Odd ghosts implement the matrix powers at boundaries.
 const chebyshevFragment = header + `
+${diskPotentialGLSL}
+uniform float spacing;
+uniform float kineticFraction;
+uniform float inverseRadius;
 uniform sampler2D currentTerm;
 uniform sampler2D previousTerm;
 uniform sampler2D accumulated;
@@ -61,6 +66,9 @@ void main(){
   for(int d=0;d<4;d++){nearSum+=neighbor(p,directions[d],1,u);farSum+=neighbor(p,directions[d],2,u);thirdSum+=neighbor(p,directions[d],3,u);fourthSum+=neighbor(p,directions[d],4,u);}
   // The spectrum of A=(H-cI)/c lies in [-1,1], c=(2048/315)*alpha/(2 dx²).
   vec2 applied=((205.0/36.0-2048.0/315.0)*u-1.6*nearSum+0.2*farSum-8.0*thirdSum/315.0+fourthSum/560.0)*(315.0/2048.0);
+  // With V in [0,Vmax], the spectrum remains inside [0,2*c+Vmax].
+  // Recenter and scale the FULL Hamiltonian before the Chebyshev recurrence.
+  if(diskHeight>0.0)applied=kineticFraction*applied+(kineticFraction-1.0+diskPotential(vec2(p)*spacing)*inverseRadius)*u;
   nextTerm=order==1?applied:2.0*applied-texelFetch(previousTerm,p,0).xy;
   sum=(order==1?firstCoefficient*u:texelFetch(accumulated,p,0).xy)+multiply(coefficient,nextTerm);
   if(finalTerm)sum=multiply(rotation,sum);
@@ -121,6 +129,8 @@ void main(){
 }`;
 
 const reduceFragment = header + `
+${diskPotentialGLSL}
+uniform float spacing;
 uniform sampler2D source;
 uniform bool first;
 out vec4 value;
@@ -129,7 +139,11 @@ void main(){
   for(int j=0;j<2;j++)for(int i=0;i<2;i++){
     ivec2 q=base+ivec2(i,j);if(any(greaterThanEqual(q,size)))continue;
     vec4 v=texelFetch(source,q,0);
-    if(first){float rho=dot(v.xy,v.xy);v=vec4(rho,rho,(q.x>edge.x&&q.y<edge.y)?rho:0.0,boundary(q)?rho:0.0);}
+    if(first){
+      float rho=dot(v.xy,v.xy);vec2 point=vec2(q)*spacing;
+      bool shadow=diskHeight>0.0?(point.x>diskGeometry.x+diskGeometry.z&&abs(point.y-diskGeometry.y)<diskGeometry.z):(q.x>edge.x&&q.y<edge.y);
+      v=vec4(rho,rho,shadow?rho:0.0,boundary(q)?rho:0.0);
+    }
     value.x+=v.x;value.y=max(value.y,v.y);value.z+=v.z;value.w=max(value.w,v.w);
   }
 }`;
@@ -148,16 +162,21 @@ function makeProgram(gl, fragment) {
 }
 
 export class ObstacleExperiment {
-  constructor(gl, { classicality = 0.3, angle = 0, seed = 2, count = 1, refinement = 1, edge = true, stepScale = 1 } = {}) {
+  constructor(gl, { classicality = 0.3, angle = 0, seed = 2, count = 1, refinement = 1, edge = true, disk = false, stepScale = 1 } = {}) {
     this.gl = gl; this.seed = seed; this.count = count; this.is2D = true;
     this.params = obstacleParameters(classicality, angle, refinement);
-    this.edge = edge ? KNIFE_EDGE : null;
+    this.disk = disk ? diskParameters(this.params) : null;
+    this.edge = edge && !disk ? KNIFE_EDGE : null;
+    if (this.disk) this.params.model = '2D smooth repulsive disk';
     this.resources = []; this.programs = []; this.time = 0; this.steps = 0; this.maxNormError = 0; this.maxParticleSubsteps = 0;
     this.guidanceStepScale = 1; this.guidanceRetries = 0;
     this.positions = initialParticles(this.params, seed, count); this.initialPositions = this.positions.slice();
+    if (this.disk) this.reference = new ClassicalDiskTrajectory(this.initialPositions.subarray(0, 2), [this.params.vx, this.params.vy], this.params.alpha, this.disk);
     const { nx, ny, dx, alpha } = this.params;
     this.width = nx + 1; this.height = ny + 1;
-    this.radius = 1024 * alpha / (315 * dx * dx); this.maxDt = stepScale * Math.min(8 / this.radius, 0.12 * this.params.sigma / this.params.speed);
+    this.kineticRadius = 1024 * alpha / (315 * dx * dx);
+    this.radius = this.kineticRadius + (this.disk?.height || 0) / 2;
+    this.maxDt = stepScale * Math.min(8 / this.radius, 0.12 * this.params.sigma / this.params.speed);
     if (!gl.getExtension('EXT_color_buffer_float')) throw new Error('The obstacle needs floating-point WebGL2 rendering. Please enable hardware acceleration.');
     if (Math.max(this.width, this.height) > gl.getParameter(gl.MAX_TEXTURE_SIZE)) throw new Error('This GPU cannot resolve the obstacle at this slider setting.');
     this.vao = gl.createVertexArray(); this.framebuffer = gl.createFramebuffer(); this.copyFramebuffer = gl.createFramebuffer();
@@ -192,6 +211,9 @@ export class ObstacleExperiment {
     gl.uniform2i(p.u('grid'), this.params.nx, this.params.ny);
     gl.uniform2i(p.u('edge'), Math.round(KNIFE_EDGE.x / this.params.dx), Math.round(KNIFE_EDGE.tip / this.params.dx));
     gl.uniform1i(p.u('hasEdge'), this.edge ? 1 : 0);
+    gl.uniform1f(p.u('spacing'), this.params.dx);
+    gl.uniform4f(p.u('diskGeometry'), this.disk?.x || 0, this.disk?.y || 0, this.disk?.radius || 0, this.disk?.edgeWidth || 1);
+    gl.uniform1f(p.u('diskHeight'), this.disk?.height || 0);
   }
   bind(p, name, texture, unit) { const gl = this.gl; gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, texture); gl.uniform1i(p.u(name), unit); }
   target(a, b = null, w = this.width, h = this.height) {
@@ -235,6 +257,8 @@ export class ObstacleExperiment {
     const gl = this.gl, p = this.stepProgram, oldWave = this.waveTexture, nextWave = this.waves[1 - this.waveIndex];
     const z = this.radius * dt;
     this.use(p); gl.uniform1f(p.u('firstCoefficient'), besselJ(0, z));
+    gl.uniform1f(p.u('kineticFraction'), this.kineticRadius / this.radius);
+    gl.uniform1f(p.u('inverseRadius'), 1 / this.radius);
     const phase = -(this.radius - this.params.energy) * dt;
     gl.uniform2f(p.u('rotation'), Math.cos(phase), Math.sin(phase));
     let current = oldWave, previous = oldWave, accumulated = oldWave;
@@ -310,13 +334,14 @@ export class ObstacleExperiment {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.bindVertexArray(null);
     if (!Number.isFinite(this.norm) || this.maxNormError > 0.01) throw new Error('The 2D wave failed its probability-conservation check.');
   }
-  classicalAt(time) { return classicalObstaclePosition(this.initialPositions.subarray(0, 2), [this.params.vx, this.params.vy], time, this.edge); }
+  classicalAt(time) { return this.reference ? this.reference.at(time) : classicalObstaclePosition(this.initialPositions.subarray(0, 2), [this.params.vx, this.params.vy], time, this.edge); }
   diagnostics() {
     return { time: this.time, norm: this.norm, normError: Math.abs(this.norm - 1), maxNormError: this.maxNormError,
       intervals: this.params.nx, grid: [this.width, this.height], params: this.params, count: this.count,
       positions: [...this.positions], initialPositions: [...this.initialPositions], finite: [...this.positions].every(Number.isFinite),
       shadowProbability: this.shadowProbability, boundaryDensity: this.boundaryDensity, steps: this.steps,
-      maxDt: this.maxDt, maxParticleSubsteps: this.maxParticleSubsteps, obstacle: Boolean(this.edge), guidanceFailure: this.guidanceFailure,
+      maxDt: this.maxDt, maxParticleSubsteps: this.maxParticleSubsteps, obstacle: Boolean(this.edge || this.disk), disk: this.disk,
+      classicalEnergyError: this.reference?.maxEnergyError, guidanceFailure: this.guidanceFailure,
       guidanceRetries: this.guidanceRetries, guidanceStepScale: this.guidanceStepScale };
   }
   readWave() {

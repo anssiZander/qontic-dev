@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.mjs",
     "dev": "node server.mjs",
-    "test": "node --test tests/physics.test.js tests/obstacle-physics.test.js",
+    "test": "node --test tests/physics.test.js tests/obstacle-physics.test.js tests/disk-physics.test.js",
     "check": "node scripts/check.mjs",
     "build": "node scripts/build.mjs",
     "vendor": "node scripts/vendor-media.mjs",

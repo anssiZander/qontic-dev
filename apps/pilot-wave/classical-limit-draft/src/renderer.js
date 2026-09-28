@@ -19,6 +19,7 @@ uniform sampler2D field;
 uniform bool fullWave;
 uniform vec2 waveGrid;
 uniform vec3 obstacle;
+uniform vec4 disk;
 uniform vec2 viewport;
 uniform vec2 center;
 uniform float zoom;
@@ -47,6 +48,19 @@ vec4 sampleField(vec2 world){
   return vec4(z,dot(z,z),0);
 }
 vec3 drawEdge(vec3 c,vec2 world){
+  if(disk.z>0.0){
+    vec2 delta=world*vec2(1.6,1.0)-disk.xy;
+    float r=length(delta),d=(r-disk.z)*viewport.y*zoom/pixelScale;
+    float inside=1.0-smoothstep(-1.0,1.0,d);
+    float radial=clamp(r/disk.z,0.0,1.0);
+    vec3 material=mix(vec3(0.016,0.027,0.042),vec3(0.055,0.079,0.098),radial*radial);
+    c=mix(c,material,0.72*inside);
+    // A quiet silver rim marks the radial turning contour for the launch
+    // energy. The finite potential's skirt is deliberately not a solid mask.
+    float rim=1.0-smoothstep(0.6,1.5,abs(d));
+    float light=0.72+0.28*dot(delta/max(r,1e-8),normalize(vec2(-0.6,0.8)));
+    c=mix(c,vec3(0.65,0.75,0.83)*light,rim);
+  }
   if(obstacle.z<0.5)return c;
   vec2 pixel=(world-obstacle.xy)*viewport*zoom;
   float d=length(vec2(pixel.x,max(0.0,pixel.y)))/pixelScale;
@@ -406,6 +420,7 @@ export class Renderer {
     gl.uniform2f(this.wave.uniform('waveGrid'), experiment.params.nx || 1, experiment.params.ny || 1);
     gl.uniform2f(this.wave.uniform('viewport'), this.canvas.width, this.canvas.height);
     gl.uniform3f(this.wave.uniform('obstacle'), (experiment.edge?.x || 0) / BOX.width, experiment.edge?.tip || 0, experiment.edge ? 1 : 0);
+    gl.uniform4f(this.wave.uniform('disk'), experiment.disk?.x || 0, experiment.disk?.y || 0, experiment.disk?.turningRadius || 0, 0);
     gl.uniform1f(this.wave.uniform('peak'), experiment.is2D ? experiment.peak : experiment.xAxis.peak * experiment.yAxis.peak);
     gl.uniform1f(this.wave.uniform('brightness'), options.brightness);
     gl.uniform1f(this.wave.uniform('pixelScale'), this.dpr);

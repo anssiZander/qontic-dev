@@ -8,14 +8,15 @@ const $ = id => document.getElementById(id);
 const query = new URLSearchParams(location.search);
 const numericQuery = (name, fallback) => query.has(name) && Number.isFinite(Number(query.get(name))) ? Number(query.get(name)) : fallback;
 const initialScene = Object.hasOwn(SCENES, query.get('scene')) ? query.get('scene') : sceneKey(query.get('obstacle') === '1');
-const sceneClassicality = { free: SCENES.free.classicality, barrier: SCENES.barrier.classicality };
+const sceneClassicality = Object.fromEntries(Object.entries(SCENES).map(([key, value]) => [key, value.classicality]));
+let diskAngle = SCENES.disk.angle, boxAngle = SCENES[initialScene].angle;
 function freshSeed(previous) {
   let seed;
   do { seed = 1 + crypto.getRandomValues(new Uint32Array(1))[0] % 999999; } while (seed === previous);
   return seed;
 }
 const settings = {
-  obstacle: initialScene === 'barrier',
+  scene: initialScene, obstacle: initialScene !== 'free',
   classicality: clamp(numericQuery('classicality', SCENES[initialScene].classicality), 0, 1),
   angle: clamp(numericQuery('angle', SCENES[initialScene].angle), -180, 180),
   seed: clamp(Math.floor(numericQuery('seed', freshSeed())), 1, 999999),
@@ -45,15 +46,14 @@ function showError(error) {
 
 function syncParameters() {
   const p = parameters(settings.classicality, settings.angle), s = p.classicality;
-  const scene = sceneKey(settings.obstacle);
+  const scene = sceneKey(settings);
   sceneClassicality[scene] = s;
   $('classicality').value = s; $('classicality-value').textContent = `${Math.round(s * 100)}%`;
   $('classicality').setAttribute('aria-valuetext', `${Math.round(s * 100)} percent toward nearly classical`);
   $('angle').value = settings.angle; $('angle-value').textContent = `${settings.angle}°`;
   $('count').value = settings.count;
   $('count-value').textContent = settings.count;
-  $('scene-free').checked = !settings.obstacle;
-  $('scene-barrier').checked = settings.obstacle;
+  for (const key of Object.keys(SCENES)) $(`scene-${key}`).checked = key === scene;
   $('scene-name').textContent = SCENES[scene].heading;
   $('scene-note').textContent = SCENES[scene].note;
   $('regime-name').textContent = s < 0.23 ? 'WAVE DOMINATED' : s < 0.62 ? 'TOWARD THE CLASSICAL LIMIT' : s < 0.86 ? 'LOCALIZED PACKET' : 'NEARLY CLASSICAL';
@@ -78,11 +78,16 @@ function scheduleReset() {
   pendingReset = true; syncParameters();
 }
 
-function selectScene(obstacle) {
-  if (settings.obstacle === obstacle) return;
-  sceneClassicality[sceneKey(settings.obstacle)] = settings.classicality;
-  settings.obstacle = obstacle;
-  settings.classicality = sceneClassicality[sceneKey(obstacle)];
+function selectScene(value) {
+  const scene = sceneKey(value), previous = sceneKey(settings);
+  if (previous === scene) return;
+  sceneClassicality[previous] = settings.classicality;
+  // Aim the disk's first launch at its upper flank. Remember its angle when
+  // leaving, while retaining the existing shared angle of the two older scenes.
+  if (previous === 'disk') { diskAngle = settings.angle; settings.angle = boxAngle; }
+  if (scene === 'disk') { boxAngle = settings.angle; settings.angle = diskAngle; }
+  settings.scene = scene; settings.obstacle = scene !== 'free';
+  settings.classicality = sceneClassicality[scene];
 }
 
 function setPaused(value) {
@@ -171,7 +176,7 @@ $('count').addEventListener('input', () => { settings.count = Number($('count').
 for (const scene of Object.keys(SCENES)) {
   $(`scene-${scene}`).addEventListener('change', () => {
     if (!$(`scene-${scene}`).checked) return;
-    selectScene(scene === 'barrier'); scheduleReset();
+    selectScene(scene); scheduleReset();
   });
 }
 
@@ -277,7 +282,7 @@ async function record() {
     lastExport = result.report;
     downloadURL = URL.createObjectURL(result.blob);
     const link = $('export-download'); link.href = downloadURL;
-    link.download = `classical-limit-${SCENES[sceneKey(settings.obstacle)].filename}-${Math.round(settings.classicality * 100)}-${result.report.width}x${result.report.height}-30fps-${new Date().toISOString().replace(/[:.]/g, '-')}.${result.extension}`;
+    link.download = `classical-limit-${SCENES[sceneKey(settings)].filename}-${Math.round(settings.classicality * 100)}-${result.report.width}x${result.report.height}-30fps-${new Date().toISOString().replace(/[:.]/g, '-')}.${result.extension}`;
     link.hidden = false; link.textContent = `Save ${result.extension.toUpperCase()} again`;
     $('export-status').textContent = `Ready · ${result.report.width} × ${result.report.height} · 30 fps · ${result.report.duration} s`;
     link.click();
@@ -321,14 +326,15 @@ try {
   if (query.get('test') === '1') window.__classicalLimit = {
     ready: true,
     snapshot: () => ({ ...experiment.diagnostics(), settings: { ...settings }, appearance: { ...appearance },
-      scene: sceneKey(settings.obstacle), sceneClassicality: { ...sceneClassicality }, paused, failed, frames, fps,
+      scene: sceneKey(settings), sceneClassicality: { ...sceneClassicality }, paused, failed, frames, fps,
       maxNormError, historyLength: history.length, lastEvaluations, gpu: renderer.gpu,
       exporting: Boolean(exportJob), lastExport,
       glError: renderer.gl.getError(), canvas: [$('canvas').width, $('canvas').height],
       view: { center: [...renderer.center], zoom: renderer.zoom } }),
     pause: setPaused,
     configure: options => {
-      if ('obstacle' in options) selectScene(Boolean(options.obstacle));
+      if ('scene' in options) selectScene(options.scene);
+      else if ('obstacle' in options) selectScene(Boolean(options.obstacle));
       for (const key of ['classicality', 'angle', 'seed', 'count']) if (key in options) settings[key] = options[key];
       const p = parameters(settings.classicality, settings.angle);
       settings.classicality = p.classicality; settings.angle = p.angle;

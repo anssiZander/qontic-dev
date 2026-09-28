@@ -1,8 +1,8 @@
 # ClassicalLimit
 
-This branch adds an ideal reflecting knife edge to the Q-ONTIC classical-limit experiment. The wave packet grazes its tip, diffracts into the shadow, and guides the particles around the corner. The original `qontic-dev/apps/pilot-wave/classical-limit` is a read-only reference and was not modified.
+This Q-ONTIC draft has three classical-limit scenes: a free reflecting box, an ideal reflecting knife edge, and an experimental smooth repulsive disk. The original `qontic-dev/apps/pilot-wave/classical-limit` remains a separate reference app.
 
-The **Without barrier / With barrier** scene selector combines the original separable box and the two-dimensional diffraction experiment. Each retains its own physics solver, speed calibration and full classicality range. Both use the latest barrier visuals: the red–blue phase gradient, cream-centered yellow particles, warm trail overlaps, and the outlined cyan reference drawn on top. The integration branch is `codex/unified-classical-limit`.
+The **Without barrier / With barrier / Disk** scene selector combines the original separable box and GPU diffraction experiments. The free box retains its fast solver and full classicality range. All scenes use the red–blue phase gradient, cream-centered yellow particles, warm trail overlaps, velocity arrows, and the outlined cyan reference drawn on top. The disk trial is isolated on `codex/classical-limit-disk`, based on `f07e6d9`; returning to `Anssi` restores the version before the disk.
 
 ## Run
 
@@ -22,6 +22,7 @@ The app uses **WebGL2** for rendering and for the full 2D obstacle solver. The o
 
 - **Scene:** **Without barrier** uses the original fast, separable solver and its more extreme classical endpoint. **With barrier** uses the GPU diffraction solver and an infinitely thin Dirichlet edge at `x = 0.8`, extending from the bottom wall to `y = 0.5`. Each scene remembers its last classicality setting during the session. Switching restarts the wave and trails with newly sampled particle positions, preserving launch direction, particle count, appearance, framing and playback settings. No diffracted wave is converted into a separable state.
 - **Barrier launch:** the default packet starts at `(0.44, 0.515)`, with a horizontal launch and 30% classicality. At approximately 2–4 simulation seconds the first diffraction pattern is easy to see. Later reflections from the outer box interact with it. Restart to repeat the encounter.
+- **Disk:** a finite, strongly repulsive circular potential, centered at `(0.9, 0.43)`. Its first launch aims horizontally at the upper flank; the disk remembers its own direction and classicality when switching away. Other controls and appearance stay shared. The reference follows Newton's equation for the same potential; it is not assigned an artificial hard-circle bounce. The faint silver outline marks the radial `V = launch energy` contour. Finite penetration and a gradual turn near this contour are physical features of this model.
 - **Classicality:** continuously vary from a broad, strongly spreading wave to a narrow packet whose particle makes almost straight flights. Moving it restarts the preparation with freshly sampled positions. It selects a family of experiments; it does not suddenly change the mass of an already evolving wave. Each scene has its own calibration: equal percentages do not mean equal mass or wavelength across scenes, and 100% without the barrier reaches further than 100% with it.
 - **Launch direction:** −180° to +180°. Positive angles point upward. Changing direction restarts the experiment.
 - **Pause / Restart:** also Space / R when focus is outside interactive controls. Each restart samples fresh particle positions from the initial density. H hides the control panel.
@@ -38,9 +39,9 @@ The velocity overlay samples `v = alpha Im(psi* grad(psi)) / |psi|²` on a small
 
 ## Video quality
 
-**Phase legend:** a small red–blue colour wheel stays inside the lower-right corner of the scene and recordings, with no separate visibility checkbox. It labels 0, +π/2, −π/2 and ±π and explains that black can mean phase zero, even with nonzero probability density. The key shows the palette before density and classicality shading. Its position and relative size match between the live scene and video, including on smaller screens. It does not intercept zooming or dragging.
+**Phase legend:** a small red–blue colour wheel stays inside the lower-right corner of the scene and recordings while the wave is visible, with no separate visibility checkbox. It labels 0, +π/2, −π/2 and ±π and explains that black can mean phase zero, even with nonzero probability density. The key shows the palette before density and classicality shading. Its position and relative size match between the live scene and video, including on smaller screens. It does not intercept zooming or dragging.
 
-**Phase palette:** both scenes and recordings use only the red–blue mapping from `Bohmian Free Packet/shaders/wave_render.frag`: blue for positive phase, red for negative phase, magenta at ±π, and a symmetric smooth fade to black near zero. The alternate palette and its button have been removed. The latest barrier renderer's density brightness, gradual phase-colour fade toward the classical end, and density-only view are retained.
+**Phase palette:** all scenes and recordings use only the red–blue mapping from `Bohmian Free Packet/shaders/wave_render.frag`: blue for positive phase, red for negative phase, magenta at ±π, and a symmetric smooth fade to black near zero. The alternate palette and its button have been removed. The latest barrier renderer's density brightness and gradual phase-colour fade toward the classical end are retained.
 
 Export advances a separate instance of the same physics solver at exact video times `startTime + frameIndex * playback / 30`. It samples particle paths at intervals no larger than 1/120 simulation second. The obstacle solver retains its internal adaptive steps. Wall time does not affect the video: even a slow render produces every frame at **30 fps**, with explicit timestamps, duration and a seekable index. The live experiment is paused and preserved during export, then its previous playback state is restored. A current-time export reconstructs its wave and trail history from the seeded launch; small floating-point differences from the live 2D run are possible because of its different step schedule.
 
@@ -83,6 +84,26 @@ Solving this equation for `k_i` keeps the group velocity at the requested compon
 The idealized geometry and boundary choice follow the Dirichlet case in [Dubertrand, Shim and Struyve, *Bohmian trajectories for the half-line barrier*](https://arxiv.org/abs/1707.06173). This implementation uses a finite reflecting box and a numerical 2D propagator, rather than that paper's infinite-domain exact propagator.
 
 If the browser loses its graphics context, the obstacle experiment restarts in a paused state after restoration because the wave lived in GPU memory. The original box retains its CPU state. A numerical error pauses the scene; Restart or changing the controls rebuilds the state.
+
+## Experimental disk model
+
+The disk uses a **finite repulsive potential**, not a hard Dirichlet cutout. This keeps the circular geometry smooth instead of approximating its boundary by grid-aligned steps. It shares the knife scene's full 2D GPU kinetic operator, launch-speed calibration, guidance interpolation, and classicality range. Only the disk scene adds the potential:
+
+```text
+i dψ/dt = [-(alpha/2) ∇² + V(r)] ψ
+u = clamp((R-r)/w, 0, 1)
+V(r) = Vmax u³ (10 - 15u + 6u²)
+R = 0.12, w = 0.04, center = (0.9, 0.43)
+Vmax = 10 [v0²/(2 alpha)] + 4 alpha/sigma²
+```
+
+The height exceeds the carrier energy and allows for the quantum packet's momentum spread. It is recalibrated with classicality, so this slider compares a family of strongly reflecting experiments. The edge width is a fixed physical length, including during grid-refinement tests. The plateau and exterior join the transition with continuous first and second derivatives. There is no absorbing mask, particle rejection from the disk, or fake reflection in Bohmian guidance. Small evanescent penetration and finite-barrier transmission are possible, especially for higher-energy components. The silver outline is the radial contour at which the potential equals the launch kinetic energy; a classical trajectory with angular momentum can turn outside it.
+
+The added real diagonal potential preserves the Hermitian spatial Hamiltonian. With the old kinetic spectrum in `[0, 2c]` and `0 <= V <= Vmax`, the Chebyshev propagator uses radius `c + Vmax/2` and reduces the maximum timestep accordingly. Probability is measured without periodic renormalization. Wave and velocity rendering use the same evolving complex field, including around the disk.
+
+The cyan reference integrates `a = -alpha grad(V)` with RK4 at 0.001 simulation-second steps. Its recent trail samples are cached in a fixed-size ring; sparse checkpoints support older queries without keeping every step. Box-wall reflections remain exact straight-line reflections where the disk force is zero. The comparison and the quantum experiment start at the same sampled position with the same launch speed.
+
+The disk is an isolated trial. Its numerical checks and hardware timings are in [validation/disk.md](validation/disk.md). This model is not a claim to solve an infinitely hard circular wall, and the finite-grid checks do not establish accuracy for all seeds or arbitrarily long trajectories.
 
 ## Obstacle-free physical model and speed matching
 

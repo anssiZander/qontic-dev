@@ -6,3 +6,4 @@ playwright-report/
 validation/*.png
 validation/*.webm
 validation/*.mp4
+validation/*.json
