@@ -23,7 +23,7 @@ const settings = {
   count: clamp(Math.floor(numericQuery('count', 1)), 1, 256),
 };
 const appearance = {
-  waveView: query.get('wave') === 'density' ? 'density' : 'phase',
+  waveView: 'phase',
   showWave: true, showPhase: true, showVelocity: true, showParticles: true, showTrails: true,
   trailStartTime: 0,
   showReference: true, dotSize: 15, trailSeconds: 5, brightness: 1, playback: 1,
@@ -184,17 +184,21 @@ for (const scene of Object.keys(SCENES)) {
 function syncVisibility() {
   appearance.showVelocity = $('show-velocity').checked;
   appearance.showWave = $('show-wave').checked;
-  appearance.waveView = $('wave-view').value;
   appearance.showPhase = appearance.showWave && appearance.waveView === 'phase';
-  $('wave-view').disabled = !appearance.showWave;
+  for (const mode of ['phase', 'density']) {
+    $(`wave-${mode}`).disabled = !appearance.showWave;
+    $(`wave-${mode}`).setAttribute('aria-pressed', String(appearance.waveView === mode));
+  }
   $('phase-legend').hidden = !(appearance.showWave && appearance.showPhase);
   appearance.showParticles = appearance.showTrails = $('show-particles').checked;
   appearance.showReference = $('show-reference').checked;
   $('reference-legend').hidden = !appearance.showReference;
   drawingDirty = true;
 }
-$('wave-view').value = appearance.waveView;
-for (const id of ['show-wave', 'wave-view', 'show-velocity', 'show-reference']) $(id).addEventListener('change', syncVisibility);
+for (const mode of ['phase', 'density']) $(`wave-${mode}`).addEventListener('click', () => {
+  appearance.waveView = mode; syncVisibility();
+});
+for (const id of ['show-wave', 'show-velocity', 'show-reference']) $(id).addEventListener('change', syncVisibility);
 $('show-particles').addEventListener('change', () => {
   syncVisibility();
   appearance.trailStartTime = experiment.time;

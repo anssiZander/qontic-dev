@@ -15,7 +15,8 @@ input[type=range]{appearance:none;-webkit-appearance:none;display:block;width:10
   min-height: 44px;
   height: 100%;
 }
-.label-row #wave-view { width: 136px; max-width: 136px; }
+.wave-view-options button { flex: 1; padding: 9px 4px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: #9299b2; font-size: 11px; }
+.wave-view-options button[aria-pressed="true"] { background: #29233f; border-color: #7864a1; color: #ece3ff; }
 
 /* The viewport belongs to the scene; only the controls scroll. */
 main {
