@@ -18,11 +18,12 @@ function freshSeed(previous) {
 const settings = {
   scene: initialScene, obstacle: initialScene !== 'free',
   classicality: clamp(numericQuery('classicality', SCENES[initialScene].classicality), 0, 1),
-  angle: clamp(numericQuery('angle', SCENES[initialScene].angle), -180, 180),
+  angle: clamp(numericQuery('angle', SCENES[initialScene].angle), -90, 90),
   seed: clamp(Math.floor(numericQuery('seed', freshSeed())), 1, 999999),
   count: clamp(Math.floor(numericQuery('count', 1)), 1, 256),
 };
 const appearance = {
+  waveView: query.get('wave') === 'density' ? 'density' : 'phase',
   showWave: true, showPhase: true, showVelocity: true, showParticles: true, showTrails: true,
   trailStartTime: 0,
   showReference: true, dotSize: 15, trailSeconds: 5, brightness: 1, playback: 1,
@@ -182,14 +183,18 @@ for (const scene of Object.keys(SCENES)) {
 
 function syncVisibility() {
   appearance.showVelocity = $('show-velocity').checked;
-  appearance.showWave = appearance.showPhase = $('show-wave').checked;
+  appearance.showWave = $('show-wave').checked;
+  appearance.waveView = $('wave-view').value;
+  appearance.showPhase = appearance.showWave && appearance.waveView === 'phase';
+  $('wave-view').disabled = !appearance.showWave;
   $('phase-legend').hidden = !(appearance.showWave && appearance.showPhase);
   appearance.showParticles = appearance.showTrails = $('show-particles').checked;
   appearance.showReference = $('show-reference').checked;
   $('reference-legend').hidden = !appearance.showReference;
   drawingDirty = true;
 }
-for (const id of ['show-wave', 'show-velocity', 'show-reference']) $(id).addEventListener('change', syncVisibility);
+$('wave-view').value = appearance.waveView;
+for (const id of ['show-wave', 'wave-view', 'show-velocity', 'show-reference']) $(id).addEventListener('change', syncVisibility);
 $('show-particles').addEventListener('change', () => {
   syncVisibility();
   appearance.trailStartTime = experiment.time;
@@ -320,7 +325,7 @@ window.addEventListener('beforeunload', () => {
 try {
   if (query.get('embed') === '1') document.querySelector('.brand-home').hidden = true;
   syncCanvasLayout();
-  renderer = new Renderer($('canvas')); reset(); setPaused(paused); syncRecordButton();
+  renderer = new Renderer($('canvas')); reset(); setPaused(paused); syncVisibility(); syncRecordButton();
   paintPhaseLegend($('phase-legend-canvas')); syncLegendSize(); draw();
   // Explicit test mode only: numerical inspection and deterministic stress tests.
   if (query.get('test') === '1') window.__classicalLimit = {
@@ -337,7 +342,7 @@ try {
       else if ('obstacle' in options) selectScene(Boolean(options.obstacle));
       for (const key of ['classicality', 'angle', 'seed', 'count']) if (key in options) settings[key] = options[key];
       const p = parameters(settings.classicality, settings.angle);
-      settings.classicality = p.classicality; settings.angle = p.angle;
+      settings.classicality = p.classicality; settings.angle = clamp(p.angle, -90, 90);
       settings.seed = clamp(Math.floor(settings.seed), 1, 999999); settings.count = clamp(Math.floor(settings.count), 1, 256);
       reset(); draw(); return experiment.diagnostics();
     },

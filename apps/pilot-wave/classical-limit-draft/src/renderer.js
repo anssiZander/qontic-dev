@@ -26,6 +26,7 @@ uniform float zoom;
 uniform float peak;
 uniform float brightness;
 uniform float phaseAmount;
+uniform bool densityView;
 uniform float pixelScale;
 uniform float outputPixelScale;
 uniform bool visible;
@@ -82,6 +83,14 @@ vec3 freePacketPhaseColor(float ph){
     *(fadeProgress*(fadeProgress*6.0-15.0)+10.0);
   return mix(branchColor,magenta,seamBlend)*phaseVisibility;
 }
+// RelaxationBox2D/shaders/wave_render.frag, top-down density view.
+// Use its exact cosine palette and default gain/gamma. Normalize rho to the
+// current peak because these packets span very different density scales.
+vec3 relaxationDensityColor(float rho){
+  float intensity=pow(clamp(1.0-exp(-2.0*brightness*rho),0.0,1.0),0.5);
+  vec3 a=vec3(0.22,0.32,0.28),b=vec3(0.40,0.45,0.35),d=vec3(0.15,0.55,0.75);
+  return max(vec3(0.0),(a+b*cos(6.283185*(intensity+d)))*intensity);
+}
 void main(){
   vec2 world=center+(uv-0.5)/zoom;
   vec3 bg=vec3(0.008,0.012,0.028);
@@ -93,6 +102,7 @@ void main(){
   if(fullWave){vec4 a=sampleField(world);psi=a.xy;density=a.z;}
   else{vec4 a=sampleWave(waveX,world.x),b=sampleWave(waveY,world.y);density=a.z*b.z;psi=vec2(a.x*b.x-a.y*b.y,a.x*b.y+a.y*b.x);}
   float rho=max(density,0.0)/max(peak,1e-8);
+  if(densityView){color=vec4(drawEdge(bg+relaxationDensityColor(rho),world),1);return;}
   float intensity=pow(1.0-exp(-3.1*brightness*pow(rho,0.66)),1.08);
   // Restore the earlier palette, with a small contrast lift in the density.
   // Attenuate only phase detail too fine for the final output pixels.
@@ -426,6 +436,7 @@ export class Renderer {
     gl.uniform1f(this.wave.uniform('pixelScale'), this.dpr);
     gl.uniform1f(this.wave.uniform('outputPixelScale'), this.outputPixelScale || 1);
     gl.uniform1f(this.wave.uniform('phaseAmount'), options.showPhase ? Math.pow(1 - experiment.params.classicality, 0.7) : 0);
+    gl.uniform1i(this.wave.uniform('densityView'), options.showPhase ? 0 : 1);
     gl.uniform1i(this.wave.uniform('visible'), options.showWave ? 1 : 0); gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     if (options.showVelocity) this.velocityField.draw(this, experiment);

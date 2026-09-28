@@ -15,6 +15,7 @@ input[type=range]{appearance:none;-webkit-appearance:none;display:block;width:10
   min-height: 44px;
   height: 100%;
 }
+.label-row #wave-view { width: 136px; max-width: 136px; }
 
 /* The viewport belongs to the scene; only the controls scroll. */
 main {

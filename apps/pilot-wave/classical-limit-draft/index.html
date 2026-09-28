@@ -35,10 +35,11 @@
         </section>
         <label class="switch-row reference-toggle">Classical comparison<input type="checkbox" id="show-reference" checked></label>
         <div class="label-row angle-row"><label for="angle">Launch direction</label><output id="angle-value" for="angle">45°</output></div>
-        <input id="angle" type="range" min="-180" max="180" step="1" value="45">
+        <input id="angle" type="range" min="-90" max="90" step="1" value="45">
         <div class="buttons"><button id="pause" class="primary">Pause</button><button id="reset">↺ Restart</button></div>
         <details id="appearance" open><summary>Appearance & particles<span>−</span></summary><div class="detail-body">
           <label class="switch-row">Wave<input type="checkbox" id="show-wave" checked></label>
+          <div class="label-row"><label for="wave-view">Wave view</label><select id="wave-view"><option value="phase">Phase + density</option><option value="density">Density |ψ|²</option></select></div>
           <label class="switch-row" title="Faster flow makes the arrows longer, thicker and more opaque.">Velocity field<input type="checkbox" id="show-velocity" checked></label>
           <label class="switch-row">Particles<input type="checkbox" id="show-particles" checked></label>
           <div class="label-row"><label for="count">Particle count</label><output id="count-value" for="count">1</output></div><input id="count" type="range" min="1" max="256" step="1" value="1">
