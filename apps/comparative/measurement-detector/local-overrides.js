@@ -101,11 +101,11 @@ const sendModelControl = (type, value) => document.querySelector('.lab iframe')?
 
 function ensureThemedMeasurementFrame(root = document) {
   const frame = root.querySelector?.('.lab iframe') ?? (root.matches?.('.lab iframe') ? root : null);
-  if (!frame || frame.dataset.templateFrameVersion === '1.68') return;
+  if (!frame || frame.dataset.templateFrameVersion === '1.69') return;
   const url = new URL(frame.getAttribute('src') || frame.src, location.href);
   if (!url.pathname.endsWith('/measurement.html')) return;
-  frame.dataset.templateFrameVersion = '1.68';
-  url.searchParams.set('v', '1.68');
+  frame.dataset.templateFrameVersion = '1.69';
+  url.searchParams.set('v', '1.69');
   frame.src = url.href;
 }
 
