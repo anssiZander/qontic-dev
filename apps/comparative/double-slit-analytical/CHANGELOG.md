@@ -1,3 +1,9 @@
+## 2.123 — 2026-10-20
+
+- New Pilot-Wave color mode "Front/back": colors each particle by its initial position along the packet (blue back, gray center, orange front, over ±2σₓ); hit bins show the mean color. Views explains that in this factorized model front and back particles land with the same distribution.
+- Share links carry the new mode through the existing pwColor parameter.
+- Rollback: backup/double-slit-before-front-color-2.122-20261020.
+
 ## 2.122 — 2026-10-20
 
 - Phone layout: smaller distance-scale and color-range overlays so the source and slits stay visible; Core option row wraps; compact PW/O/MW header badge; smaller Feedback button and room to scroll past it.
