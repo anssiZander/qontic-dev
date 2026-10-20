@@ -9,7 +9,8 @@ const replacements = new Map([
   ["Color particles by region", "Color runs by region"],
   ["Many-particle display", "Independent-run ensemble"],
   ["receives that region's kick and becomes the corresponding outgoing branch", "acquires that region's pointer translation and becomes the corresponding correlated component"],
-  ["all separated pointer bumps have exactly equal weight", "the initial detector regions have equal Born weight, although overlapping pointer components are not individually resolved outcomes"],
+  ["With an impulsive interaction and equal-probability spacing, all separated pointer bumps have exactly equal weight.", "In equal-probability mode the detector regions have equal Born weight; when the pointer packets overlap, their components are not individually resolved outcomes."],
+  ["When particle coloring is enabled", "When run coloring is enabled"],
   ["boundary-crossing portions receive intermediate kicks", "boundary-crossing portions acquire intermediate translations"],
   ["pointer kicks", "pointer translations"],
   ["Changes how long the force is on", "Changes the duration of the translation coupling"],
@@ -50,7 +51,7 @@ const updatedDetails = `
   <p>Since p<sub>y</sub> = −iℏ∂/∂y generates translations, a pointer packet correlated with region <i>j</i> evolves as φ<sub>0</sub>(y) → φ<sub>0</sub>(y − G a<sub>j</sub>), where G = ∫g<sub>τ</sub>(t)dt. Thus the measured position information is encoded immediately in pointer position.</p>
   <div class="math-display"><strong>φ<sub>j</sub>(y) = φ<sub>0</sub>(y − G a<sub>j</sub>)</strong></div>
   <h2>Two interactions, one unsharp (weak) measurement</h2>
-  <p>This is an unsharp weak measurement without postselection; it is not a weak-value reconstruction protocol. For small G relative to the Y position width σ<sub>y</sub>, the translated pointer packets overlap. The X–Y system–pointer interaction therefore provides only limited information about the system region. The later Y–Z pointer–record interaction stores that pointer result in distinguishable Z channels. Together, the two interactions constitute one weak measurement of X.</p>
+  <p>This is an unsharp weak measurement without postselection; it is not a weak-value reconstruction protocol. For small G relative to the Y position width σ<sub>y</sub>, the translated pointer packets overlap. The X–Y system–pointer interaction therefore provides only limited information about the system region. The later Y–Z pointer–record interaction stores that pointer result in distinguishable Z channels. Together, the two interactions constitute one measurement of X. It is weak (unsharp) only while the adjacent pointer separation is small compared with σ<sub>y</sub>, as shown by the regime indicator; at large separation the same model describes a sharp measurement of the region.</p>
   <p>When the number of detector regions changes, the app automatically expands the total Y and Z output spans so that the separation of neighboring recorded channels, measured relative to the corresponding packet width, remains unchanged.</p>
   <h2>The Y–Z pointer–record interaction</h2>
   <p>The second interaction couples the pointer coordinate Y to the record coordinate Z:</p>
@@ -68,7 +69,7 @@ const updatedDetails = `
   <p>The three views use one shared Born-random realization so their corresponding outcomes can be compared; each interpretation describes that same draw in its own terms, and the Orthodox collapse is not caused by a Bohmian particle. Before the readout, the marginal density is identical in all interpretations. During the second measurement, all three views show the same smooth unitary Y–Z correlation. The end of the Y–Z interaction is the chosen Heisenberg cut in this visualization. When that readout finishes, the Orthodox display collapses abruptly to the recorded Y–Z branch and then shows the marginals of that collapsed state. The Pilot-wave display retains the full wave and permits either its marginals or conditional slices through the actual configuration. In the Many-Worlds display every recorded branch remains and may be shown in a separate labeled subcanvas with its Born weight. Thus the interpretations agree on the pre-readout distribution and outcome statistics, while representing the post-readout state differently.</p>
   <h2>Optional X–Y–Z view</h2>
   <p>The 3D option opens an interactive perspective WebGL configuration-space canvas. Drag to rotate and use the mouse wheel to zoom. Marginal mode shows a sample of the full joint ensemble density. In Pilot-wave Conditional mode, it shows the three mutually compatible planes XY at Z(t), XZ at Y(t), and YZ at X(t); the attached one-dimensional curves slice through the other two actual coordinates. The bright marker is the actual Bohmian configuration (X(t),Y(t),Z(t)); the density samples are not additional particles in the same experiment.</p>
-  <p class="scope"><b>Scope:</b> The complete X–Y coupling and finite Y–Z readout form one weak measurement of X and are analytical solutions of the stated idealized heavy-pointer Hamiltonian. The app evaluates the corresponding characteristic translations directly and does not time-step Schrödinger’s equation. Rasterization, density sampling, and display smoothing affect only the visualization.</p>
+  <p class="scope"><b>Scope:</b> The complete X–Y coupling and finite Y–Z readout form one measurement of X, unsharp in the overlap regime, and are analytical solutions of the stated idealized heavy-pointer Hamiltonian. The app evaluates the corresponding characteristic translations directly and does not time-step Schrödinger’s equation. Rasterization, density sampling, and display smoothing affect only the visualization.</p>
 `;
 
 function updateDetailsPanel(root = document) {
@@ -111,11 +112,11 @@ const sendModelControl = (type, value) => document.querySelector('.lab iframe')?
 
 function ensureThemedMeasurementFrame(root = document) {
   const frame = root.querySelector?.('.lab iframe') ?? (root.matches?.('.lab iframe') ? root : null);
-  if (!frame || frame.dataset.templateFrameVersion === '1.72') return;
+  if (!frame || frame.dataset.templateFrameVersion === '1.73') return;
   const url = new URL(frame.getAttribute('src') || frame.src, location.href);
   if (!url.pathname.endsWith('/measurement.html')) return;
-  frame.dataset.templateFrameVersion = '1.72';
-  url.searchParams.set('v', '1.72');
+  frame.dataset.templateFrameVersion = '1.73';
+  url.searchParams.set('v', '1.73');
   frame.src = url.href;
 }
 
@@ -299,18 +300,38 @@ function installAdvancedDetectorControls(root = document) {
   wrap.querySelector('[data-control="particleColors"]').addEventListener('change',(event)=>{localParticleColors=event.target.checked;sendModelControl('particleColors',localParticleColors)});
 }
 
+function regimeLabel() {
+  const strength = document.querySelector('input[aria-label="Interaction strength"]');
+  if (strength) localCoupling = +strength.value;
+  // Adjacent nominal Y separation is coupling*1.15 for every region count (see zoneCountScale).
+  const ratio = localCoupling * 1.15 / Math.max(localYPositionWidth, 1e-6);
+  const label = ratio < 1.5 ? 'Strong pointer overlap' : ratio < 3 ? 'Partial pointer overlap' : 'Resolved pointer packets';
+  return { ratio, label };
+}
+
+function applyRegimeLabel(badge) {
+  const { ratio, label } = regimeLabel();
+  const title = `Adjacent Y-packet separation / σy = ${ratio.toFixed(2)}`;
+  if (badge.textContent !== label) badge.textContent = label;
+  if (badge.title !== title) badge.title = title;
+}
+
 function updateRegimeIndicator(root = document) {
   const strength = document.querySelector('input[aria-label="Interaction strength"]');
   const badge = document.querySelector('.compact-regime');
   if (!strength || !badge) return;
-  localCoupling = +strength.value;
-  const ratio = localCoupling * 1.15 / Math.max(localYPositionWidth, 1e-6);
-  const label = ratio < 1.5 ? 'Strong pointer overlap' : ratio < 3 ? 'Partial pointer overlap' : 'Resolved pointer packets';
-  if (badge.textContent !== label) badge.textContent = label;
-  badge.title = `Adjacent Y-packet separation / σy = ${ratio.toFixed(2)}`;
+  applyRegimeLabel(badge);
   if (!strength.dataset.regimeListener) {
     strength.dataset.regimeListener = 'true';
-    strength.addEventListener('input', updateRegimeIndicator);
+    strength.addEventListener('input', () => updateRegimeIndicator());
+  }
+  // React re-renders the badge with its own coupling-only label whenever the
+  // coupling crosses its old thresholds. Re-apply the sigma_y-aware label after
+  // any such text change. applyRegimeLabel writes only when the text differs,
+  // so this observer cannot loop.
+  if (!badge.dataset.regimeObserver) {
+    badge.dataset.regimeObserver = 'true';
+    new MutationObserver(() => applyRegimeLabel(badge)).observe(badge, { childList: true, characterData: true, subtree: true });
   }
 }
 
