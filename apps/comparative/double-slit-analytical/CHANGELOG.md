@@ -1,8 +1,10 @@
-## 2.123 — 2026-10-20
+## 2.124 — 2026-10-20
 
-- New Pilot-Wave color mode "Front/back": colors each particle by its initial position along the packet (blue back, gray center, orange front, over ±2σₓ); hit bins show the mean color. Views explains that in this factorized model front and back particles land with the same distribution.
-- Share links carry the new mode through the existing pwColor parameter.
-- Rollback: backup/double-slit-before-front-color-2.122-20261020.
+- Removed the Front/back color mode added in 2.123 (reverted).
+- 3D view now applies the Display-tab opacity sliders: wave, slit wall, detector, probability curve, screen hits and error bars, particles and trajectories. Previously only the on/off state reached 3D.
+- In 3D, hiding the detector wall no longer hides the probability curve and hit histogram.
+- The 3D slit wall uses the Slit wall color swatch.
+- Rollback: backup/double-slit-before-3d-opacity-2.123-20261020.
 
 ## 2.122 — 2026-10-20
 
