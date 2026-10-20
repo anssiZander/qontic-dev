@@ -61,7 +61,9 @@ assert(engine.includes('packet-core-options'));
 assert(engine.includes('packet-slit-balance'));
 assert(engine.includes('apertureWeights'));
 assert(engine.includes('return (sourcePos+detectorDistance)/.7'));
-assert(shell.includes("updateParameter('detector-distance', 50, 3000"));
+// Saved settings restore values only; the creation ranges (e.g. lambda <= 50 nm) stay authoritative.
+assert(shell.includes("restoreParameterValue('detector-distance', state.detectorDistance)"));
+assert(!/updateParameter\('wavelength', 1, 500/.test(shell), 'saved settings must not widen the wavelength range');
 assert(engine.includes("slitColors={upper:'#22d3ee',lower:'#ff9f43'}"));
 assert(engine.includes('pending.push({index,cohort:a.cohort,slitSide:a.slitSide,wallY:a.wallY})'));
 assert(engine.includes("directedRow.innerHTML='Direct PW <input"));

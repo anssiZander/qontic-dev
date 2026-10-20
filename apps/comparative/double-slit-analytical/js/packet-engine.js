@@ -1,8 +1,8 @@
-import {mountFlowOverlay} from './flow-overlay.js?v=2.120';
-import {physicsHTML,viewsHTML,physicsEquations,whichPathPhysicsHTML,whichPathViewsHTML,whichPathEquations} from './physics-content.js?v=2.120';
+import {mountFlowOverlay} from './flow-overlay.js?v=2.121';
+import {physicsHTML,viewsHTML,physicsEquations,whichPathPhysicsHTML,whichPathViewsHTML,whichPathEquations} from './physics-content.js?v=2.121';
 import {drawBinPulse,DETECTOR_PULSE_SECONDS} from './detector-pulse.js?v=59';
 import {mountPacketGeometry,mountSlitWidth,mountSlitSeparation,trimTail,tailOpacity} from './packet-interaction.js?v=2.108';
-import {histogramLayout,surfaceHeightValue,surfaceDisplayDensity,surfacePhaseRate} from './packet-model.js?v=2.120';
+import {histogramLayout,surfaceHeightValue,surfaceDisplayDensity,surfacePhaseRate} from './packet-model.js?v=2.121';
 import {aperture,sourceCoefficients,sourceComponents,sourceTransverse,sourceEnvelope,sampleSource,sampleTransmittedSource,stepSource,sourceProfile,maximumCoreSafeSeparation} from './source-packet-model.js?v=2.108';
 import {detectorLaw,quantumSchedule,recordWithHit,samplePixel} from './packet-outcomes.js?v=2.108';
 export function mountPacketEngine({core,advanced}){
@@ -129,7 +129,7 @@ export function mountPacketEngine({core,advanced}){
  function updateMath(){
   packetMath.innerHTML=physicsHTML+'<h3>Direct-PW preparation</h3><p>Direct PW samples transmitted configurations within a fixed ±3σₐ window around each Gaussian aperture, independently of the displayed Slit extent. This window contains 99.73% of an isolated Gaussian profile. The green comparison curve remains the common analytical Gaussian-wave prediction rather than introducing a hard finite-core cut.</p><h3>Unequal slit transmission</h3><p>The expert “Slit balance” control multiplies the upper and lower aperture amplitudes by factors a₁ and a₂ between zero and one. One slit remains fully open while the other is attenuated; “Upper only” or “Lower only” sets the opposite factor to zero. The analytical Gaussian propagation is unchanged: only the corresponding closed-form component coefficients change. Unequal amplitudes reduce fringe visibility and break the reflection symmetry of the Pilot-Wave velocity field.</p>'+whichPathPhysicsHTML;
   math.removeAttribute('aria-busy');
-  const views=document.getElementById('rationale');views.innerHTML=viewsHTML+'<h3>3D wave surface</h3><p>The optional interactive 3D view graphs the same analytical field used by the 2D view. Dragging rotates the camera, the wheel or a pinch gesture zooms, and right-dragging pans. The Height selector can graph contrast-enhanced |Ψ|², cos φ, or Re Ψ and Im Ψ with the same enhanced amplitude envelope. The monotonic height boost preserves zeros and ordering but is not a linear amplitude scale; it keeps the weaker transmitted wave readable beside the incident packet. The cos φ choice is a continuous phase display that avoids an artificial moving cliff at the ±π wrap; unlike φ itself, it does not uniquely identify the phase angle. For cos φ, Re Ψ and Im Ψ, the middle of the height range is zero, and the reference grid and apparatus lie on that zero plane; the translucent floor lets negative lobes remain visible below it. To prevent temporal aliasing, the 3D carrier-phase animation is display-capped at 2 rad/s; this changes neither the wavefunction used for guidance nor any simulated timing. Surface color independently retains the wave quantity selected in the ordinary Show control and uses the same slowed display phase in 3D. With which-path tagging, phase and signed height use a density-weighted display of the two noninterfering tagged components rather than treating them as a coherent sum. Height and color are display coordinates and do not add a physical spatial dimension. The detector histogram is likewise graphed vertically above a low detector wall: it uses the same predicted curve, retained hits and square-root count error bars as the 2D histogram. When the wave is visible, Pilot-Wave particles and trajectories are lifted onto its graph only to keep their positions visible; hiding the wave places them at a fixed height on the apparatus zero plane. Their dynamics are always calculated entirely in the physical x–y plane. The Pilot-Wave toolbar eye changes only this display; it does not alter the guidance field or interrupt the simulation.</p><h3>Direct-PW statistics</h3><p>The fixed ±3σₐ Direct-PW window omits only the 0.27% isolated-Gaussian tails. The green curve continues to show the common analytical probability distribution, without a hard central cut. Toggling Direct PW preserves earlier hits and affects new packets.</p>'+whichPathViewsHTML;
+  const views=document.getElementById('rationale');views.innerHTML=viewsHTML+'<h3>3D wave surface</h3><p>The optional interactive 3D view graphs the same analytical field used by the 2D view. Dragging rotates the camera, the wheel or a pinch gesture zooms, and right-dragging pans. The Height selector can graph contrast-enhanced |Ψ|², cos θ, or Re Ψ and Im Ψ with the same enhanced amplitude envelope. The monotonic height boost preserves zeros and ordering but is not a linear amplitude scale; it keeps the weaker transmitted wave readable beside the incident packet. The cos θ choice is a continuous phase display that avoids an artificial moving cliff at the ±π wrap; unlike θ itself, it does not uniquely identify the phase angle. For cos θ, Re Ψ and Im Ψ, the middle of the height range is zero, and the reference grid and apparatus lie on that zero plane; the translucent floor lets negative lobes remain visible below it. To prevent temporal aliasing, the 3D carrier-phase animation is display-capped at 2 rad/s; this changes neither the wavefunction used for guidance nor any simulated timing. Surface color independently retains the wave quantity selected in the ordinary Show control and uses the same slowed display phase in 3D. With which-path tagging, phase and signed height use a density-weighted display of the two noninterfering tagged components rather than treating them as a coherent sum. Height and color are display coordinates and do not add a physical spatial dimension. The detector histogram is likewise graphed vertically above a low detector wall: it uses the same predicted curve, retained hits and square-root count error bars as the 2D histogram. When the wave is visible, Pilot-Wave particles and trajectories are lifted onto its graph only to keep their positions visible; hiding the wave places them at a fixed height on the apparatus zero plane. Their dynamics are always calculated entirely in the physical x–y plane. The Pilot-Wave toolbar eye hides or shows the wave in both the 2D and 3D displays; it does not alter the guidance field or interrupt the simulation.</p><h3>Direct-PW statistics</h3><p>The fixed ±3σₐ Direct-PW window omits only the 0.27% isolated-Gaussian tails. The green curve continues to show the common analytical probability distribution, without a hard central cut. Toggling Direct PW preserves earlier hits and affects new packets.</p>'+whichPathViewsHTML;
   views.removeAttribute('aria-busy');
   for(const node of [...packetMath.querySelectorAll('[data-equation]'),...views.querySelectorAll('[data-equation]')]){
    const formula=physicsEquations[node.dataset.equation]??whichPathEquations[node.dataset.equation];
@@ -263,7 +263,7 @@ export function mountPacketEngine({core,advanced}){
  function drawWave(){ensure();drawSourceWave();}
  async function ensureSurface3D(){
   if(surface3D)return surface3D;
-  if(!surface3DLoad)surface3DLoad=import('./packet-surface-3d.js?v=2.108').then(({mountPacketSurface3D})=>{
+  if(!surface3DLoad)surface3DLoad=import('./packet-surface-3d.js?v=2.121').then(({mountPacketSurface3D})=>{
    surface3D=mountPacketSurface3D({host:document.getElementById('canvas-container')});configureSurfaceEditor();surface3D.configureHeight(surfaceHeightMode,mode=>{surfaceHeightMode=mode;localStorage.setItem('qontic-double-slit-surface-height',mode);draw();});surface3D.setVisible(surfaceView);surface3D.setEditing(geometryEditing);draw();return surface3D;
   }).catch(error=>{surface3DLoad=null;surfaceView=false;syncSurfaceView();console.error('Unable to start the 3D renderer',error);});
   return surface3DLoad;
@@ -439,14 +439,38 @@ export function mountPacketEngine({core,advanced}){
   drawWave();flowOverlay.draw({ctx:setupCtx,p,coeff,pulses,t,X,Y,width:canvas.width,height:canvas.height,yOffset,surfaceView});drawParticles();histogram();drawDetection();updateSurface3D();window.qonticScaleOverlay?.update();geometryControls?.update();slitControls?.update();separationControls?.update();stats();
  }
 
- function hash(){return '&engine=packet&packetOrigin=source&sourceWidth='+sourceWidth.value+'&packetLength='+length.value+'&packetWidth='+width.value+'&slitExtent='+extent.value+'&slitBalance='+balance.value+'&packetCount='+p.particles+'&tailLength='+tailLength.value+'&packetInterval='+interval.value+(surfaceView?'&surface3d=1&surfaceHeight='+surfaceHeightMode:'');}
+ function hash(){return '&engine=packet&packetOrigin=source&sourceWidth='+sourceWidth.value+'&packetLength='+length.value+'&packetWidth='+width.value+'&slitExtent='+extent.value+'&slitBalance='+balance.value+'&packetCount='+p.particles+'&tailLength='+tailLength.value+'&packetInterval='+interval.value+(surfaceView?'&surface3d=1&surfaceHeight='+surfaceHeightMode:'')+viewHash();}
+ // Settings that live outside the packet model but define what a shared link shows.
+ function viewHash(){
+  const v=id=>document.getElementById(id);
+  const q=[['pixels',v('det-pixels-input')?.value],['particle',v('particleType')?.value],['directed',directed.checked?1:0],['pwColor',particleColorMode.value],
+   ['show',v('basicsWaveFunctionOption')?.value],['speed',v('animationStep-input')?.value],
+   ['flowArrows',v('flow-arrows')?.checked?1:0],['flowLines',v('flow-lines')?.checked?1:0],['flowLength',v('flow-length')?.value],['flowSpacing',v('flow-spacing')?.value]];
+  return q.filter(([,x])=>x!==undefined&&x!==null&&x!=='').map(([k,x])=>'&'+k+'='+encodeURIComponent(x)).join('');
+ }
+ function applyViewHash(){
+  const v=id=>document.getElementById(id);
+  const fire=(el,type='change')=>el?.dispatchEvent(new Event(type,{bubbles:true}));
+  const pick=(el,value)=>{if(el&&value!==null&&[...el.options].some(o=>o.value===value)){el.value=value;fire(el);}};
+  const num=(key,lo,hi)=>{if(!params.has(key))return null;const n=Number(params.get(key));return Number.isFinite(n)&&n>=lo&&n<=hi?n:null;};
+  const pixels=num('pixels',+(v('det-pixels')?.min??10),+(v('det-pixels')?.max??500));
+  if(pixels!==null)$('#det-pixels-group')[0]?.setValueInFirstUnit(Math.round(pixels));
+  pick(v('particleType'),params.get('particle'));
+  if(params.has('directed')&&directed.checked!==(params.get('directed')==='1')){directed.checked=params.get('directed')==='1';fire(directed);}
+  pick(particleColorMode,params.get('pwColor'));
+  pick(v('basicsWaveFunctionOption'),params.get('show'));
+  const speed=num('speed',+(v('animationStep')?.min??0),+(v('animationStep')?.max??100));
+  if(speed!==null)$('#animationStep-group')[0]?.setValueInFirstUnit(speed);
+  for(const [key,id] of [['flowLength','flow-length'],['flowSpacing','flow-spacing']]){const el=v(id),n=el&&num(key,+el.min,+el.max);if(n!==null&&n!==undefined){el.value=n;fire(el,'input');}}
+  for(const [key,id] of [['flowArrows','flow-arrows'],['flowLines','flow-lines']]){const el=v(id);if(el&&params.has(key)){el.checked=params.get(key)==='1';fire(el);}}
+ }
  const params=new URLSearchParams(location.hash.slice(1));
  if(params.has('surface3d'))surfaceView=params.get('surface3d')==='1';
  if(['psi2','phase','real','imag'].includes(params.get('surfaceHeight')))surfaceHeightMode=params.get('surfaceHeight');
  for(const [key,el] of [['packetLength',length],['packetWidth',width],['slitExtent',extent],['sourceWidth',sourceWidth],['tailLength',tailLength],['packetInterval',interval]]){const n=Number(params.get(key));if(params.has(key)&&n>=+el.min&&n<=+el.max){el.value=n;syncPacketInput(el);}}
  const savedBalance=Number(params.get('slitBalance'));if(params.has('slitBalance')&&savedBalance>=-100&&savedBalance<=100)balance.value=savedBalance;syncBalance();
  applyPacketLimits();
- const count=+params.get('packetCount');if(count>=1&&count<=5000)$('#MaxPart-group')[0]?.setValueInFirstUnit(count);
+ const count=+params.get('packetCount');if(count>=+(document.getElementById('MaxPart')?.min??1)&&count<=+(document.getElementById('MaxPart')?.max??1000))$('#MaxPart-group')[0]?.setValueInFirstUnit(count);
  interval.addEventListener('input',()=>{syncPacketInput(interval);nextEmission=Math.max(t,(pulses.at(-1)?.born??t)+emissionPeriod());});
  directed.addEventListener('change',()=>{localStorage.setItem('qontic-pw-directed-slits',String(directed.checked));syncMode();draw();});
  particleColorMode.addEventListener('change',()=>{localStorage.setItem('qontic-pw-particle-color',particleColorMode.value);localStorage.removeItem('qontic-pw-color-by-slit');draw();});
@@ -537,7 +561,10 @@ export function mountPacketEngine({core,advanced}){
   if(particleType==='photon'){particleType='electron';$('#particleType').val('electron');}
   document.querySelector('#waveFunctionOption option[value=Phase]').textContent='Phase (cos θ)';if(!$('#waveFunctionOption').val())$('#waveFunctionOption').val('Psi2');
   const species=document.createElement('div');species.className='input-group packet-species packet-core-options';species.append(document.getElementById('particleType'),directedRow,slitColorRow);document.getElementById('experiment-bar').after(species);
-  whichPathDetector='none';updateWhichPathButton();setupGeo(false);reset=0;resetEngine();draw();
+  // A shared link may request the ideal which-slit detector; otherwise start without one.
+  const linkedDetector=params.get('wp');
+  whichPathDetector=['slit1','slit2'].includes(linkedDetector)&&slit1Open&&slit2Open?linkedDetector:'none';updateWhichPathButton();setupGeo(false);reset=0;resetEngine();
+  applyViewHash();draw();
  });
  function sampleBranch(){
   ensure();if(nHits===0||window.qonticMWBranches?.busy)return;

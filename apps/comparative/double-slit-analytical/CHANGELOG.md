@@ -1,3 +1,14 @@
+## 2.121 — 2026-10-19
+
+- Saved settings restore values within each control's own range; a reload no longer widens λ to 500 nm or the source-position minimum to 0.
+- Share links keep the which-slit detector and now also carry detector pixels, particle type, Direct PW, Pilot-Wave color mode, Show option, playback speed and flow settings.
+- Many-Worlds branch counter shows N^m exactly (e.g. 16² = 256) instead of rounding to a power of ten.
+- The app starts when browser storage is blocked (in-memory fallback); a corrupted saved state is ignored.
+- Reset Defaults clears only this app's settings, not every app on the site.
+- Readout renamed Packet Speed: it is the group velocity ħk/m (tooltip said phase velocity ω/k). Energy tooltip: central packet energy, not assigned to individual trajectories. Updated stale tooltips.
+- 3D text and Height menu use θ for the phase (φ is the transverse field). Views text: the eye button hides the wave in 2D and 3D.
+- Rollback: backup/double-slit-before-review-fixes-2.120-20261019.
+
 ## 2.120 — 2026-10-05
 
 - Physics explains reduced-model probability current, streamline slope and physical arrow-shaft arc length.
