@@ -102,7 +102,7 @@ const CONTROL_REGISTRY = Object.freeze({
   trailLength: { category: 'visual', originalLabel: 'Trail length' },
 });
 
-let localCoupling = 1.15;
+let localCoupling = 1.0;
 let localVolumeDensity = 3.0, localVolumeBrightness = 0.65, localLabelScale = 1.3, localTrailLength = 3, localInteractionDuration = 1.5, localPostReadoutTime = 6.8;
 let localWeakDetectorX = 0, localStrongDetectorX = 6, localXPositionWidth=.92, localYPositionWidth=.82, localZPointerWidth = .26, localViewMode = 'xy', localInterpretation = 'pilot';
 let localWaveColorMode = 'start', localWaveColors = true, localParticleColors = false, localLightTheme = false, graphicsActive = false;
@@ -112,11 +112,11 @@ const sendModelControl = (type, value) => document.querySelector('.lab iframe')?
 
 function ensureThemedMeasurementFrame(root = document) {
   const frame = root.querySelector?.('.lab iframe') ?? (root.matches?.('.lab iframe') ? root : null);
-  if (!frame || frame.dataset.templateFrameVersion === '1.73') return;
+  if (!frame || frame.dataset.templateFrameVersion === '1.74') return;
   const url = new URL(frame.getAttribute('src') || frame.src, location.href);
   if (!url.pathname.endsWith('/measurement.html')) return;
-  frame.dataset.templateFrameVersion = '1.73';
-  url.searchParams.set('v', '1.73');
+  frame.dataset.templateFrameVersion = '1.74';
+  url.searchParams.set('v', '1.74');
   frame.src = url.href;
 }
 
