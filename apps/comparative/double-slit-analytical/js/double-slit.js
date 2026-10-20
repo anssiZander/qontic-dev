@@ -54,7 +54,7 @@ var colorPart="red"
 var colorProb="green"
 var colorPsi   ="white"
 var colorTraj="red"
-var colorScreen="blue"
+var colorScreen="#d4e6ef" // slit wall; matches the drawn wall
 var colorSensor='#90ee90';
 var colorScale="#000000"
 var currentCycleIndex=10000;
@@ -74,21 +74,7 @@ var startRealTime = 0; // real time when simulation started (for elapsed display
 // {bins, cdf} objects.  Sampling is O(log n) via binary search instead
 // of building million-entry arrays.
 //==================================================================================================
-function sampleFromCDF(dist) {
-   const r = Math.random();
-   const cdf = dist.cdf;
-   const bins = dist.bins;
-   // Binary search for the bin where cdf[i] >= r
-   let lo = 0, hi = cdf.length - 1;
-   while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (cdf[mid] < r) lo = mid + 1;
-      else hi = mid;
-   }
-   // Linearly interpolate within the bin for smooth sampling
-   const binWidth = bins.length > 1 ? (bins[1] - bins[0]) : 0;
-   return bins[lo] + (Math.random() - 0.5) * binWidth;
-}
+// (2.122: unused legacy sampleFromCDF removed; the packet engine samples detector pixels.)
 
 //==================================================================================================
 // Web Worker for off-main-thread precomputation
@@ -294,15 +280,6 @@ function renderWaveWithWebGL() { /* Retired packet-incompatible renderer/precomp
 //==================================================================================================================
 //
 //==================================================================================================================
-function lcg(seed) {
-   let state = seed;
-   return function() {
-      state = (1664525 * state + 1013904223) % 4294967296; // LCG formula
-      return state / 4294967296; // Normalize to [0, 1)
-   };
-}
-
-const random = lcg(55142);
 //==================================================================================================================
 //
 //==================================================================================================================
@@ -909,6 +886,8 @@ function restoreSimulationState() {
   // Version 2.96 changes the former black default to a visible red. Preserve
   // every explicitly selected non-black color while migrating the old default.
   if(state.colors&&['black','#000','#000000','rgb(0, 0, 0)'].includes(String(state.colors.hit).toLowerCase()))state.colors.hit='#ef4444';
+  // Version 2.122 draws the slit wall in its swatch color; migrate the old unused blue default.
+  if(state.colors&&['blue','#0000ff','rgb(0, 0, 255)'].includes(String(state.colors.screen).toLowerCase()))state.colors.screen='#d4e6ef';
   restoreDisplayOpacities(state.displayOpacities);
 
   // Clear old state if version doesn't match (units changed from mm to nm)

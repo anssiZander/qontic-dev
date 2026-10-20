@@ -386,3 +386,23 @@ body.analytical-template { --font-size-base:13px; --font-size-sm:13px; --font-si
 .flow-settings .flow-control-row .flow-spacing { margin-left:auto; }
 .flow-settings .flow-spacing input[type=range] { grid-column:auto; width:40px; min-width:24px; }
 .flow-settings .flow-spacing label { display:block; white-space:nowrap; }
+
+/* 2.122: the wave-range control maps the 2D colors only; the 3D renderer does not use it. */
+.analytical-template #canvas-container.packet-surface-3d .qontic-range-panel { display:none !important; }
+
+/* 2.122: phone layout. Shrink the canvas overlays so the source and slits stay
+   visible, let the Core option row wrap, and keep the header label compact. */
+@media (max-width: 600px) {
+  .analytical-template #canvas-container .qontic-distance-scale { transform:scale(.6); transform-origin:top left; }
+  .analytical-template #canvas-container .qontic-range-panel { transform:scale(.6); transform-origin:bottom left; }
+  .analytical-template .packet-core-options { flex-wrap:wrap; row-gap:6px; }
+  .analytical-template .packet-core-options > select { flex:1 1 100%; }
+  .analytical-template .packet-core-options .packet-slit-colors { margin-left:8px !important; }
+  .analytical-template #Info { margin-bottom:56px; }
+  .qontic-feedback-widget { opacity:.88; }
+  .qontic-feedback-widget .qontic-feedback-button { padding:6px 11px; font-size:12px; }
+}
+@media (max-width: 560px) {
+  /* qsf-style.css sets #view-label font-size by id, which overrode the shared compact (PW/O/MW) badge. */
+  .analytical-template .qontic-header-tools > #view-label { font-size:0; }
+}

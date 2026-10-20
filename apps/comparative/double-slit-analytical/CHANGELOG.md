@@ -1,3 +1,14 @@
+## 2.122 — 2026-10-20
+
+- Phone layout: smaller distance-scale and color-range overlays so the source and slits stay visible; Core option row wraps; compact PW/O/MW header badge; smaller Feedback button and room to scroll past it.
+- 3D view hides the 2D color-range control, which does not affect the 3D surface.
+- The Slit wall color swatch now sets the drawn wall color (default light gray-blue; the old unused blue default is migrated).
+- Pilot-Wave readout "No hit: absorbed · missed" explains why the same per-packet setting gives fewer hits than Orthodox and Many-Worlds.
+- Particle selector tooltip and Physics text: at fixed λ the mass changes only speed, energy and time scale.
+- Separation and slit-width limits also respect the ±3σ Direct PW window (strictest of the displayed windows); Views text notes it.
+- Cleanup: removed unreferenced packet-preview.js, spherical-worker.js, sampleFromCDF and lcg; one ?v= suffix for all local modules; README links and app.json description updated.
+- Rollback: backup/double-slit-before-open-issues-2.121-20261020.
+
 ## 2.121 — 2026-10-19
 
 - Saved settings restore values within each control's own range; a reload no longer widens λ to 500 nm or the source-position minimum to 0.

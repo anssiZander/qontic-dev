@@ -33,7 +33,7 @@
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="js/palette.js"></script>
     <script>window.qonticTemplateLayout = true;</script>
-    <script src="js/double-slit.js?v=2.121"></script>
+    <script src="js/double-slit.js?v=2.122"></script>
     <link rel="stylesheet" href="css/qsf-style.css?v=20260908-layout3">
     <script defer src="../../../shared/back-home.js"></script>
     <style>
@@ -56,11 +56,11 @@
     </style>
     <link rel="stylesheet" href="../../../shared/qontic-shell.css?v=3.6">
     <link rel="stylesheet" href="../../../shared/qontic-app.css?v=3.5">
-    <link rel="stylesheet" href="css/qontic-template.css?v=2.121">
+    <link rel="stylesheet" href="css/qontic-template.css?v=2.122">
     <script type="importmap">
       {"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}
     </script>
-    <script type="module" src="js/qontic-template.js?v=2.121"></script>
+    <script type="module" src="js/qontic-template.js?v=2.122"></script>
 </head>
 <body>
   <!-- Loading overlay — visible until JS init completes -->
@@ -318,6 +318,10 @@
            <tr class="info-box" data-tip="Number of detector hits">
                <td class="label">Hits:</td>
                <td align=right class="value"><span id="nhits">0</span></td> 
+           </tr>
+           <tr class="info-box bohmian-only" data-tip="Pilot-Wave trials that gave no screen hit: absorbed at the slit wall, or passing outside the displayed screen. Orthodox and Many-Worlds count screen registrations only, so the same per-packet setting gives more hits there.">
+               <td class="label">No hit:</td>
+               <td align=right class="value"><span id="noHitCount">0 absorbed · 0 missed</span></td>
            </tr>
            <tr class="info-box advanced-info" data-tip="Number of simulation steps completed">
                <td class="label">Steps:</td>

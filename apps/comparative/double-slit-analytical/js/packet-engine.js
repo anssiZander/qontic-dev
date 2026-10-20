@@ -1,10 +1,10 @@
-import {mountFlowOverlay} from './flow-overlay.js?v=2.121';
-import {physicsHTML,viewsHTML,physicsEquations,whichPathPhysicsHTML,whichPathViewsHTML,whichPathEquations} from './physics-content.js?v=2.121';
-import {drawBinPulse,DETECTOR_PULSE_SECONDS} from './detector-pulse.js?v=59';
-import {mountPacketGeometry,mountSlitWidth,mountSlitSeparation,trimTail,tailOpacity} from './packet-interaction.js?v=2.108';
-import {histogramLayout,surfaceHeightValue,surfaceDisplayDensity,surfacePhaseRate} from './packet-model.js?v=2.121';
-import {aperture,sourceCoefficients,sourceComponents,sourceTransverse,sourceEnvelope,sampleSource,sampleTransmittedSource,stepSource,sourceProfile,maximumCoreSafeSeparation} from './source-packet-model.js?v=2.108';
-import {detectorLaw,quantumSchedule,recordWithHit,samplePixel} from './packet-outcomes.js?v=2.108';
+import {mountFlowOverlay} from './flow-overlay.js?v=2.122';
+import {physicsHTML,viewsHTML,physicsEquations,whichPathPhysicsHTML,whichPathViewsHTML,whichPathEquations} from './physics-content.js?v=2.122';
+import {drawBinPulse,DETECTOR_PULSE_SECONDS} from './detector-pulse.js?v=2.122';
+import {mountPacketGeometry,mountSlitWidth,mountSlitSeparation,trimTail,tailOpacity} from './packet-interaction.js?v=2.122';
+import {histogramLayout,surfaceHeightValue,surfaceDisplayDensity,surfacePhaseRate} from './packet-model.js?v=2.122';
+import {aperture,sourceCoefficients,sourceComponents,sourceTransverse,sourceEnvelope,sampleSource,sampleTransmittedSource,stepSource,sourceProfile,maximumCoreSafeSeparation} from './source-packet-model.js?v=2.122';
+import {detectorLaw,quantumSchedule,recordWithHit,samplePixel} from './packet-outcomes.js?v=2.122';
 export function mountPacketEngine({core,advanced}){
  physicsEquations.mask='\\phi(y,L^+)=T(y)\\phi(y,L^-),\\qquad T(y)=\\frac1C\\sum_{j\\,\\mathrm{open}}a_j e^{-(y-y_j)^2/(4\\sigma_a^2)},\\quad 0\\le a_j\\le1';
  const panel=document.createElement('div');panel.className='packet-settings';
@@ -35,12 +35,16 @@ export function mountPacketEngine({core,advanced}){
   const extentMax=Math.max(1,Math.min(5,Math.floor(height/(4*30)*2)/2));
   extent.max=extentMax;extent.parentElement.querySelector('input[type=number]').max=extentMax;
   if(+extent.value>extentMax)extent.value=extentMax;
-  const n=+extent.value;
-  dynamicWidthMax=Math.max(30,Math.floor(height/(4*n)/5)*5);
+  // Direct PW draws and samples a fixed ±3σ window, so its openings must also fit
+  // on the wall and hold the transmitted probability (2.122).
+  let directPW=false;try{directPW=directed.checked;}catch(_){}
+  // Every displayed window (the Slit extent, plus ±3σ under Direct PW) must fit on
+  // the wall and hold the transmitted probability; take the strictest limit.
+  const n=+extent.value,windows=directPW&&n!==3?[n,3]:[n],widest=Math.max(...windows);
+  dynamicWidthMax=Math.max(30,Math.floor(height/(4*widest)/5)*5);
   width.max=width.parentElement.querySelector('input[type=number]').max=dynamicWidthMax;
   if(+width.value>dynamicWidthMax)width.value=dynamicWidthMax;
-  const wallLimit=Math.max(0,Math.floor(height-2*n*(+width.value)));
-  dynamicSeparationMax=maxTailSafeSeparation(Math.min(2000,wallLimit),n);
+  dynamicSeparationMax=Math.min(...windows.map(m=>maxTailSafeSeparation(Math.min(2000,Math.max(0,Math.floor(height-2*m*(+width.value)))),m)));
   separationRange.max=separationNumber.max=dynamicSeparationMax;
   if(+separationRange.value>dynamicSeparationMax)separationRange.value=separationNumber.value=dynamicSeparationMax;
   slitSeparation=+separationRange.value;
@@ -179,7 +183,7 @@ export function mountPacketEngine({core,advanced}){
   const mass=particleType==='neutron'?mNeutron:mElectron,speed=hbar/mass*p.k/100;
   $('#waveSpeed').text(speed>=1000?(speed/1000).toFixed(2)+' km/s':speed.toFixed(2)+' m/s');
   $('#particleEnergy').text((.5*mass*(hbar*p.k/(mass*100))**2/1.602176634e-19).toExponential(2)+' eV');
-  time=totalTime*timeUnit;$('#systemTime').text(time.toFixed(3)+' ns');$('#realTime').text(realElapsed.toFixed(1)+' s');$('#nhits').text(nHits);$('#shownParticles').text(particles.filter(a=>!a.done).length);$('#maxParticlesDisplay').text(p.particles);$('#nSteps').text(nSteps);
+  time=totalTime*timeUnit;$('#systemTime').text(time.toFixed(3)+' ns');$('#realTime').text(realElapsed.toFixed(1)+' s');$('#nhits').text(nHits);$('#shownParticles').text(particles.filter(a=>!a.done).length);$('#maxParticlesDisplay').text(p.particles);$('#nSteps').text(nSteps);$('#noHitCount').text(absorbed+' absorbed · '+missed+' missed');
   const sampleButton=document.getElementById('resampleHitsButton');
   sampleButton.disabled=nHits===0||!!window.qonticMWBranches?.busy;
   sampleButton.title=nHits===0?'Collect screen hits before sampling another branch.':window.qonticMWBranches?.busy?'Finish choosing the current branch first.':'Sample another detector history with the same number of hits, using the packet outcome probabilities.';
@@ -263,7 +267,7 @@ export function mountPacketEngine({core,advanced}){
  function drawWave(){ensure();drawSourceWave();}
  async function ensureSurface3D(){
   if(surface3D)return surface3D;
-  if(!surface3DLoad)surface3DLoad=import('./packet-surface-3d.js?v=2.121').then(({mountPacketSurface3D})=>{
+  if(!surface3DLoad)surface3DLoad=import('./packet-surface-3d.js?v=2.122').then(({mountPacketSurface3D})=>{
    surface3D=mountPacketSurface3D({host:document.getElementById('canvas-container')});configureSurfaceEditor();surface3D.configureHeight(surfaceHeightMode,mode=>{surfaceHeightMode=mode;localStorage.setItem('qontic-double-slit-surface-height',mode);draw();});surface3D.setVisible(surfaceView);surface3D.setEditing(geometryEditing);draw();return surface3D;
   }).catch(error=>{surface3DLoad=null;surfaceView=false;syncSurfaceView();console.error('Unable to start the 3D renderer',error);});
   return surface3DLoad;
@@ -423,12 +427,12 @@ export function mountPacketEngine({core,advanced}){
    // fixed ±3σ preparation window. The analytical wave remains untruncated.
    const half=displayExtentSigma()*(slitPreviewWidth??p.sy*100)*toCanvasY;
    const openings=displayCenters().map(center=>[Math.max(0,Y(center)-half),Math.min(canvas.height,Y(center)+half)]).filter(([a,b])=>b>a).sort((a,b)=>a[0]-b[0]);
-   setupCtx.strokeStyle='#d4e6ef';setupCtx.lineWidth=6;setupCtx.lineCap='butt';setupCtx.beginPath();let cursor=0;
+   setupCtx.strokeStyle=colorScreen;setupCtx.lineWidth=6;setupCtx.lineCap='butt';setupCtx.beginPath();let cursor=0;
    for(const [top,bottom] of openings){if(top>cursor){setupCtx.moveTo(wallX,cursor);setupCtx.lineTo(wallX,top);}cursor=Math.max(cursor,bottom);}
    if(cursor<canvas.height){setupCtx.moveTo(wallX,cursor);setupCtx.lineTo(wallX,canvas.height);}setupCtx.stroke();
    setupCtx.strokeStyle='#81e7f5';setupCtx.lineWidth=1.5;
    for(const [top,bottom] of openings){setupCtx.beginPath();setupCtx.moveTo(wallX-9,top);setupCtx.lineTo(wallX+9,top);setupCtx.moveTo(wallX-9,bottom);setupCtx.lineTo(wallX+9,bottom);setupCtx.stroke();}
-   openings.forEach(([top,bottom],index)=>{const transmission=p.apertureWeights?.[index]??1;if(transmission>=1)return;setupCtx.save();setupCtx.globalAlpha*=1-transmission;setupCtx.strokeStyle='#d4e6ef';setupCtx.lineWidth=6;setupCtx.beginPath();setupCtx.moveTo(wallX,top);setupCtx.lineTo(wallX,bottom);setupCtx.stroke();setupCtx.restore();});
+   openings.forEach(([top,bottom],index)=>{const transmission=p.apertureWeights?.[index]??1;if(transmission>=1)return;setupCtx.save();setupCtx.globalAlpha*=1-transmission;setupCtx.strokeStyle=colorScreen;setupCtx.lineWidth=6;setupCtx.beginPath();setupCtx.moveTo(wallX,top);setupCtx.lineTo(wallX,bottom);setupCtx.stroke();setupCtx.restore();});
    if(p.whichPath){
     const detectorIndex=whichPathDetector==='slit2'?1:0,detectorY=Y(p.centers[detectorIndex]);
     setupCtx.globalAlpha=1;setupCtx.fillStyle='#ffd54a';setupCtx.strokeStyle='#3b2d00';setupCtx.lineWidth=1.5;setupCtx.fillRect(wallX-13,detectorY-9,11,18);setupCtx.strokeRect(wallX-13,detectorY-9,11,18);
@@ -472,7 +476,7 @@ export function mountPacketEngine({core,advanced}){
  applyPacketLimits();
  const count=+params.get('packetCount');if(count>=+(document.getElementById('MaxPart')?.min??1)&&count<=+(document.getElementById('MaxPart')?.max??1000))$('#MaxPart-group')[0]?.setValueInFirstUnit(count);
  interval.addEventListener('input',()=>{syncPacketInput(interval);nextEmission=Math.max(t,(pulses.at(-1)?.born??t)+emissionPeriod());});
- directed.addEventListener('change',()=>{localStorage.setItem('qontic-pw-directed-slits',String(directed.checked));syncMode();draw();});
+ directed.addEventListener('change',()=>{localStorage.setItem('qontic-pw-directed-slits',String(directed.checked));applyPacketLimits();syncMode();draw();});
  particleColorMode.addEventListener('change',()=>{localStorage.setItem('qontic-pw-particle-color',particleColorMode.value);localStorage.removeItem('qontic-pw-color-by-slit');draw();});
  balance.addEventListener('input',()=>{syncBalance();resetEngine();draw();});
  balanceEqual.addEventListener('click',()=>{if(balance.disabled)return;balance.value='0';balance.dispatchEvent(new Event('input',{bubbles:true}));});
@@ -558,6 +562,7 @@ export function mountPacketEngine({core,advanced}){
   const label=document.querySelector('#MaxPart-group label');if(label)label.textContent='Particles / packet:';
   for(const value of ['photon']){const el=document.querySelector('#particleType option[value='+value+']');if(el)el.remove();}
   syncSlowPacketMode();
+  document.getElementById('particleType').title='At the same wavelength an electron and a neutron give the same pattern; the mass changes only the speed, energy and time scale.';
   if(particleType==='photon'){particleType='electron';$('#particleType').val('electron');}
   document.querySelector('#waveFunctionOption option[value=Phase]').textContent='Phase (cos θ)';if(!$('#waveFunctionOption').val())$('#waveFunctionOption').val('Psi2');
   const species=document.createElement('div');species.className='input-group packet-species packet-core-options';species.append(document.getElementById('particleType'),directedRow,slitColorRow);document.getElementById('experiment-bar').after(species);
