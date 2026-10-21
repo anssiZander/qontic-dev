@@ -1728,6 +1728,10 @@ $(document).ready(function() {
       const paletteIndex = 2; // Gray 
       const [paletteName, hexPalette] = paletteEntries[paletteIndex];
       graphPalette = window.paletteModule.prepareRgbPalette(hexPalette);
+      // 2.128: the Display-tab swatch was drawn before this default existed, so it
+      // stayed blank until the palette changed. Record the name and redraw it now.
+      window.paletteModule.setPaletteByName?.(paletteName);
+      window.qonticUpdateWavePalettePreview?.();
       
       // Initialize which-path detector palettes (blue and green)
       graphPaletteSlit1 = window.paletteModule.prepareRgbPalette(window.paletteModule.palettes.Blue);

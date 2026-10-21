@@ -1,8 +1,8 @@
 import { mountExpandedResize } from '../../../../shared/qontic-expanded-resize.js?v=1';
 import { mountQonticShortcuts } from '../../../../shared/qontic-shortcuts.js?v=1';
-import { mountPacketEngine } from './packet-engine.js?v=2.127';
-import { mountMWBranching } from './mw-branching.js?v=2.127';
-import { APP_RELEASE } from './release.js?v=2.127';
+import { mountPacketEngine } from './packet-engine.js?v=2.128';
+import { mountMWBranching } from './mw-branching.js?v=2.128';
+import { APP_RELEASE } from './release.js?v=2.128';
 import { mountCoordinateTools, mountDistanceScale, mountValueRange } from '../../../../shared/qontic-overlays.js?v=5';
 import { mountQonticMedia } from '../../../../shared/qontic-media.js?v=3.8';
 import { enableResizableSidebar } from '../../../../shared/qontic-resize.js?v=1';
@@ -107,8 +107,11 @@ $(function () {
   const layers = document.createElement('div');
   layers.className = 'analytical-layers';
   layerTable.before(layers);
+  // 2.128: the swatch is first drawn while its row is still detached from the page,
+  // where getElementById finds nothing; keep a direct reference to the canvas.
+  const waveSwatch = document.getElementById('openPaletteBtn');
   const updateWavePalettePreview = () => {
-    const canvas = document.getElementById('openPaletteBtn');
+    const canvas = waveSwatch || document.getElementById('openPaletteBtn');
     if (!(canvas instanceof HTMLCanvasElement)) return;
     const colors = Array.isArray(window.graphPalette) && window.graphPalette.length
       ? window.graphPalette

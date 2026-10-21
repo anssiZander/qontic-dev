@@ -1,3 +1,8 @@
+## 2.128 — 2026-10-21
+
+- Fixed: the wave palette swatch in the Display tab was blank on page load and appeared only after the palette was changed. It was drawn while its row was not yet attached to the page, so the lookup by id found nothing; the template now keeps a direct reference to the swatch. The default palette name is also recorded at start-up, so the swatch tooltip names it.
+- Rollback: backup/double-slit-before-palette-swatch-2.127-20261021.
+
 ## 2.127 — 2026-10-20
 
 - Restored the 3D graphics of 2.125: palette-colored surface, previous floor and background, standard particles and trails, 96×64 mesh. The Phase hue style of 2.126 is removed.
