@@ -1,10 +1,10 @@
-import {mountFlowOverlay} from './flow-overlay.js?v=2.126';
-import {physicsHTML,viewsHTML,physicsEquations,whichPathPhysicsHTML,whichPathViewsHTML,whichPathEquations} from './physics-content.js?v=2.126';
-import {drawBinPulse,DETECTOR_PULSE_SECONDS} from './detector-pulse.js?v=2.126';
-import {mountPacketGeometry,mountSlitWidth,mountSlitSeparation,trimTail,tailOpacity} from './packet-interaction.js?v=2.126';
-import {histogramLayout,surfaceHeightValue,surfaceDisplayDensity,surfacePhaseRate} from './packet-model.js?v=2.126';
-import {aperture,sourceCoefficients,sourceComponents,sourceTransverse,sourceEnvelope,sampleSource,sampleTransmittedSource,stepSource,sourceProfile,maximumCoreSafeSeparation} from './source-packet-model.js?v=2.126';
-import {detectorLaw,quantumSchedule,recordWithHit,samplePixel} from './packet-outcomes.js?v=2.126';
+import {mountFlowOverlay} from './flow-overlay.js?v=2.127';
+import {physicsHTML,viewsHTML,physicsEquations,whichPathPhysicsHTML,whichPathViewsHTML,whichPathEquations} from './physics-content.js?v=2.127';
+import {drawBinPulse,DETECTOR_PULSE_SECONDS} from './detector-pulse.js?v=2.127';
+import {mountPacketGeometry,mountSlitWidth,mountSlitSeparation,trimTail,tailOpacity} from './packet-interaction.js?v=2.127';
+import {histogramLayout,surfaceHeightValue,surfaceDisplayDensity,surfacePhaseRate} from './packet-model.js?v=2.127';
+import {aperture,sourceCoefficients,sourceComponents,sourceTransverse,sourceEnvelope,sampleSource,sampleTransmittedSource,stepSource,sourceProfile,maximumCoreSafeSeparation} from './source-packet-model.js?v=2.127';
+import {detectorLaw,quantumSchedule,recordWithHit,samplePixel} from './packet-outcomes.js?v=2.127';
 export function mountPacketEngine({core,advanced}){
  physicsEquations.mask='\\phi(y,L^+)=T(y)\\phi(y,L^-),\\qquad T(y)=\\frac1C\\sum_{j\\,\\mathrm{open}}a_j e^{-(y-y_j)^2/(4\\sigma_a^2)},\\quad 0\\le a_j\\le1';
  const panel=document.createElement('div');panel.className='packet-settings';
@@ -69,7 +69,7 @@ export function mountPacketEngine({core,advanced}){
  const math=document.getElementById('math-container'),packetMath=document.createElement('section');packetMath.className='math-section';math.replaceChildren(packetMath);
  let slowPacketMode=false,savedPacketCount=null;
  let enabled=true,p=null,coeff=null,profile=null,law=null,sourceGrid=null,fingerprint='',particles=[],pending=[],pulses=[],slitHits={upper:[],lower:[]},spectrumHitCounts=[],spectrumHitSums=[],nextEmission=0,t=0,totalTime=0,pulse=0,absorbed=0,pulseAbsorbed=0,missed=0,last=null,realElapsed=0,timeUnit=1,yOffset=0,finished=false,packetAnimationId=null,visualPhase=0,flash=null,hold=0,lastMode=interpretation;
- let surfaceView=localStorage.getItem('qontic-double-slit-surface-view')==='true',surfaceHeightMode=localStorage.getItem('qontic-double-slit-surface-height')||'psi2',surfaceHeights=null,surfacePhase=null,surfaceAmplitude=null,surface3D=null,surface3DLoad=null,pwWaveVisible=localStorage.getItem('qontic-pw-wave-visible')!=='false',pwWaveButton=null;
+ let surfaceView=localStorage.getItem('qontic-double-slit-surface-view')==='true',surfaceHeightMode=localStorage.getItem('qontic-double-slit-surface-height')||'psi2',surfaceHeights=null,surfaceLegend=null,surface3D=null,surface3DLoad=null,pwWaveVisible=localStorage.getItem('qontic-pw-wave-visible')!=='false',pwWaveButton=null;
  if(!['psi2','phase','real','imag'].includes(surfaceHeightMode))surfaceHeightMode='psi2';
  const slitColors={upper:'#22d3ee',lower:'#ff9f43'};
  const spectrumSteps=48;
@@ -133,7 +133,7 @@ export function mountPacketEngine({core,advanced}){
  function updateMath(){
   packetMath.innerHTML=physicsHTML+'<h3>Direct-PW preparation</h3><p>Direct PW samples transmitted configurations within a fixed ±3σₐ window around each Gaussian aperture, independently of the displayed Slit extent. This window contains 99.73% of an isolated Gaussian profile. The green comparison curve remains the common analytical Gaussian-wave prediction rather than introducing a hard finite-core cut.</p><h3>Unequal slit transmission</h3><p>The expert “Slit balance” control multiplies the upper and lower aperture amplitudes by factors a₁ and a₂ between zero and one. One slit remains fully open while the other is attenuated; “Upper only” or “Lower only” sets the opposite factor to zero. The analytical Gaussian propagation is unchanged: only the corresponding closed-form component coefficients change. Unequal amplitudes reduce fringe visibility and break the reflection symmetry of the Pilot-Wave velocity field.</p>'+whichPathPhysicsHTML;
   math.removeAttribute('aria-busy');
-  const views=document.getElementById('rationale');views.innerHTML=viewsHTML+'<h3>3D wave surface</h3><p>The optional interactive 3D view graphs the same analytical field used by the 2D view. Dragging rotates the camera, the wheel or a pinch gesture zooms, and right-dragging pans. The Height selector can graph contrast-enhanced |Ψ|², cos θ, or Re Ψ and Im Ψ with the same enhanced amplitude envelope. The monotonic height boost preserves zeros and ordering but is not a linear amplitude scale; it keeps the weaker transmitted wave readable beside the incident packet. The cos θ choice is a continuous phase display that avoids an artificial moving cliff at the ±π wrap; unlike θ itself, it does not uniquely identify the phase angle. For cos θ, Re Ψ and Im Ψ, the middle of the height range is zero, and the reference grid and apparatus lie on that zero plane; the translucent floor lets negative lobes remain visible below it. To prevent temporal aliasing, the 3D carrier-phase animation is display-capped at 2 rad/s; this changes neither the wavefunction used for guidance nor any simulated timing. Surface color independently retains the wave quantity selected in the ordinary Show control and uses the same slowed display phase in 3D. With which-path tagging, phase and signed height use a density-weighted display of the two noninterfering tagged components rather than treating them as a coherent sum. Height and color are display coordinates and do not add a physical spatial dimension. The detector histogram is likewise graphed vertically above a low detector wall: it uses the same predicted curve, retained hits and square-root count error bars as the 2D histogram. Pilot-Wave particles and trajectories are drawn on a flat plane, not on the graph of the wave: by default the apparatus zero plane, the physical x–y plane. The 3D toolbar’s Particle height slider raises that plane for visibility only, and its Wave slider sets the surface opacity in Pilot-Wave. The Color selector chooses Phase hue (the default), where hue gives the local phase θ and brightness the amplitude, so dark regions carry little probability; or the 2D palette. In Phase hue, uniformly colored particles are shown in yellow so they stand out against the phase colors. Their dynamics are always calculated entirely in the physical x–y plane. The Pilot-Wave toolbar eye hides or shows the wave in both the 2D and 3D displays; it does not alter the guidance field or interrupt the simulation.</p><h3>Direct-PW statistics</h3><p>The fixed ±3σₐ Direct-PW window omits only the 0.27% isolated-Gaussian tails. The green curve continues to show the common analytical probability distribution, without a hard central cut. Toggling Direct PW preserves earlier hits and affects new packets.</p>'+whichPathViewsHTML;
+  const views=document.getElementById('rationale');views.innerHTML=viewsHTML+'<h3>3D wave surface</h3><p>The optional interactive 3D view graphs the same analytical field used by the 2D view. Dragging rotates the camera, the wheel or a pinch gesture zooms, and right-dragging pans. The Height selector can graph contrast-enhanced |Ψ|², cos θ, or Re Ψ and Im Ψ with the same enhanced amplitude envelope. The monotonic height boost preserves zeros and ordering but is not a linear amplitude scale; it keeps the weaker transmitted wave readable beside the incident packet. The cos θ choice is a continuous phase display that avoids an artificial moving cliff at the ±π wrap; unlike θ itself, it does not uniquely identify the phase angle. For cos θ, Re Ψ and Im Ψ, the middle of the height range is zero, and the reference grid and apparatus lie on that zero plane; the translucent floor lets negative lobes remain visible below it. To prevent temporal aliasing, the 3D carrier-phase animation is display-capped at 2 rad/s; this changes neither the wavefunction used for guidance nor any simulated timing. Surface color independently retains the wave quantity selected in the ordinary Show control and uses the same slowed display phase in 3D. With which-path tagging, phase and signed height use a density-weighted display of the two noninterfering tagged components rather than treating them as a coherent sum. Height and color are display coordinates and do not add a physical spatial dimension. The detector histogram is likewise graphed vertically above a low detector wall: it uses the same predicted curve, retained hits and square-root count error bars as the 2D histogram. Pilot-Wave particles and trajectories are drawn on a flat plane, not on the graph of the wave: by default the apparatus zero plane, the physical x–y plane. The 3D toolbar’s Particle height slider raises that plane for visibility only, and its Wave slider sets the surface opacity in Pilot-Wave. When Show is set to Phase, a wheel in the corner gives the surface color for each phase angle θ; because the display uses cos θ, +θ and −θ share a color. Their dynamics are always calculated entirely in the physical x–y plane. The Pilot-Wave toolbar eye hides or shows the wave in both the 2D and 3D displays; it does not alter the guidance field or interrupt the simulation.</p><h3>Direct-PW statistics</h3><p>The fixed ±3σₐ Direct-PW window omits only the 0.27% isolated-Gaussian tails. The green curve continues to show the common analytical probability distribution, without a hard central cut. Toggling Direct PW preserves earlier hits and affects new packets.</p>'+whichPathViewsHTML;
   views.removeAttribute('aria-busy');
   for(const node of [...packetMath.querySelectorAll('[data-equation]'),...views.querySelectorAll('[data-equation]')]){
    const formula=physicsEquations[node.dataset.equation]??whichPathEquations[node.dataset.equation];
@@ -267,7 +267,7 @@ export function mountPacketEngine({core,advanced}){
  function drawWave(){ensure();drawSourceWave();}
  async function ensureSurface3D(){
   if(surface3D)return surface3D;
-  if(!surface3DLoad)surface3DLoad=import('./packet-surface-3d.js?v=2.126').then(({mountPacketSurface3D})=>{
+  if(!surface3DLoad)surface3DLoad=import('./packet-surface-3d.js?v=2.127').then(({mountPacketSurface3D})=>{
    surface3D=mountPacketSurface3D({host:document.getElementById('canvas-container')});configureSurfaceEditor();surface3D.configureHeight(surfaceHeightMode,mode=>{surfaceHeightMode=mode;localStorage.setItem('qontic-double-slit-surface-height',mode);draw();});surface3D.setVisible(surfaceView);surface3D.setEditing(geometryEditing);draw();return surface3D;
   }).catch(error=>{surface3DLoad=null;surfaceView=false;syncSurfaceView();console.error('Unable to start the 3D renderer',error);});
   return surface3DLoad;
@@ -287,10 +287,10 @@ export function mountPacketEngine({core,advanced}){
   const trails=[],points=[];
   if(interpretation==='bohmian')for(const a of particles){
    const group=particleColorGroup(a),opacity=tailOpacity(a.done,a.finishedAt??realElapsed,realElapsed);
-   if(opacity&&a.path.length)trails.push({color:groupColor(group,true),uniform:group==='default',points:a.path.map(([x,y])=>[Math.max(0,Math.min(1,X(x)/detectorX)),Math.max(0,Math.min(1,Y(y)/canvas.height))])});
-   if(!a.done)points.push({color:groupColor(group),uniform:group==='default',u:Math.max(0,Math.min(1,X(a.x)/detectorX)),v:Math.max(0,Math.min(1,Y(a.y)/canvas.height))});
+   if(opacity&&a.path.length)trails.push({color:groupColor(group,true),points:a.path.map(([x,y])=>[Math.max(0,Math.min(1,X(x)/detectorX)),Math.max(0,Math.min(1,Y(y)/canvas.height))])});
+   if(!a.done)points.push({color:groupColor(group),u:Math.max(0,Math.min(1,X(a.x)/detectorX)),v:Math.max(0,Math.min(1,Y(a.y)/canvas.height))});
   }
-  surface3D.update({gridWidth:gridW,gridHeight:gridH,fieldFraction:detectorX/canvas.width,heightMode:surfaceHeightMode,heights:surfaceHeights,phase:surfacePhase,amplitude:surfaceAmplitude,rgba:data.data,
+  surface3D.update({gridWidth:gridW,gridHeight:gridH,fieldFraction:detectorX/canvas.width,heightMode:surfaceHeightMode,heights:surfaceHeights,phaseLegend:surfaceLegend,rgba:data.data,
    showWave:waveShown(),showScreen:shown('plot_screen')&&p.source,showDetector:shown('plot_detector'),showProbability:shown('hit_prob')&&!p.focused,showHits:shown('plot_hits'),showParticles:shown('plot_particles'),showTrajectories:shown('plot_trajectories'),
    wallFraction:wallX/detectorX,openings,apertureWeights:p.apertureWeights||[],whichPathFraction:p.whichPath?(Y(p.centers[whichPathDetector==='slit2'?1:0])/canvas.height):null,
    pilotWave:interpretation==='bohmian',detectorColor:colorDetector,screenColor:colorScreen,probabilityColor:colorProb,
@@ -332,7 +332,7 @@ export function mountPacketEngine({core,advanced}){
   });
   const peak=sourceGrid.maxRho/(Math.sqrt(2*Math.PI)*p.sx),envPeak=1/(Math.sqrt(2*Math.PI)*p.sx);
   if(paletteKey!==graphPalette||!paletteColors){paletteKey=graphPalette;paletteColors=Array.from({length:1024},(_,i)=>window.paletteModule.getColorForValue(i/1023,graphPalette));}
-  const alpha=255*elementOpacity('plot_wave');surfaceHeights=surfaceView?new Float32Array(gridW*gridH):null;surfacePhase=surfaceView?new Float32Array(2*gridW*gridH):null;surfaceAmplitude=surfaceView?new Float32Array(gridW*gridH):null;
+  const alpha=255*elementOpacity('plot_wave');surfaceHeights=surfaceView?new Float32Array(gridW*gridH):null;
   for(let j=0;j<gridH;j++)for(let i=0;i<gridW;i++){
    const n=j*gridW+i,rho=sourceGrid.values[2*n]*env[i].rho;
    // Preserve a localized Gaussian envelope; do not amplify its remote tails.
@@ -341,7 +341,7 @@ export function mountPacketEngine({core,advanced}){
    const weight=-Math.expm1(-3*rawWeight)/-Math.expm1(-3);let phaseCos=sourceGrid.phaseCos[n],phaseSin=sourceGrid.phaseSin[n];
    if(p.whichPath&&sourceGrid.xs[i]>=p.wall){const r0=sourceGrid.branches[4*n],r1=sourceGrid.branches[4*n+2],total=Math.max(1e-300,r0+r1),a0=sourceGrid.branches[4*n+1],a1=sourceGrid.branches[4*n+3];phaseCos=(r0*Math.cos(a0)+r1*Math.cos(a1))/total;phaseSin=(r0*Math.sin(a0)+r1*Math.sin(a1))/total;const norm=Math.hypot(phaseCos,phaseSin)||1;phaseCos/=norm;phaseSin/=norm;}
    const cosTheta=phaseCos*env[i].cos-phaseSin*env[i].sin,sinTheta=phaseSin*env[i].cos+phaseCos*env[i].sin,normalizedDensity=rho/Math.max(1e-30,peak);
-   if(surfaceHeights){surfaceHeights[n]=surfaceHeightValue(surfaceHeightMode,surfaceDisplayDensity(normalizedDensity),cosTheta,sinTheta);surfacePhase[2*n]=cosTheta;surfacePhase[2*n+1]=sinTheta;surfaceAmplitude[n]=surfaceDisplayDensity(normalizedDensity);}
+   if(surfaceHeights)surfaceHeights[n]=surfaceHeightValue(surfaceHeightMode,surfaceDisplayDensity(normalizedDensity),cosTheta,sinTheta);
    let value;
    if(mode==='Phase'){
     // Display cos(theta), a smooth scalar representation of the local phase.
@@ -363,6 +363,8 @@ export function mountPacketEngine({core,advanced}){
   }
   fc.putImageData(data,0,0);
   if(!surfaceView){waveCtx.save();waveCtx.imageSmoothingEnabled=true;waveCtx.imageSmoothingQuality="high";waveCtx.beginPath();waveCtx.rect(0,0,detectorX,canvas.height);waveCtx.clip();waveCtx.drawImage(field,0,0,canvas.width,canvas.height);waveCtx.restore();}
+  // Phase legend for 3D: palette color of cos θ through the current display range.
+  surfaceLegend=surfaceView&&mode==='Phase'&&!p.whichPath?Array.from({length:72},(_,k)=>{const value=.5+.5*Math.cos(k*Math.PI/36),rgb=paletteColors[Math.round(Math.max(0,Math.min(1,(value-range.min)/span))*1023)];return `rgb(${Math.round(.88*rgb[0]+.12*255)},${Math.round(.88*rgb[1]+.12*255)},${Math.round(.88*rgb[2]+.12*255)})`;}):null;
   if(!p.whichPath)drawPaletteScale(graphPalette,mode==='Phase'?2*range.min-1:range.min,mode==='Phase'?2*range.max-1:range.max);
  }
 

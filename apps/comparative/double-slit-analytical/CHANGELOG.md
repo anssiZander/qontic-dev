@@ -1,3 +1,10 @@
+## 2.127 — 2026-10-20
+
+- Restored the 3D graphics of 2.125: palette-colored surface, previous floor and background, standard particles and trails, 96×64 mesh. The Phase hue style of 2.126 is removed.
+- Kept from 2.126: the Pilot-Wave 3D Wave-opacity slider (default back to 55%) and Particle-height slider, and the larger canvas.
+- Kept the phase wheel: in 3D, when Show is set to Phase, a corner wheel gives the surface color for each phase angle θ using the current palette and display range (cos θ, so +θ and −θ share a color). Hidden for |Ψ|², log |Ψ|² and with the which-slit detector.
+- Rollback: backup/double-slit-before-3d-restore-2.126-20261020.
+
 ## 2.126 — 2026-10-20
 
 - 3D "Phase hue" color style (new default): the surface is colored by the complex phase θ (blue 0, violet +π/2, red ±π, magenta −π/2) with brightness set by the amplitude, on a dark floor; a phase-wheel legend appears in the corner. "2D palette" keeps the previous coloring. Selector in the 3D toolbar.
