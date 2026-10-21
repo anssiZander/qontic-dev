@@ -1,3 +1,10 @@
+## 2.125 — 2026-10-20
+
+- 3D: Pilot-Wave particles and trajectories always lie on the fixed apparatus plane (the physical x–y plane) instead of riding the graph of the wave.
+- 3D in Pilot-Wave: the wave surface is semi-transparent (55%, times the Wave opacity slider) and drawn after the particles so they stay visible beneath it. Orthodox and Many-Worlds keep the nearly opaque surface.
+- Views text updated.
+- Rollback: backup/double-slit-before-3d-plane-2.124-20261020.
+
 ## 2.124 — 2026-10-20
 
 - Removed the Front/back color mode added in 2.123 (reverted).

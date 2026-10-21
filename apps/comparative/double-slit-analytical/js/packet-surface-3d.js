@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
-import {dragSurfaceGeometry} from './packet-interaction.js?v=2.124';
-import {surfaceZeroLevel} from './packet-model.js?v=2.124';
+import {dragSurfaceGeometry} from './packet-interaction.js?v=2.125';
+import {surfaceZeroLevel} from './packet-model.js?v=2.125';
 
 const X_MIN=-2,X_MAX=2,Y_MIN=-1.5,Y_MAX=1.5,SURFACE_HEIGHT=.72;
 
@@ -103,11 +103,14 @@ export function mountPacketSurface3D({host}){
    colors[3*n]=base[0]+visibility*((rgba[4*source]||75)/255-base[0]);colors[3*n+1]=base[1]+visibility*((rgba[4*source+1]||150)/255-base[1]);colors[3*n+2]=base[2]+visibility*((rgba[4*source+2]||190)/255-base[2]);
   }
   geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));geometry.computeVertexNormals();
-  const waveOpacity=layerOpacity(state,'wave');
-  const mesh=new THREE.Mesh(geometry,fade(new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:.98,side:THREE.DoubleSide}),waveOpacity));
+  // Pilot-Wave particles stay on the fixed apparatus plane (2.125), so the wave is
+  // drawn semi-transparent there and rendered after them, letting them show through.
+  const waveOpacity=layerOpacity(state,'wave'),seeThrough=!!state.pilotWave;
+  const mesh=new THREE.Mesh(geometry,fade(new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:seeThrough?.55:.98,side:THREE.DoubleSide}),waveOpacity));
+  if(seeThrough){mesh.material.depthWrite=false;mesh.renderOrder=2;}
   mesh.userData.wave=true;
   dynamic.add(mesh);
-  const wire=new THREE.Mesh(geometry.clone(),fade(new THREE.MeshBasicMaterial({color:0xd8f5ff,wireframe:true,transparent:true,opacity:.075}),waveOpacity));wire.userData.wave=true;dynamic.add(wire);
+  const wire=new THREE.Mesh(geometry.clone(),fade(new THREE.MeshBasicMaterial({color:0xd8f5ff,wireframe:true,transparent:true,opacity:.075}),waveOpacity));wire.userData.wave=true;if(seeThrough){wire.material.depthWrite=false;wire.renderOrder=2;}dynamic.add(wire);
  }
 
  function addWall(state){
@@ -147,7 +150,8 @@ export function mountPacketSurface3D({host}){
  }
 
  function addParticles(state){
-  const fixedZ=surfaceZeroLevel(state.heightMode,SURFACE_HEIGHT),particleZ=(u,v,lift)=>state.showWave&&state.heights?sampleHeight(state,u,v)*SURFACE_HEIGHT+lift:fixedZ+lift;
+  // Particles and trails always lie on the apparatus zero plane, the physical x–y plane.
+  const fixedZ=surfaceZeroLevel(state.heightMode,SURFACE_HEIGHT),particleZ=(u,v,lift)=>fixedZ+lift;
   const trailPositions=[],trailColors=[],pointPositions=[],pointColors=[];
   if(state.showTrajectories)for(const trail of state.trails){const c=color(trail.color);for(let i=1;i<trail.points.length;i++){
    const a=trail.points[i-1],b=trail.points[i],az=particleZ(a[0],a[1],.035),bz=particleZ(b[0],b[1],.035);
