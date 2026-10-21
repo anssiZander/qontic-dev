@@ -303,7 +303,7 @@ def generate_module_pages(resources, modules):
   <section><h2>Resources</h2><div class="resource-list">{resource_html}</div></section>
   {related_html}
 </main>
-<footer>Q-Ontic Lab · Rice University</footer>
+<footer>Q-Ontic Lab · Rice University · Comments or problems? <a href="mailto:qonticlab@rice.edu">qonticlab@rice.edu</a></footer>
 </body>
 </html>
 '''

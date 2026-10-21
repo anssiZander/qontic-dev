@@ -172,7 +172,7 @@ function decorateShell(shell, settings) {
 
   const footer = document.createElement('footer');
   footer.className = 'qontic-footer';
-  footer.innerHTML = `<span>${settings.version || 'Q-Ontic interactive demonstration'}</span><nav aria-label="Q-Ontic links"><a href="${settings.homeHref}">All demonstrations</a><a href="${settings.labHref}">Q-Ontic Lab</a></nav>`;
+  footer.innerHTML = `<span>${settings.version || 'Q-Ontic interactive demonstration'}</span><span class="qontic-footer-contact">Comments or problems? <a href="mailto:qonticlab@rice.edu">qonticlab@rice.edu</a></span><nav aria-label="Q-Ontic links"><a href="${settings.homeHref}">All demonstrations</a><a href="${settings.labHref}">Q-Ontic Lab</a></nav>`;
   // Keep shared navigation outside the framework-managed app root. React may
   // replace Demo/Details children, but it will not reorder this sibling.
   if (directory || !settings.showSiteNavigation) footer.querySelector('nav')?.remove();
