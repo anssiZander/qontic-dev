@@ -406,3 +406,15 @@ body.analytical-template { --font-size-base:13px; --font-size-sm:13px; --font-si
   /* qsf-style.css sets #view-label font-size by id, which overrode the shared compact (PW/O/MW) badge. */
   .analytical-template .qontic-header-tools > #view-label { font-size:0; }
 }
+
+/* 2.126: Pilot-Wave 3D style sliders in the 3D toolbar. */
+.analytical-template .packet-surface-help .packet-surface-pw { display:flex;align-items:center;gap:10px; }
+.analytical-template .packet-surface-help .packet-surface-pw[hidden] { display:none; }
+.analytical-template .packet-surface-help .packet-surface-pw input[type=range] { pointer-events:auto;width:84px;accent-color:#55d8e6; }
+/* 2.126: larger canvas. The shared layout reserves 270px of the viewport height for
+   page chrome; this app reserves 150px, so the 4:3 canvas grows and side margins shrink. */
+.analytical-template .qontic-workspace { max-width:calc(var(--qontic-sidebar-width) + var(--qontic-layout-gap) + max(320px, (100dvh - 150px) * 4 / 3)); }
+.analytical-template .packet-surface-help { flex-wrap:wrap;max-width:calc(100% - 20px);box-sizing:border-box; }
+/* 2.126: phase legend for the 3D Phase hue style. */
+.analytical-template #canvas-container > canvas.packet-surface-legend { position:absolute;left:auto;top:auto;right:10px;bottom:10px;z-index:7;width:96px;height:96px;padding:4px;box-sizing:content-box;border:1px solid rgba(190,229,241,.22);border-radius:8px;background:rgba(5,10,16,.78);pointer-events:none; }
+.analytical-template #canvas-container > canvas.packet-surface-legend[hidden] { display:none; }

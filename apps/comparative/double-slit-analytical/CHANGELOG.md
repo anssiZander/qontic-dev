@@ -1,3 +1,12 @@
+## 2.126 — 2026-10-20
+
+- 3D "Phase hue" color style (new default): the surface is colored by the complex phase θ (blue 0, violet +π/2, red ±π, magenta −π/2) with brightness set by the amplitude, on a dark floor; a phase-wheel legend appears in the corner. "2D palette" keeps the previous coloring. Selector in the 3D toolbar.
+- 3D Pilot-Wave in Phase hue: glowing particles and thick trails; uniformly colored particles are shown in yellow.
+- 3D toolbar sliders in Pilot-Wave: Wave (surface opacity, default 75%) and Particle height (height of the plane carrying particles and trails, 0–110% of the surface height; display only).
+- Finer 3D mesh (240×160) so the phase bands are resolved.
+- Larger canvas: the layout reserves 150 px instead of 270 px of the viewport height for page chrome, so the 4:3 canvas grows (e.g. 907×680 → 1067×800 on a 1500×950 window) and side margins shrink.
+- Rollback: backup/double-slit-before-3d-style-2.125-20261020.
+
 ## 2.125 — 2026-10-20
 
 - 3D: Pilot-Wave particles and trajectories always lie on the fixed apparatus plane (the physical x–y plane) instead of riding the graph of the wave.
