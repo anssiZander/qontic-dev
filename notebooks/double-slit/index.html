@@ -384,7 +384,7 @@ body.qn-dark .task-card{background:#2a1f08;border-color:#7a5a12;color:#f3d9a0}bo
 <div class="section-head">
 <h2>5. Same pattern, three accounts <span class="time-est">≈ 15 min</span></h2>
 <p>All three accounts use the same wavefunction and predict the same screen statistics. They disagree about what exists and what happens between the source and the screen. Choose an account above the figure and send electrons.</p>
-<div class="guided-summary"><strong>What to notice:</strong> The histogram is the same in all three. In <b>Orthodox</b>, the packet ends in one hit. In <b>Pilot Wave</b>, a particle follows a definite path guided by the wave. In <b>Many Worlds</b>, every detector pixel records a hit in its own branch, and one branch is followed.</div>
+<div class="guided-summary"><strong>What to notice:</strong> The histogram is the same in all three. In <b>Orthodox</b>, the packet ends in one hit. In <b>Pilot Wave</b>, a particle follows a definite path guided by the wave. In <b>Many Worlds</b>, send one electron and watch the screen split into branches: each has its own hit, its own record and its own observer. Then one branch is followed, but the others are still there.</div>
 <div class="interpretation-list">
 <div class="interp-item"><h3>Orthodox</h3>The wavefunction is the complete description of the electron, and it gives probabilities for measurement results. No path is assigned between source and screen. At detection, one result occurs and the wavefunction is replaced by one that matches it. This step, often called collapse, is not described by the Schrödinger equation. A which-slit record counts as a measurement: the state is reduced to one slit's part, so nothing is left to interfere. <i>Hard question:</i> the theory does not say exactly when or why collapse happens, or what counts as a measurement. This is the measurement problem. In the app: no trajectories; the packet fades as hits are registered.</div>
 <div class="interp-item"><h3>Pilot Wave</h3>The electron is a particle with a definite position at all times. The wavefunction is also real, and it guides the particle. The particle goes through one slit; the wave goes through both, and the particle's motion depends on both parts. The randomness comes from not knowing the exact starting position. With a which-slit record, the detector's own parts end up in one of two clearly different states; the part of the wave tied to the other reading no longer affects the particle, so it is guided by one part alone. <i>Hard question:</i> the guidance is nonlocal: with several particles, the motion of one depends instantly on where the others are, however far away. In the app: each sampled particle is drawn with its trajectory.</div>
@@ -410,7 +410,7 @@ body.qn-dark .task-card{background:#2a1f08;border-color:#7a5a12;color:#f3d9a0}bo
 </div>
 <div class="checks"><label><input id="f5-wp" type="checkbox"/> Which-slit detector</label><label><input id="f5-wave" type="checkbox" checked/> Show wave</label></div>
 <div class="app-callout"><strong>In the app</strong><a class="button" target="_blank" rel="noopener" href="../../apps/comparative/double-slit-analytical/#sep=300&amp;src=225&amp;det=1000&amp;scr=1200&amp;wl=50&amp;view=copenhagen&amp;slits=11&amp;wp=none">Orthodox view</a><a class="button" target="_blank" rel="noopener" href="../../apps/comparative/double-slit-analytical/#sep=300&amp;src=225&amp;det=1000&amp;scr=1200&amp;wl=50&amp;view=bohmian&amp;slits=11&amp;wp=none">Pilot Wave view</a><a class="button" target="_blank" rel="noopener" href="../../apps/comparative/double-slit-analytical/#sep=300&amp;src=225&amp;det=1000&amp;scr=1200&amp;wl=50&amp;view=manyworlds&amp;slits=11&amp;wp=none">Many Worlds view</a></div>
-<details class="equation-detail control-detail"><summary>Details and math: guidance and branching</summary><div><p><b>Pilot Wave.</b> The particle moves forward at the packet speed; its sideways motion follows the phase of ψ:</p><div class="equation math-display">\[\frac{dy}{dx}=\frac{1}{k}\,\mathrm{Im}\!\left(\frac{\partial_y\psi}{\psi}\right),\qquad k=\frac{2\pi}{\lambda}.\]</div><p>This is the app's law, integrated with a fourth-order Runge–Kutta step of 2 nm. Starting positions are drawn from the source beam; at the wall a particle passes with probability T(y)², as in the app's default mode. The first published double-slit trajectories of this kind are in Philippidis, Dewdney and Hiley (1979). For photons, Kocsis and coworkers (2011) measured average paths with weak measurements. These are averages of the probability flow, which every account can compute; in Pilot Wave they are also the particle paths.</p><p><b>Many Worlds.</b> Each of the 100 detector pixels defines a possible record, as in the app. After a run, the joint state contains all of them, with weights p<sub>i</sub> = ∫<sub>pixel i</sub>|ψ|². The figure follows one branch, chosen with probability p<sub>i</sub>, and counts its hit.</p></div></details>
+<details class="equation-detail control-detail"><summary>Details and math: guidance and branching</summary><div><p><b>Pilot Wave.</b> The particle moves forward at the packet speed; its sideways motion follows the phase of ψ:</p><div class="equation math-display">\[\frac{dy}{dx}=\frac{1}{k}\,\mathrm{Im}\!\left(\frac{\partial_y\psi}{\psi}\right),\qquad k=\frac{2\pi}{\lambda}.\]</div><p>This is the app's law, integrated with a fourth-order Runge–Kutta step of 2 nm. Starting positions are drawn from the source beam; at the wall a particle passes with probability T(y)², as in the app's default mode. The first published double-slit trajectories of this kind are in Philippidis, Dewdney and Hiley (1979). For photons, Kocsis and coworkers (2011) measured average paths with weak measurements. These are averages of the probability flow, which every account can compute; in Pilot Wave they are also the particle paths.</p><p><b>Many Worlds.</b> Each of the 100 detector pixels defines a possible record, as in the app. After a run, the joint state of electron, screen and observer is a sum with one term for each record, weighted by p<sub>i</sub> = ∫<sub>pixel i</sub>|ψ|²:</p><div class="equation math-display">\[\sum_i c_i\,|\text{hit at pixel } i\rangle\,|\text{observer sees } i\rangle,\qquad |c_i|^2=p_i .\]</div><p>To keep the picture readable, the split groups the 100 pixel records into 12 zones of 100 nm (6 zones of 200 nm on a phone); each miniature is one zone, drawn brighter when its weight is larger. The figure then follows one branch, chosen with probability equal to its weight, and adds its hit to that branch's record. With the which-slit detector on, the state already splits at the wall into a branch where the detector reads upper and one where it reads lower; the two branches cannot interfere.</p></div></details>
 </div>
 </div>
 </section>
@@ -708,13 +708,14 @@ document.addEventListener("DOMContentLoaded",()=>{
     let top = DEF.H / 2;
     openings.forEach(([a, b]) => { ctx.fillRect(wx, Y(top), ww, Y(a) - Y(top)); top = b; });
     ctx.fillRect(wx, Y(top), ww, Y(-DEF.H / 2) - Y(top));
-    if (cfg.det) {
+    if (cfg.det && !cfg.noLabels) {
       ctx.save(); ctx.strokeStyle = C.upper; ctx.lineWidth = 2; ctx.globalAlpha = Math.min(1, 0.35 + 0.65 * cfg.det);
       ctx.strokeRect(wx - 6, Y(p.d / 2 + core) - 3, ww + 12, Y(p.d / 2 - core) - Y(p.d / 2 + core) + 6);
       ctx.fillStyle = C.upper; ctx.font = "600 11px " + FONT; ctx.textAlign = "left"; ctx.textBaseline = "bottom";
       ctx.fillText("detector", wx + ww + 9, Y(p.d / 2 + core) - 2); ctx.restore();
     }
     ctx.fillStyle = C.screen; ctx.fillRect(X(D) - 2, R.y0, 3, R.y1 - R.y0);
+    if (cfg.noLabels) return { X, Y, D };
     ctx.fillStyle = C.muted; ctx.font = "12px " + FONT; ctx.textBaseline = "top";
     if (X(p.L) - R.x0 > 90) { ctx.textAlign = "left"; ctx.fillText("source", R.x0 + 4, R.y1 + 6); }
     ctx.textAlign = "center"; ctx.fillText("wall", X(p.L), R.y1 + 6);
@@ -932,7 +933,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   // =========================================================
   // Part 5: the three accounts
   // =========================================================
-  const f5 = { rep: "pilot-wave", wp: false, showWave: true, flights: [], hitsU: new Array(NB).fill(0), hitsL: new Array(NB).fill(0), hits: new Array(NB).fill(0), runs: 0, absorbed: 0, sameSide: 0, branch: null, landed: [] };
+  const f5 = { rep: "pilot-wave", wp: false, showWave: true, flights: [], hitsU: new Array(NB).fill(0), hitsL: new Array(NB).fill(0), hits: new Array(NB).fill(0), runs: 0, absorbed: 0, sameSide: 0, branch: null, landed: [], split: null, history: [] };
   let cache5 = null;
   const HX = 1;
   function buildCache5() {
@@ -977,8 +978,9 @@ document.addEventListener("DOMContentLoaded",()=>{
     f5.hits[b]++; f5.runs++;
     if (tag) { (tag === "U" ? f5.hitsU : f5.hitsL)[b]++; if ((tag === "U") === (y >= 0)) f5.sameSide++; }
   }
-  function clear5() { f5.flights = []; f5.hits.fill(0); f5.hitsU.fill(0); f5.hitsL.fill(0); f5.runs = 0; f5.absorbed = 0; f5.sameSide = 0; f5.branch = null; f5.landed = []; }
+  function clear5() { f5.flights = []; f5.hits.fill(0); f5.hitsU.fill(0); f5.hitsL.fill(0); f5.runs = 0; f5.absorbed = 0; f5.sameSide = 0; f5.branch = null; f5.landed = []; f5.split = null; f5.history = []; }
   function send5(n) {
+    if (f5.split) return;   // let the current split finish
     const t0 = clock("c5");
     if (f5.rep === "pilot-wave") {
       const parts = []; for (let i = 0; i < n; i++) { const r = pilotRun(); if (r) parts.push(r); }
@@ -991,6 +993,99 @@ document.addEventListener("DOMContentLoaded",()=>{
     if (f5.landed.length > 400) f5.landed.splice(0, f5.landed.length - 400);
     clocks.c5.paused = false; syncPause(); drawF5();
   }
+  // ---------- Many Worlds: the split ----------
+  // At detection the joint state of electron and screen becomes a sum of branches, one for each
+  // detector record. The 100 pixel records are grouped here into 12 zones of 100 nm so the
+  // branches can be drawn; each miniature is one branch with its own hit and its own record.
+  const SPLIT = { open: 0.7, hold: 3.2, select: 4.4 };   // phase ends, seconds of animation time
+  function zoneWeights(nz) {
+    const pb = f5.wp ? SC.pInc : SC.pBoth, wz = new Array(nz).fill(0), zw = DEF.H / nz;
+    pb.forEach((p, i) => { wz[Math.min(nz - 1, Math.floor(((i + 0.5) * DEF.H / NB) / zw))] += p; });
+    return wz;
+  }
+  function sampleInZone(z, nz) {
+    const zw = DEF.H / nz;
+    for (let k = 0; k < 4000; k++) { const y = sampleY(!f5.wp); if (y >= -DEF.H / 2 + z * zw && y < -DEF.H / 2 + (z + 1) * zw) return y; }
+    return -DEF.H / 2 + (z + 0.5) * zw;
+  }
+  function startSplit(now) {
+    // 12 zones of 100 nm on a wide screen, 6 zones of 200 nm on a phone
+    const nz = document.getElementById("c5").clientWidth < 560 ? 6 : 12;
+    const wz = zoneWeights(nz), r = Math.random();
+    let acc = 0, chosen = nz - 1;
+    for (let z = 0; z < nz; z++) { acc += wz[z]; if (r < acc) { chosen = z; break; } }
+    f5.split = { t: now, nz, wz, chosen, ys: wz.map((_, z) => sampleInZone(z, nz)) };
+  }
+  function finishSplit() {
+    const sp = f5.split; f5.split = null;
+    const y = sp.ys[sp.chosen];
+    record5(y, null); f5.branch = { y, t: clock("c5"), mw: true };
+    f5.history.push(y); if (f5.history.length > 8) f5.history.shift();
+  }
+  function observer(ctx, x, y, s, color) {
+    ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = Math.max(1, s * 0.12);
+    ctx.beginPath(); ctx.arc(x, y - s * 0.75, s * 0.22, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x, y - s * 0.5); ctx.lineTo(x, y); ctx.moveTo(x - s * 0.3, y - s * 0.32); ctx.lineTo(x + s * 0.3, y - s * 0.32);
+    ctx.moveTo(x, y); ctx.lineTo(x - s * 0.25, y + s * 0.45); ctx.moveTo(x, y); ctx.lineTo(x + s * 0.25, y + s * 0.45); ctx.stroke(); ctx.restore();
+  }
+  function miniWorld(ctx, R, z, sp, alpha, big) {
+    const y = sp.ys[z], p = sp.wz[z], pmax = Math.max(...sp.wz);
+    ctx.save(); ctx.globalAlpha = alpha;
+    ctx.fillStyle = C.bg; ctx.fillRect(R.x0, R.y0, R.x1 - R.x0, R.y1 - R.y0);
+    const wd = R.x1 - R.x0, ht = R.y1 - R.y0;
+    const app = { x0: R.x0 + 4, x1: R.x0 + wd * 0.74, y0: R.y0 + (big ? 12 : 16), y1: R.y1 - (big ? 24 : 16) };
+    const pr = { x0: app.x1 + 4, x1: R.x1 - 4, y0: app.y0, y1: app.y1 };
+    const A = apparatus(ctx, app, M, { u: true, l: true, g: f5.wp ? 0 : 1, slot: "mw" + (big ? "big" : z), time: clock("c5"), waveAlpha: 0.3, det: f5.wp ? 1 : 0, noLabels: !big, wave: f5.showWave });
+    // this branch's record: everything so far plus its own hit
+    const bh = (pr.y1 - pr.y0) / NB, own = binOf(y), hm = Math.max(1, ...f5.hits, f5.hits[own] + 1) * 1.1;
+    for (let i = 0; i < NB; i++) {
+      const c = f5.hits[i] + (i === own ? 1 : 0); if (!c) continue;
+      ctx.fillStyle = i === own ? C.ink : C.prob; ctx.fillRect(pr.x0, pr.y1 - (i + 1) * bh, c / hm * (pr.x1 - pr.x0), Math.max(1, bh - 0.5));
+    }
+    const hx = A.X(A.D) - 4, hy = A.Y(y);
+    ctx.fillStyle = C.prob; ctx.beginPath(); ctx.arc(hx, hy, big ? 5 : 3, 0, 7); ctx.fill();
+    ctx.strokeStyle = C.prob; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(hx, hy, big ? 10 : 6, 0, 7); ctx.stroke();
+    observer(ctx, app.x0 + (app.x1 - app.x0) * 0.62, app.y1 - (big ? 18 : 8), big ? 26 : 12, C.ink);
+    ctx.fillStyle = C.ink; ctx.font = (big ? "600 13px " : "600 10.5px ") + FONT; ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText(`weight ${(100 * p).toFixed(p < 0.01 ? 1 : 0)}%`, R.x0 + 6, R.y0 + 3);
+    ctx.fillStyle = C.muted; ctx.font = (big ? "12px " : "10px ") + FONT; ctx.textAlign = "right";
+    ctx.fillText(`sees y = ${y >= 0 ? "+" : "−"}${fmt(Math.abs(y))} nm`, R.x1 - 6, R.y0 + 3);
+    ctx.strokeStyle = z === sp.chosen && big ? C.ink : C.line; ctx.lineWidth = 1; ctx.strokeRect(R.x0 + 0.5, R.y0 + 0.5, wd - 1, ht - 1);
+    ctx.restore();
+    return p / pmax;
+  }
+  function drawSplit(ctx, w, h, now) {
+    const sp = f5.split, age = now - sp.t;
+    if (age >= SPLIT.select) { finishSplit(); return false; }
+    const NZ = sp.nz, cols = w < 560 ? 2 : 4, rows = Math.ceil(NZ / cols), gap = 6, top = 30;
+    ctx.fillStyle = C.bg; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = C.ink; ctx.font = "600 13px " + FONT; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    const narrowCap = w < 560;
+    ctx.fillText(age < SPLIT.hold ? (narrowCap ? `${NZ} branches: one hit and one observer each` : `The electron reached the screen: ${NZ} branches, each with its own hit and observer`) : (narrowCap ? "Following one branch" : "Following one branch, chosen with probability equal to its weight"), 12, 16);
+    const cw = (w - 20 - gap * (cols - 1)) / cols, ch = (h - top - 10 - gap * (rows - 1)) / rows;
+    const cell = (k) => { const c = k % cols, r = Math.floor(k / cols); return { x0: 10 + c * (cw + gap), y0: top + r * (ch + gap), x1: 10 + c * (cw + gap) + cw, y1: top + r * (ch + gap) + ch }; };
+    // order: top zone first, so the grid reads like the screen from top to bottom
+    const order = [...Array(NZ).keys()].reverse();
+    const open = Math.min(1, age / SPLIT.open);
+    const sel = age > SPLIT.hold ? Math.min(1, (age - SPLIT.hold) / (SPLIT.select - SPLIT.hold)) : 0;
+    const ease = (t) => t * t * (3 - 2 * t);
+    const pmax = Math.max(...sp.wz);
+    order.forEach((z, k) => {
+      if (z === sp.chosen && sel > 0) return;
+      const R0 = cell(k), mid = { x0: w / 2 - 2, x1: w / 2 + 2, y0: h / 2 - 2, y1: h / 2 + 2 }, e = ease(open);
+      const R = { x0: mid.x0 + (R0.x0 - mid.x0) * e, x1: mid.x1 + (R0.x1 - mid.x1) * e, y0: mid.y0 + (R0.y0 - mid.y0) * e, y1: mid.y1 + (R0.y1 - mid.y1) * e };
+      if (R.x1 - R.x0 < 30) return;
+      const a = (0.18 + 0.82 * sp.wz[z] / pmax) * (1 - 0.8 * sel);
+      miniWorld(ctx, R, z, sp, a, false);
+    });
+    if (sel > 0) {
+      const R0 = cell(order.indexOf(sp.chosen)), Rf = { x0: 10, y0: top, x1: w - 10, y1: h - 10 }, e = ease(sel);
+      const R = { x0: R0.x0 + (Rf.x0 - R0.x0) * e, x1: R0.x1 + (Rf.x1 - R0.x1) * e, y0: R0.y0 + (Rf.y0 - R0.y0) * e, y1: R0.y1 + (Rf.y1 - R0.y1) * e };
+      miniWorld(ctx, R, sp.chosen, sp, 1, e > 0.6);
+    }
+    return true;
+  }
+
   function drawF5() {
     const { ctx, w, h } = prep(document.getElementById("c5"));
     const L = layout(w, h, narrowProf(w));
@@ -1000,7 +1095,8 @@ document.addEventListener("DOMContentLoaded",()=>{
       const xc = x0 + VDISP * (now - f.t0);
       if (xc < D + SIGX) return true;
       if (f5.rep === "pilot-wave") f.parts.forEach(r => { record5(r.yEnd, r.tag); f5.landed.push(r); });
-      else { const y = sampleY(!f5.wp); record5(y, null); f5.branch = { y, t: now, mw: f5.rep === "many-worlds" }; }
+      else if (f5.rep === "many-worlds") startSplit(now);
+      else { const y = sampleY(!f5.wp); record5(y, null); f5.branch = { y, t: now }; }
       return false;
     });
     const live = f5.flights.length ? f5.flights[f5.flights.length - 1] : null;
@@ -1008,6 +1104,12 @@ document.addEventListener("DOMContentLoaded",()=>{
     const cfg = { u: true, l: true, g: f5.wp ? 0 : 1, slot: "c5", time: now, det: f5.wp ? 1 : 0, wave: f5.showWave };
     if (live) cfg.pulse = xc; else cfg.waveAlpha = 0.3;
     const A = apparatus(ctx, L.app, M, cfg);
+    if (f5.rep === "many-worlds" && f5.wp) {
+      ctx.save(); ctx.font = "600 11px " + FONT; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillStyle = C.upper; ctx.fillText("branch: detector reads upper", A.X(M.p.L) + 40, A.Y(M.p.d / 2 + 150));
+      ctx.fillStyle = C.lower; ctx.fillText("branch: detector reads lower", A.X(M.p.L) + 40, A.Y(-M.p.d / 2 - 150));
+      ctx.restore();
+    }
     if (f5.rep === "pilot-wave") {
       ctx.save(); ctx.strokeStyle = C.line; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(A.X(M.p.L), A.Y(0)); ctx.lineTo(A.X(D), A.Y(0)); ctx.stroke(); ctx.restore();
       const many = f5.landed.length > 60;
@@ -1023,18 +1125,6 @@ document.addEventListener("DOMContentLoaded",()=>{
     }
     // Many Worlds: at arrival every pixel holds a record in its own branch; one branch is followed.
     if (f5.branch && f5.branch.mw) {
-      const age = now - f5.branch.t;
-      if (age < 2.2) {
-        const sx = A.X(D), bh = (L.app.y1 - L.app.y0) / NB, pmax = Math.max(...(f5.wp ? SC.pInc : SC.pBoth));
-        const fade = age < 1.2 ? 1 : Math.max(0, 1 - (age - 1.2) / 1);
-        (f5.wp ? SC.pInc : SC.pBoth).forEach((pi, i) => {
-          const yy = L.app.y1 - (i + 0.5) * bh;
-          ctx.globalAlpha = (0.15 + 0.85 * pi / pmax) * fade; ctx.fillStyle = C.prob;
-          ctx.beginPath(); ctx.arc(sx - 9, yy, 2.4, 0, 7); ctx.fill();
-          ctx.strokeStyle = C.prob; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(sx - 9, yy); ctx.lineTo(sx - 26 - 40 * pi / pmax, yy); ctx.stroke();
-        });
-        ctx.globalAlpha = 1;
-      }
       ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(A.X(D) - 9, A.Y(f5.branch.y), 7, 0, 7); ctx.stroke();
     } else if (f5.branch && now - f5.branch.t < 1) {
       ctx.strokeStyle = C.prob; ctx.lineWidth = 2; ctx.globalAlpha = 1 - (now - f5.branch.t); ctx.beginPath(); ctx.arc(A.X(D) - 9, A.Y(f5.branch.y), 6 + 18 * (now - f5.branch.t), 0, 7); ctx.stroke(); ctx.globalAlpha = 1;
@@ -1049,10 +1139,21 @@ document.addEventListener("DOMContentLoaded",()=>{
     const step = DEF.H / (SC.s.ys.length - 1), dens = f5.wp ? SC.inc : SC.both, total = dens.reduce((a, b) => a + b, 0);
     const pred = dens.map(v => v / total * (DEF.H / NB) / step * Math.max(1, f5.runs));
     profile(ctx, L.prof, SC.s.ys, f5.runs ? [{ vals: pred, color: C.ink, width: 1.3 }] : [], f5.runs ? hm : 1, "hits");
+    const splitting = f5.split ? drawSplit(ctx, w, h, now) : false;
+    document.querySelector("#part5 .qn-results").style.visibility = splitting ? "hidden" : "";
     const rows = [`<b>${{ "orthodox": "Orthodox", "pilot-wave": "Pilot Wave", "many-worlds": "Many Worlds" }[f5.rep]}</b>`, `runs recorded: ${f5.runs}`];
     if (f5.rep === "pilot-wave") { rows.push(`tries stopped by the wall (not runs): ${f5.absorbed}`); if (f5.runs) rows.push(`landed on the side of their slit: ${fmt(100 * f5.sameSide / f5.runs)}%`); }
     if (f5.rep === "orthodox") rows.push(live ? "packet on its way; no path is assigned" : "each run ends in one hit; the packet is gone");
-    if (f5.rep === "many-worlds") rows.push(live ? "packet on its way; no collapse" : f5.branch ? `this run: ${NB} branches, one per detector pixel; following the one with a hit at y = ${fmt(f5.branch.y)} nm` : "send one to see the branches");
+    if (f5.rep === "many-worlds") {
+      if (splitting) {
+        const age = now - f5.split.t;
+        rows.push(age < SPLIT.hold ? `${f5.split.nz} branches shown (the ${NB} pixel records grouped into ${f5.split.nz} zones)` : "following one branch; the others continue too");
+      } else if (live) rows.push("packet on its way; no collapse");
+      else if (f5.runs) {
+        rows.push(`branch records after ${f5.runs} run${f5.runs > 1 ? "s" : ""}: ${NB}<sup>${f5.runs}</sup>`);
+        if (f5.history.length) rows.push(`hits in the branch followed: ${f5.history.map(y => (y >= 0 ? "+" : "−") + fmt(Math.abs(y))).join(", ")} nm`);
+      } else rows.push("send one to watch the split");
+    }
     if (live && live.parts.length > 1) rows.push(`${live.parts.length} separate runs drawn together`);
     setReadout("r5", rows);
   }
