@@ -25,7 +25,8 @@
     --upper: #0089a8;      /* upper-slit component (cyan, as in the app) */
     --lower: #d9701e;      /* lower-slit component (orange, as in the app) */
     --prob: #b8860b;       /* probability / detections (gold) */
-    --wave: #1f6fd1;       /* wave brightness in the trajectory figure */
+    --wave: #1f6fd1;       /* wave crests */
+    --trough: #a8c6ee;     /* wave troughs */
     --plot-bg: #fbfcfe;
     --grid: #e6edf6;
     --tint: #eef4fb;
@@ -36,14 +37,14 @@
     :root:not([data-theme="light"]) {
       --navy: #0c2340; --blue: #6aa8ff; --blue-hover: #8fbcff; --ink: #dde5f0; --muted: #9aa8b9;
       --paper: #0d1522; --surface: #152033; --line: #2a3a52;
-      --upper: #3fc3e0; --lower: #f08c3c; --prob: #e2b33c; --wave: #4d9bff;
+      --upper: #3fc3e0; --lower: #f08c3c; --prob: #e2b33c; --wave: #5aa8ff; --trough: #1c3a63;
       --plot-bg: #101a2a; --grid: #1f2c40; --tint: #182a44; color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
     --navy: #0c2340; --blue: #6aa8ff; --blue-hover: #8fbcff; --ink: #dde5f0; --muted: #9aa8b9;
     --paper: #0d1522; --surface: #152033; --line: #2a3a52;
-    --upper: #3fc3e0; --lower: #f08c3c; --prob: #e2b33c; --wave: #4d9bff;
+    --upper: #3fc3e0; --lower: #f08c3c; --prob: #e2b33c; --wave: #5aa8ff; --trough: #1c3a63;
     --plot-bg: #101a2a; --grid: #1f2c40; --tint: #182a44; color-scheme: dark;
   }
 
@@ -244,7 +245,7 @@
   <section id="puzzle">
     <h2><span class="num">1</span>The puzzle</h2>
     <div class="prose">
-      <p>The figure shows the experiment seen from above, with the same layout as the app. The source is on the left, the wall with two slits in the middle, the detector screen on the right. The blue shading is the wavefunction: brighter means larger |ψ|². It is rescaled at each distance from the source, so the pattern stays visible as the wave spreads. The curve to the right of the screen is the probability of a hit at each height y.</p>
+      <p>The figure shows the experiment seen from above, with the same layout as the app. The source is on the left, the wall with two slits in the middle, the detector screen on the right. The blue shading is the wavefunction, moving from left to right. Brightness shows |ψ|², rescaled at each distance from the source so the pattern stays visible as the wave spreads. The moving stripes are the crests of the wave, one wavelength apart. The curve to the right of the screen is the probability of a hit at each height y.</p>
       <p>Start with only the upper slit open. Electrons arriving at the screen spread into a single broad hump. Switch to the lower slit: another hump, shifted down. Now open both.</p>
       <div class="predict">
         <span class="label">Predict first</span>
@@ -663,29 +664,35 @@
   // Shared apparatus view: the experiment seen from above
   // (x = propagation, left to right; y = transverse, up = upper slit)
   // =========================================================
-  const imgCache = new Map();
   function hexRGB(s) {
     const t = document.createElement("canvas").getContext("2d");
     t.fillStyle = s; const v = t.fillStyle;
     if (v[0] === "#") return [parseInt(v.slice(1, 3), 16), parseInt(v.slice(3, 5), 16), parseInt(v.slice(5, 7), 16)];
     const m = v.match(/\d+/g); return m ? m.slice(0, 3).map(Number) : [0, 0, 0];
   }
-  // Wave brightness |ψ|² in the x–y plane. cfg: u, l = slit open; g = coherence (1 full, 0 none).
-  function fieldImage(m, cfg, nx, ny) {
-    const key = [m.p.lam, m.p.d, cfg.u, cfg.l, cfg.g.toFixed(2), nx, ny, css("--wave"), css("--plot-bg")].join("|");
-    if (imgCache.has(key)) return imgCache.get(key);
-    if (imgCache.size > 40) imgCache.clear();
-    const p = m.p, k = m.k, D = p.L + p.Z;
-    const off = document.createElement("canvas"); off.width = nx; off.height = ny;
-    const octx = off.getContext("2d"); const im = octx.createImageData(nx, ny);
-    const cw = hexRGB(css("--wave")), cb = hexRGB(css("--plot-bg"));
-    const col = new Float32Array(ny);
+  // Moving wave. The full wavefunction is Ψ = F(x − vt) e^{i(kx − ωt)} φ(y, x), as in the app.
+  // Brightness follows |φ|² (rescaled column by column); light and dark bands follow the
+  // crests of Re Ψ, which move at the phase velocity ω/k = v/2.
+  const VDISP = 480;          // displayed packet speed, nm per second of animation
+  const SIGX = 50;            // packet length σx, nm (app default)
+  const waveClock = () => reduceMotion ? 0 : performance.now() / 1000;
+  const FIELDS = new Map();
+  function getField(m, cfg, nx, ny) {
+    const key = [m.p.lam, m.p.d, cfg.u, cfg.l, cfg.g.toFixed(2), nx, ny].join("|");
+    if (FIELDS.has(key)) return FIELDS.get(key);
+    if (FIELDS.size > 40) FIELDS.clear();
+    const p = m.p, k = m.k, D = p.L + p.Z, n = nx * ny;
+    const mag = new Float32Array(n), c0 = new Float32Array(n), s0 = new Float32Array(n), xs = new Float32Array(nx);
+    const dens = new Float32Array(ny), arg = new Float32Array(ny);
     for (let ix = 0; ix < nx; ix++) {
-      const x = (ix + 0.5) / nx * D;
+      const x = (ix + 0.5) / nx * D; xs[ix] = x;
       let mx = 0;
       if (x < p.L) {
         const c = propagate(m.inc0, x, k);
-        for (let iy = 0; iy < ny; iy++) { const y = DEF.H / 2 - (iy + 0.5) / ny * DEF.H; col[iy] = abs2(evalAt(c, y)); if (col[iy] > mx) mx = col[iy]; }
+        for (let iy = 0; iy < ny; iy++) {
+          const y = DEF.H / 2 - (iy + 0.5) / ny * DEF.H, e = evalAt(c, y);
+          dens[iy] = abs2(e); arg[iy] = Math.atan2(e[1], e[0]); if (dens[iy] > mx) mx = dens[iy];
+        }
       } else {
         const cs = m.comps.map(c => propagate(c, x - p.L, k));
         for (let iy = 0; iy < ny; iy++) {
@@ -693,19 +700,52 @@
           const a = evalAt(cs[0], y), b = evalAt(cs[1], y);
           let v = (cfg.u ? abs2(a) : 0) + (cfg.l ? abs2(b) : 0);
           if (cfg.u && cfg.l) v += 2 * cfg.g * (a[0] * b[0] + a[1] * b[1]);
-          col[iy] = Math.max(0, v); if (col[iy] > mx) mx = col[iy];
+          dens[iy] = Math.max(0, v); if (dens[iy] > mx) mx = dens[iy];
+          // crests: the coherent sum when both alternatives interfere, otherwise the stronger one
+          const z = !cfg.u ? b : !cfg.l ? a : cfg.g > 0.5 ? cadd(a, b) : (abs2(a) > abs2(b) ? a : b);
+          arg[iy] = Math.atan2(z[1], z[0]);
         }
       }
       for (let iy = 0; iy < ny; iy++) {
-        const t = mx > 0 ? Math.pow(col[iy] / mx, 0.6) * 0.85 : 0;
-        const o = (iy * nx + ix) * 4;
-        im.data[o] = cb[0] + (cw[0] - cb[0]) * t; im.data[o + 1] = cb[1] + (cw[1] - cb[1]) * t;
-        im.data[o + 2] = cb[2] + (cw[2] - cb[2]) * t; im.data[o + 3] = 255;
+        const o = iy * nx + ix, th = arg[iy] + k * x;
+        mag[o] = mx > 0 ? Math.pow(dens[iy] / mx, 0.6) * 0.9 : 0;
+        c0[o] = Math.cos(th); s0[o] = Math.sin(th);
       }
     }
-    octx.putImageData(im, 0, 0);
-    imgCache.set(key, off); return off;
+    const F = { nx, ny, mag, c0, s0, xs, omega: k * VDISP / 2 };
+    FIELDS.set(key, F); return F;
   }
+  let colorsCache = null;
+  const waveColors = () => colorsCache || (colorsCache = { crest: hexRGB(css("--wave")), trough: hexRGB(css("--trough")), bg: hexRGB(css("--plot-bg")) });
+  const pool = new Map();
+  // Render one frame of the field into a reusable offscreen canvas. pulse = packet center x, or null for a steady beam.
+  function renderField(F, t, pulse, slot) {
+    let off = pool.get(slot);
+    if (!off || off.width !== F.nx || off.height !== F.ny) { off = document.createElement("canvas"); off.width = F.nx; off.height = F.ny; pool.set(slot, off); off._im = off.getContext("2d").createImageData(F.nx, F.ny); }
+    const im = off._im, d = im.data, { crest, trough, bg } = waveColors();
+    const cw = Math.cos(F.omega * t), sw = Math.sin(F.omega * t);
+    const env = new Float32Array(F.nx);
+    for (let ix = 0; ix < F.nx; ix++) env[ix] = pulse === null ? 1 : Math.exp(-((F.xs[ix] - pulse) ** 2) / (2 * SIGX * SIGX));
+    for (let o = 0, n = F.nx * F.ny; o < n; o++) {
+      const tm = F.mag[o] * env[o % F.nx];
+      const c = F.c0[o] * cw + F.s0[o] * sw;           // cos(kx + arg φ − ωt)
+      const hc = 0.5 * (1 + c), ht = 1 - hc, j = o * 4;
+      d[j] = bg[0] + tm * (crest[0] * hc + trough[0] * ht - bg[0]);
+      d[j + 1] = bg[1] + tm * (crest[1] * hc + trough[1] * ht - bg[1]);
+      d[j + 2] = bg[2] + tm * (crest[2] * hc + trough[2] * ht - bg[2]);
+      d[j + 3] = 255;
+    }
+    off.getContext("2d").putImageData(im, 0, 0);
+    return off;
+  }
+  function drawWave(ctx, R, m, cfg, slot) {
+    const nx = Math.min(300, Math.max(60, Math.round(R.x1 - R.x0))), ny = Math.min(240, Math.max(60, Math.round(R.y1 - R.y0)));
+    const F = getField(m, cfg, nx, ny);
+    const img = renderField(F, cfg.time === undefined ? waveClock() : cfg.time, cfg.pulse === undefined ? null : cfg.pulse, slot);
+    ctx.save(); ctx.globalAlpha = cfg.waveAlpha === undefined ? 1 : cfg.waveAlpha;
+    ctx.imageSmoothingEnabled = true; ctx.drawImage(img, R.x0, R.y0, R.x1 - R.x0, R.y1 - R.y0); ctx.restore();
+  }
+
   // Split a canvas into the apparatus, an optional profile strip on its right, and a label band.
   function layout(w, h, profFrac, extraFrac) {
     const band = 24, gap = 8;
@@ -720,11 +760,7 @@
     const X = (x) => R.x0 + x / D * (R.x1 - R.x0);
     const Y = (y) => R.y0 + (DEF.H / 2 - y) / DEF.H * (R.y1 - R.y0);
     ctx.fillStyle = css("--plot-bg"); ctx.fillRect(R.x0, R.y0, R.x1 - R.x0, R.y1 - R.y0);
-    if (cfg.wave !== false) {
-      const img = fieldImage(m, cfg, Math.min(300, Math.max(60, Math.round(R.x1 - R.x0))), Math.min(240, Math.max(60, Math.round(R.y1 - R.y0))));
-      ctx.save(); ctx.globalAlpha = cfg.waveAlpha === undefined ? 1 : cfg.waveAlpha;
-      ctx.imageSmoothingEnabled = true; ctx.drawImage(img, R.x0, R.y0, R.x1 - R.x0, R.y1 - R.y0); ctx.restore();
-    }
+    if (cfg.wave !== false) drawWave(ctx, R, m, cfg, cfg.slot || "default");
     // wall: openings ±1.5 σa around each open slit, closed slits drawn solid
     const core = 1.5 * p.sigA, wx = X(p.L) - 3, ww = 6;
     const openings = [];
@@ -787,7 +823,7 @@
     const vmax = Math.max(...both, ...sum) * 1.08;
     const { ctx, w, h } = prep(document.getElementById("c1"));
     const L = layout(w, h, w < 560 ? 0.3 : 0.24);
-    apparatus(ctx, L.app, m, f1Cfg[f1.show]);
+    apparatus(ctx, L.app, m, Object.assign({ slot: "c1" }, f1Cfg[f1.show]));
     const ser = [], legend = [];
     if (f1.show === "upper") { ser.push({ vals: pu, color: css("--upper"), fill: true }); legend.push(["--upper", "upper slit only"]); }
     if (f1.show === "lower") { ser.push({ vals: pl, color: css("--lower"), fill: true }); legend.push(["--lower", "lower slit only"]); }
@@ -820,7 +856,7 @@
   // Figure 2: single hits on the screen build the pattern
   // =========================================================
   const NB = 60;
-  const f2 = { hits: new Array(NB).fill(0), dots: [], n: 0, flash: null };
+  const f2 = { hits: new Array(NB).fill(0), dots: [], n: 0, flash: null, flights: [] };
   const m2 = buildModel();
   const sc2 = m2.screen(1200);
   const dens2 = sc2.U.map((u, i) => abs2(cadd(u, sc2.L[i])));
@@ -844,15 +880,21 @@
     }
     if (f2.dots.length > 3000) f2.dots.splice(0, f2.dots.length - 3000);
     drawF2();
-    if (n === 1 && !reduceMotion) {
-      const step = () => { drawF2(); if (f2.flash && performance.now() - f2.flash.t < 900) requestAnimationFrame(step); };
-      requestAnimationFrame(step);
-    }
+  }
+  // One electron = one packet. It travels from the source; the hit is registered when it reaches the screen.
+  function launch() {
+    if (reduceMotion) { addHits(1); return; }
+    f2.flights.push(performance.now() / 1000);
+    if (f2.flights.length > 3) f2.flights.shift();
   }
   function drawF2() {
     const { ctx, w, h } = prep(document.getElementById("c2"));
     const L = layout(w, h, w < 560 ? 0.3 : 0.24);
-    const A = apparatus(ctx, L.app, m2, { u: true, l: true, g: 1, waveAlpha: 0.45 });
+    const D2 = m2.p.L + m2.p.Z, now = performance.now() / 1000, x0 = -3 * SIGX;
+    const arrived = f2.flights.filter(t0 => x0 + VDISP * (now - t0) >= D2 + 2 * SIGX);
+    if (arrived.length) { f2.flights = f2.flights.filter(t0 => !arrived.includes(t0)); arrived.forEach(() => addHits(1)); return; }
+    const live = f2.flights.length ? x0 + VDISP * (now - f2.flights[f2.flights.length - 1]) : null;
+    const A = apparatus(ctx, L.app, m2, live === null ? { u: true, l: true, g: 1, waveAlpha: 0.35, slot: "c2" } : { u: true, l: true, g: 1, pulse: live, slot: "c2" });
     // the screen as a band where hits land
     const sx1 = A.X(A.D), sx0 = Math.max(L.app.x0, sx1 - 18);
     ctx.fillStyle = css("--tint"); ctx.globalAlpha = 0.9; ctx.fillRect(sx0, L.app.y0, sx1 - sx0, L.app.y1 - L.app.y0); ctx.globalAlpha = 1;
@@ -878,11 +920,11 @@
     document.getElementById("f2-read").innerHTML = `<span>electrons sent: ${f2.n}</span><span>detector pixels: ${NB} × ${DEF.H / NB} nm</span>` +
       (f2.n === 1 ? `<span>this one landed at y = ${fmt(f2.dots[f2.dots.length - 1][0])} nm</span>` : "");
   }
-  document.getElementById("f2-one").addEventListener("click", () => addHits(1));
+  document.getElementById("f2-one").addEventListener("click", launch);
   document.getElementById("f2-ten").addEventListener("click", () => addHits(10));
   document.getElementById("f2-hund").addEventListener("click", () => addHits(100));
   document.getElementById("f2-thou").addEventListener("click", () => addHits(1000));
-  document.getElementById("f2-clear").addEventListener("click", () => { f2.hits.fill(0); f2.dots = []; f2.n = 0; f2.flash = null; drawF2(); });
+  document.getElementById("f2-clear").addEventListener("click", () => { f2.hits.fill(0); f2.dots = []; f2.n = 0; f2.flash = null; f2.flights = []; drawF2(); });
 
   // =========================================================
   // Figure 3: two paths to one screen point, and their arrows
@@ -900,7 +942,7 @@
     const { ctx, w, h } = prep(c3);
     const narrow = w < 640;
     const L = narrow ? layout(w, h, 0.3) : layout(w, h, 0.17, 0.3);
-    const A = apparatus(ctx, L.app, m3, { u: true, l: true, g: 1, waveAlpha: 0.55 });
+    const A = apparatus(ctx, L.app, m3, { u: true, l: true, g: 1, waveAlpha: 0.7, slot: "c3" });
     const vmax = Math.max(...both3) * 1.08;
     const P = profile(ctx, L.prof, sc3.ys, [{ vals: sum3, color: css("--muted"), width: 1.3, dash: [5, 4] }, { vals: both3, color: css("--prob"), width: 2.4, fill: true }], vmax);
     f3geom = { app: L.app, prof: L.prof, Y: A.Y };
@@ -996,7 +1038,7 @@
   function drawF4() {
     const { ctx, w, h } = prep(document.getElementById("c4"));
     const L = layout(w, h, w < 560 ? 0.3 : 0.24);
-    apparatus(ctx, L.app, m4, { u: true, l: true, g: Math.round(f4.g * 20) / 20, det: 1 - f4.g });
+    apparatus(ctx, L.app, m4, { u: true, l: true, g: Math.round(f4.g * 20) / 20, det: 1 - f4.g, slot: "c4" });
     const pu = sc4.U.map(abs2), pl = sc4.L.map(abs2);
     const cross = sc4.U.map((u, i) => 2 * (u[0] * sc4.L[i][0] + u[1] * sc4.L[i][1]));
     const full = pu.map((v, i) => v + pl[i] + cross[i]);
@@ -1085,41 +1127,8 @@
     f5.paths.push(...fresh);
     if (f5.paths.length > 600) f5.paths.splice(0, f5.paths.length - 600);
     if (reduceMotion) { drawF5(); return; }
-    f5.anim = { start: performance.now(), dur: 1400, fresh: new Set(fresh) };
-    const step = () => { drawF5(); if (f5.anim && performance.now() - f5.anim.start < f5.anim.dur) requestAnimationFrame(step); else { f5.anim = null; drawF5(); } };
-    requestAnimationFrame(step);
-  }
-  function waveImage(nx, ny) {
-    const key = [f5.d, f5.wp, nx, ny, css("--wave"), css("--plot-bg")].join("|");
-    if (f5.img && f5.imgKey === key) return f5.img;
-    const p = m5.p, k = m5.k, D = p.L + p.Z;
-    const off = document.createElement("canvas"); off.width = nx; off.height = ny;
-    const octx = off.getContext("2d"); const im = octx.createImageData(nx, ny);
-    const hex = (s) => { const t = document.createElement("canvas").getContext("2d"); t.fillStyle = s; const v = t.fillStyle; return [parseInt(v.slice(1, 3), 16), parseInt(v.slice(3, 5), 16), parseInt(v.slice(5, 7), 16)]; };
-    const cw = hex(css("--wave")), cb = hex(css("--plot-bg"));
-    const col = new Float32Array(ny);
-    for (let ix = 0; ix < nx; ix++) {
-      const x = (ix + 0.5) / nx * D;
-      let mx = 0;
-      if (x < p.L) {
-        const c = propagate(m5.inc0, x, k);
-        for (let iy = 0; iy < ny; iy++) { const y = DEF.H / 2 - (iy + 0.5) / ny * DEF.H; col[iy] = abs2(evalAt(c, y)); mx = Math.max(mx, col[iy]); }
-      } else {
-        const cs = m5.comps.map(c => propagate(c, x - p.L, k));
-        for (let iy = 0; iy < ny; iy++) {
-          const y = DEF.H / 2 - (iy + 0.5) / ny * DEF.H;
-          const a = evalAt(cs[0], y), b = evalAt(cs[1], y);
-          col[iy] = f5.wp ? abs2(a) + abs2(b) : abs2(cadd(a, b)); mx = Math.max(mx, col[iy]);
-        }
-      }
-      for (let iy = 0; iy < ny; iy++) {
-        const t = mx > 0 ? Math.pow(col[iy] / mx, 0.6) * 0.85 : 0;
-        const o = (iy * nx + ix) * 4;
-        im.data[o] = cb[0] + (cw[0] - cb[0]) * t; im.data[o + 1] = cb[1] + (cw[1] - cb[1]) * t; im.data[o + 2] = cb[2] + (cw[2] - cb[2]) * t; im.data[o + 3] = 255;
-      }
-    }
-    octx.putImageData(im, 0, 0);
-    f5.img = off; f5.imgKey = key; return off;
+    f5.anim = { start: performance.now(), dur: 2600, fresh: new Set(fresh) };
+    drawF5();
   }
   function drawF5() {
     const canvas = document.getElementById("c5");
@@ -1130,10 +1139,7 @@
     const X = (x) => area.x0 + x / D * (area.x1 - area.x0);
     const Y = (y) => area.y0 + (DEF.H / 2 - y) / DEF.H * (area.y1 - area.y0);
     ctx.fillStyle = css("--plot-bg"); ctx.fillRect(area.x0, area.y0, area.x1 - area.x0, area.y1 - area.y0);
-    if (f5.showWave) {
-      const img = waveImage(Math.min(320, Math.round(area.x1 - area.x0)), Math.min(260, Math.round(area.y1 - area.y0)));
-      ctx.imageSmoothingEnabled = true; ctx.drawImage(img, area.x0, area.y0, area.x1 - area.x0, area.y1 - area.y0);
-    }
+    if (f5.showWave) drawWave(ctx, area, m5, { u: true, l: true, g: f5.wp ? 0 : 1, slot: "c5" }, "c5");
     // wall with two openings (±1.5 σa cores, as drawn in the app)
     const core = 1.5 * p.sigA;
     ctx.fillStyle = css("--muted");
@@ -1148,6 +1154,7 @@
     ctx.beginPath(); ctx.moveTo(X(p.L), Y(0)); ctx.lineTo(X(D), Y(0)); ctx.stroke(); ctx.setLineDash([]);
     // trajectories
     const now = performance.now();
+    if (f5.anim && now - f5.anim.start >= f5.anim.dur) f5.anim = null;
     const prog = f5.anim ? Math.min(1, (now - f5.anim.start) / f5.anim.dur) : 1;
     const many = f5.paths.length > 60;
     f5.paths.forEach(r => {
@@ -1202,7 +1209,16 @@
   bindSlider("f5-d", v => { f5.d = v; rebuild5(); }, " nm");
 
   // ---------- start ----------
-  function drawAll() { drawF1(); drawF2(); drawF3(); drawF4(); f5.img = null; drawF5(); }
+  function drawAll() { colorsCache = null; drawF1(); drawF2(); drawF3(); drawF4(); drawF5(); }
+  // Animate only the figures on screen.
+  const painters = { c1: drawF1, c2: drawF2, c3: drawF3, c4: drawF4, c5: drawF5 };
+  const onScreen = new Set();
+  if (!reduceMotion && "IntersectionObserver" in window) {
+    const io = new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? onScreen.add(e.target.id) : onScreen.delete(e.target.id)));
+    Object.keys(painters).forEach(id => io.observe(document.getElementById(id)));
+    const frame = () => { if (!document.hidden) onScreen.forEach(id => painters[id]()); requestAnimationFrame(frame); };
+    requestAnimationFrame(frame);
+  }
   buildCache();
   drawAll();
   send5(20);
