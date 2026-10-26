@@ -265,6 +265,7 @@
         </div>
         <label class="slider" for="f1-lam">λ <input id="f1-lam" type="range" min="20" max="50" step="1" value="50"><output id="f1-lam-o">50 nm</output></label>
         <label class="slider" for="f1-d">d <input id="f1-d" type="range" min="150" max="600" step="10" value="300"><output id="f1-d-o">300 nm</output></label>
+        <label class="slider" for="spd-f1">Speed <input id="spd-f1" class="spd" type="range" min="0.1" max="1.5" step="0.05" value="0.5"><output>×0.50</output></label>
       </div>
       <div class="readout" id="f1-read"></div>
     </div>
@@ -319,6 +320,7 @@
           <button class="btn" id="f2-thou" type="button">Send 1000</button>
           <button class="btn" id="f2-clear" type="button">Clear</button>
         </div>
+        <label class="slider" for="spd-f2">Speed <input id="spd-f2" class="spd" type="range" min="0.1" max="1.5" step="0.05" value="0.5"><output>×0.50</output></label>
       </div>
       <div class="readout" id="f2-read"></div>
     </div>
@@ -355,6 +357,7 @@
       <canvas id="c3b" height="220" hidden aria-label="The two amplitudes at P drawn as arrows"></canvas>
       <div class="controls">
         <label class="slider" for="f3-y" style="grid-template-columns:auto minmax(160px, 320px) 5.6rem">Point P, y <input id="f3-y" type="range" min="-580" max="580" step="2" value="0"><output id="f3-y-o">0 nm</output></label>
+        <label class="slider" for="spd-f3">Speed <input id="spd-f3" class="spd" type="range" min="0.1" max="1.5" step="0.05" value="0.5"><output>×0.50</output></label>
       </div>
       <div class="readout" id="f3-read"></div>
     </div>
@@ -390,6 +393,7 @@
           <button class="btn" id="f4-full" type="button">Reliable record</button>
         </div>
         <label class="slider" for="f4-g">Overlap γ <input id="f4-g" type="range" min="0" max="1" step="0.01" value="1"><output id="f4-g-o">1.00</output></label>
+        <label class="slider" for="spd-f4">Speed <input id="spd-f4" class="spd" type="range" min="0.1" max="1.5" step="0.05" value="0.5"><output>×0.50</output></label>
       </div>
       <div class="readout" id="f4-read"></div>
     </div>
@@ -466,6 +470,7 @@
         <label class="check" for="f5-wp"><input id="f5-wp" type="checkbox"> Which-slit detector</label>
         <label class="check" for="f5-wave"><input id="f5-wave" type="checkbox" checked> Show wave</label>
         <label class="slider" for="f5-d">d <input id="f5-d" type="range" min="150" max="500" step="10" value="300"><output id="f5-d-o">300 nm</output></label>
+        <label class="slider" for="spd-f5">Speed <input id="spd-f5" class="spd" type="range" min="0.1" max="1.5" step="0.05" value="0.5"><output>×0.50</output></label>
       </div>
       <div class="readout" id="f5-read"></div>
     </div>
@@ -675,7 +680,14 @@
   // crests of Re Ψ, which move at the phase velocity ω/k = v/2.
   const VDISP = 480;          // displayed packet speed, nm per second of animation
   const SIGX = 50;            // packet length σx, nm (app default)
-  const waveClock = () => reduceMotion ? 0 : performance.now() / 1000;
+  // Animation clock: advances at a user-chosen rate, so speed changes never make the wave jump.
+  let simT = 0, lastReal = null, SPEED = 0.5;
+  function tick() {
+    const now = performance.now() / 1000;
+    if (lastReal !== null) simT += Math.min(0.1, now - lastReal) * SPEED;
+    lastReal = now;
+  }
+  const waveClock = () => reduceMotion ? 0 : simT;
   const FIELDS = new Map();
   function getField(m, cfg, nx, ny) {
     const key = [m.p.lam, m.p.d, cfg.u, cfg.l, cfg.g.toFixed(2), nx, ny].join("|");
@@ -884,13 +896,13 @@
   // One electron = one packet. It travels from the source; the hit is registered when it reaches the screen.
   function launch() {
     if (reduceMotion) { addHits(1); return; }
-    f2.flights.push(performance.now() / 1000);
+    f2.flights.push(simT);
     if (f2.flights.length > 3) f2.flights.shift();
   }
   function drawF2() {
     const { ctx, w, h } = prep(document.getElementById("c2"));
     const L = layout(w, h, w < 560 ? 0.3 : 0.24);
-    const D2 = m2.p.L + m2.p.Z, now = performance.now() / 1000, x0 = -3 * SIGX;
+    const D2 = m2.p.L + m2.p.Z, now = simT, x0 = -3 * SIGX;
     const arrived = f2.flights.filter(t0 => x0 + VDISP * (now - t0) >= D2 + 2 * SIGX);
     if (arrived.length) { f2.flights = f2.flights.filter(t0 => !arrived.includes(t0)); arrived.forEach(() => addHits(1)); return; }
     const live = f2.flights.length ? x0 + VDISP * (now - f2.flights[f2.flights.length - 1]) : null;
@@ -1127,7 +1139,7 @@
     f5.paths.push(...fresh);
     if (f5.paths.length > 600) f5.paths.splice(0, f5.paths.length - 600);
     if (reduceMotion) { drawF5(); return; }
-    f5.anim = { start: performance.now(), dur: 2600, fresh: new Set(fresh) };
+    f5.anim = { start: simT, dur: (m5.p.L + m5.p.Z) / VDISP, fresh: new Set(fresh) };
     drawF5();
   }
   function drawF5() {
@@ -1153,7 +1165,7 @@
     ctx.strokeStyle = css("--line"); ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(X(p.L), Y(0)); ctx.lineTo(X(D), Y(0)); ctx.stroke(); ctx.setLineDash([]);
     // trajectories
-    const now = performance.now();
+    const now = simT;
     if (f5.anim && now - f5.anim.start >= f5.anim.dur) f5.anim = null;
     const prog = f5.anim ? Math.min(1, (now - f5.anim.start) / f5.anim.dur) : 1;
     const many = f5.paths.length > 60;
@@ -1210,13 +1222,18 @@
 
   // ---------- start ----------
   function drawAll() { colorsCache = null; drawF1(); drawF2(); drawF3(); drawF4(); drawF5(); }
+  // One speed for every figure; each figure has its own copy of the slider.
+  const spds = [...document.querySelectorAll("input.spd")];
+  const showSpeed = () => spds.forEach(el => { el.value = SPEED; el.nextElementSibling.textContent = "×" + SPEED.toFixed(2); });
+  spds.forEach(el => el.addEventListener("input", () => { SPEED = Number(el.value); showSpeed(); }));
+  if (reduceMotion) spds.forEach(el => { el.closest("label").hidden = true; }); else showSpeed();
   // Animate only the figures on screen.
   const painters = { c1: drawF1, c2: drawF2, c3: drawF3, c4: drawF4, c5: drawF5 };
   const onScreen = new Set();
   if (!reduceMotion && "IntersectionObserver" in window) {
     const io = new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? onScreen.add(e.target.id) : onScreen.delete(e.target.id)));
     Object.keys(painters).forEach(id => io.observe(document.getElementById(id)));
-    const frame = () => { if (!document.hidden) onScreen.forEach(id => painters[id]()); requestAnimationFrame(frame); };
+    const frame = () => { tick(); if (!document.hidden) onScreen.forEach(id => painters[id]()); requestAnimationFrame(frame); };
     requestAnimationFrame(frame);
   }
   buildCache();
