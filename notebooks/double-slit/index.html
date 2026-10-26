@@ -199,6 +199,7 @@ body.qn-dark .comparison-table th,body.qn-dark .equation-detail summary{backgrou
 .app-callout strong{display:block;color:#1e3a8a;margin-bottom:4px}
 .app-callout ol{margin:4px 0 6px;padding-left:18px}
 .app-callout a.button{display:block;text-align:center;text-decoration:none}
+.time-est{font-size:12px;font-weight:500;color:var(--muted);margin-left:6px;white-space:nowrap}
 .ui{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;padding:1px 4px;border-radius:4px;background:var(--accent-soft);white-space:nowrap}
 .plan-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
 .plan-grid .concept-card h3 span{color:var(--muted);font-weight:500}
@@ -227,7 +228,7 @@ body.qn-dark .task-card{background:#2a1f08;border-color:#7a5a12;color:#f3d9a0}bo
 <button class="qn-theme" data-qn-theme aria-pressed="false" type="button">Dark</button>
 <div class="mode-switch" role="group" aria-label="Notebook detail level"><button class="mode-button" data-notebook-mode-button="succinct" type="button" aria-pressed="false" title="Brief" aria-label="Show brief version"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 8h14M5 12h9M5 16h6"/></svg></button><button class="mode-button" data-notebook-mode-button="detailed" type="button" aria-pressed="true" title="Full" aria-label="Show full version"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 6h14M5 10h14M5 14h14M5 18h10"/></svg></button><button class="mode-reset" data-notebook-mode-reset type="button" title="Reset display preference" aria-label="Reset display preference"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 4v6h6M5.5 9a7 7 0 1 1-1 7"/></svg></button></div>
 <nav class="nav">
-<a href="#part1">1. The puzzle</a><a href="#part2">2. One electron, one dot</a><a href="#part3">3. Add, then square</a><a href="#part4">4. Which slit?</a><a href="#part5">5. Three accounts</a><a href="#part6">6. Team questions</a><a href="#part7">7. About the model</a><a href="../../apps/comparative/double-slit-analytical/#sep=300&amp;src=225&amp;det=1000&amp;scr=1200&amp;wl=50&amp;view=copenhagen&amp;slits=11&amp;wp=none" target="_blank" rel="noopener">Open the app</a>
+<a href="#part1">1. The puzzle</a><a href="#part2">2. One electron, one dot</a><a href="#part3">3. Add, then square</a><a href="#part4">4. Which slit?</a><a href="#part5">5. Three accounts</a><a href="#part6">6. Team questions</a><a href="#part7">7. About the model</a><a href="#app-tour">App tour</a><a href="../../apps/comparative/double-slit-analytical/#sep=300&amp;src=225&amp;det=1000&amp;scr=1200&amp;wl=50&amp;view=copenhagen&amp;slits=11&amp;wp=none" target="_blank" rel="noopener">Open the app</a>
 </nav>
 </div>
 </header>
@@ -249,10 +250,21 @@ body.qn-dark .task-card{background:#2a1f08;border-color:#7a5a12;color:#f3d9a0}bo
 </div>
 </section>
 
+
+<section class="learning-strip" id="app-tour">
+<h2>Quick tour of the app</h2>
+<p>The app runs the same model with more controls. For this course you need only these.</p>
+<div class="concept-grid">
+<div class="concept-card"><h3>Controls</h3><p><b>View pill</b> at the top of the panel: Orthodox, Pilot Wave or Many Worlds; tap to cycle. <b>Start / Stop</b>, <b>Reset</b> and <b>Speed</b> below it. <span class="ui">Both Slits</span> cycles to the upper or lower slit only. <span class="ui">No Detector</span> cycles to a which-slit detector at the upper or lower slit. <b>λ</b>, <b>Slit Sep.</b> and <b>Screen dist.</b> (the Z of this notebook) set the experiment.</p></div>
+<div class="concept-card"><h3>The picture</h3><p>The wave is colored by its phase (<span class="ui">Show: Phase (cos θ)</span>): the color bands are the crests, like the stripes here. Choose <span class="ui">|Ψ|²</span> to see only where the wave is strong. On the right of the screen, the green curve is the prediction, and each red dot is a counted hit total, with a bar showing its statistical uncertainty.</p></div>
+<div class="concept-card"><h3>Readouts and extras</h3><p>Below the panel: <b>Hits</b>; in Pilot Wave the number of particles; in Many Worlds the <b>Branch records</b>, which grow as (number of pixels)<sup>hits</sup> and depend on the pixel size. The <span class="ui">Physics</span> and <span class="ui">Views</span> tabs (<span class="ui">Phys</span> on phones) hold the full equations; you do not need them for this course. Screenshots: the camera icon in the header (inside <span class="ui">⋯</span> on phones) or the S key.</p></div>
+</div>
+</section>
+
 <!-- ============ PART 1 ============ -->
 <section class="section" id="part1">
 <div class="section-head">
-<h2>1. The puzzle: two slits are not one slit plus one slit</h2>
+<h2>1. The puzzle: two slits are not one slit plus one slit <span class="time-est">≈ 8 min</span></h2>
 <p>With one slit open, electrons spread into one broad hump on the screen. Open both and the screen shows bands, including places that each slit alone would reach but that are now nearly empty.</p>
 <div class="guided-summary"><strong>What to notice:</strong> Compare <b>Add the two humps</b> with <b>Both slits</b>. Opening the second slit makes some places on the screen less likely, not more.<span class="guided-equation">\[\Delta y \approx \frac{\lambda Z}{d}\]</span></div>
 <div class="detail-text"><p>Start with <b>Upper slit</b> and <b>Lower slit</b>. Then press <b>Add the two humps</b>: this is what you would expect if each electron went through one slit or the other and the two cases simply added up. Then press <b>Both slits</b>.</p><p>The spacing of the bright bands depends on the wavelength λ and the slit separation d. For a screen at distance Z behind the wall (the app calls it <span class="ui">Screen dist.</span>), it is close to λZ/d. Lowering λ squeezes the bands together, and so does moving the slits apart. Bands appear only where the two humps overlap, and the humps decide how many of them are bright: move the slits far apart and the humps separate, leaving no bands at all. The readout shows λZ/d and warns you when the humps barely overlap.</p></div>
@@ -282,7 +294,7 @@ body.qn-dark .task-card{background:#2a1f08;border-color:#7a5a12;color:#f3d9a0}bo
 <!-- ============ PART 2 ============ -->
 <section class="section" id="part2">
 <div class="section-head">
-<h2>2. One electron, one dot</h2>
+<h2>2. One electron, one dot <span class="time-est">≈ 6 min</span></h2>
 <p>The smooth curve is never seen directly. Each electron is a wave packet that passes both slits, but the screen records it as one spot at one place.</p>
 <div class="guided-summary"><strong>What to notice:</strong> <b>Send one</b> launches a single packet. It splits at the slits and spreads, yet when it reaches the screen exactly one dot appears. After many electrons, the dots follow the curve.<span class="guided-equation">\[P(y)\propto|\psi(y)|^2\]</span></div>
 <div class="detail-text"><p>Where a single dot lands cannot be predicted; only the frequencies can. The rule that connects the wave to the dots is the Born rule: the probability of a hit near y is proportional to |ψ(y)|². Each electron is sent alone, so the bands are not produced by electrons interacting with one another. This was first done with electrons by Merli, Missiroli and Pozzi (1976) and, in a famous version, by Tonomura and coworkers (1989). Both used an electron biprism, a charged wire that splits the beam in two, which plays the role of the two slits.</p></div>
@@ -311,7 +323,7 @@ body.qn-dark .task-card{background:#2a1f08;border-color:#7a5a12;color:#f3d9a0}bo
 <!-- ============ PART 3 ============ -->
 <section class="section" id="part3">
 <div class="section-head">
-<h2>3. Add, then square</h2>
+<h2>3. Add, then square <span class="time-est">≈ 8 min</span></h2>
 <p>Think of each part of the wave at a point P as an arrow, like the hand of a clock. Its length says how strong that part is; its direction says where in its cycle the wave is when it arrives. To get the probability, add the two arrows tip to tail first, then take the length of the result and square it.</p>
 <div class="guided-summary"><strong>What to notice:</strong> Drag P to a dark band. The two arrows have about the same length and point in opposite directions, so they cancel. There the two paths differ by half a wavelength.<span class="guided-equation">\[|\psi_U+\psi_L|^2=|\psi_U|^2+|\psi_L|^2+2\,\mathrm{Re}(\psi_U^{*}\psi_L)\]</span></div>
 <div class="detail-text"><p>In the language of complex numbers, the arrows are ψ<sub>U</sub> and ψ<sub>L</sub>. In the formula above, the first two terms are the two humps of Part 1. The last, the interference term, can be positive or negative; it makes the bands.</p><p>The colored lines in the figure run from each slit to P. Their lengths r<sub>U</sub> and r<sub>L</sub> differ, and every extra wavelength of path turns an arrow once around. Near the center, where the two arrows have about the same length, bright bands sit where r<sub>L</sub> − r<sub>U</sub> is a whole number of wavelengths and dark bands halfway between. Farther out, one slit's arrow is much shorter than the other, so the arrows can no longer cancel completely and the bands wash out. That is the single-slit envelope of Part 1 seen with arrows.</p></div>
@@ -338,7 +350,7 @@ body.qn-dark .task-card{background:#2a1f08;border-color:#7a5a12;color:#f3d9a0}bo
 <!-- ============ PART 4 ============ -->
 <section class="section" id="part4">
 <div class="section-head">
-<h2>4. Which slit? A record at one slit</h2>
+<h2>4. Which slit? A record at one slit <span class="time-est">≈ 8 min</span></h2>
 <p>Place a detector at the upper slit that records whether the electron passed there. The record can be any physical change: a click, a flipped spin, a moved atom. Nobody needs to look at it. The slider sets how well the record tells the two paths apart.</p>
 <div class="guided-summary"><strong>What to notice:</strong> As the record becomes reliable, the bands fade, behind the wall and on the screen, until only the two humps added remain.<span class="guided-equation">\[P_\gamma = P_U + P_L + \gamma\,(\text{interference term})\]</span></div>
 <div class="detail-text"><p>The record links the electron to the detector: "went through the upper slit" now goes together with "detector reads upper", and the same for the lower slit. The number γ measures how much the two detector readings overlap, that is, how hard they are to tell apart. If the readings can be told apart perfectly, γ = 0 and the bands disappear. If they cannot be told apart at all, γ = 1 and the bands are as strong as with no detector. In between, the bands fade. The readout gives the strength of the bands compared with no detector. The app's which-slit detector is an ideal one: it always corresponds to γ = 0.</p></div>
@@ -370,7 +382,7 @@ body.qn-dark .task-card{background:#2a1f08;border-color:#7a5a12;color:#f3d9a0}bo
 <!-- ============ PART 5 ============ -->
 <section class="section" id="part5">
 <div class="section-head">
-<h2>5. Same pattern, three accounts</h2>
+<h2>5. Same pattern, three accounts <span class="time-est">≈ 15 min</span></h2>
 <p>All three accounts use the same wavefunction and predict the same screen statistics. They disagree about what exists and what happens between the source and the screen. Choose an account above the figure and send electrons.</p>
 <div class="guided-summary"><strong>What to notice:</strong> The histogram is the same in all three. In <b>Orthodox</b>, the packet ends in one hit. In <b>Pilot Wave</b>, a particle follows a definite path guided by the wave. In <b>Many Worlds</b>, every detector pixel records a hit in its own branch, and one branch is followed.</div>
 <div class="interpretation-list">
@@ -796,8 +808,8 @@ document.addEventListener("DOMContentLoaded",()=>{
   function drawF2() {
     const { ctx, w, h } = prep(document.getElementById("c2"));
     const L = layout(w, h, narrowProf(w));
-    const D = M.p.L + M.p.Z, now = clock("c2"), x0 = -3 * SIGX;
-    const arrived = f2.flights.filter(t0 => x0 + VDISP * (now - t0) >= D + 2 * SIGX);
+    const D = M.p.L + M.p.Z, now = clock("c2"), x0 = -SIGX;
+    const arrived = f2.flights.filter(t0 => x0 + VDISP * (now - t0) >= D + SIGX);
     if (arrived.length) { f2.flights = f2.flights.filter(t0 => !arrived.includes(t0)); arrived.forEach(() => addHits2(1, true)); return; }
     const live = f2.flights.length ? x0 + VDISP * (now - f2.flights[f2.flights.length - 1]) : null;
     const A = apparatus(ctx, L.app, M, live === null ? { u: true, l: true, g: 1, waveAlpha: 0.3, slot: "c2", time: now } : { u: true, l: true, g: 1, pulse: live, slot: "c2", time: now });
@@ -982,11 +994,11 @@ document.addEventListener("DOMContentLoaded",()=>{
   function drawF5() {
     const { ctx, w, h } = prep(document.getElementById("c5"));
     const L = layout(w, h, narrowProf(w));
-    const D = M.p.L + M.p.Z, now = clock("c5"), x0 = -3 * SIGX;
+    const D = M.p.L + M.p.Z, now = clock("c5"), x0 = -SIGX;
     // finish flights that reached the screen
     f5.flights = f5.flights.filter(f => {
       const xc = x0 + VDISP * (now - f.t0);
-      if (xc < D + 2 * SIGX) return true;
+      if (xc < D + SIGX) return true;
       if (f5.rep === "pilot-wave") f.parts.forEach(r => { record5(r.yEnd, r.tag); f5.landed.push(r); });
       else { const y = sampleY(!f5.wp); record5(y, null); f5.branch = { y, t: now, mw: f5.rep === "many-worlds" }; }
       return false;
