@@ -1,0 +1,1059 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Double Slit Notebook</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Companion notebook for the Q-Ontic analytical double-slit app: interference, single detections, which-slit records, and the Orthodox, Pilot-Wave and Many-Worlds accounts.">
+<script src="../back-link.js"></script>
+<script>
+  window.MathJax = { tex: { inlineMath: [["\\(", "\\)"]], displayMath: [["\\[", "\\]"]] }, svg: { fontCache: "global" } };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js"></script>
+<style>
+  /* Layout: Q-Ontic notebook template — banner, single reading column, full-width figure cards. */
+  :root {
+    --navy: #003366;
+    --blue: #0055aa;
+    --blue-hover: #003f7f;
+    --ink: #253142;
+    --muted: #5d6b7a;
+    --paper: #f7f9fc;
+    --surface: #ffffff;
+    --line: #dbe4f0;
+    --upper: #0089a8;      /* upper-slit component (cyan, as in the app) */
+    --lower: #d9701e;      /* lower-slit component (orange, as in the app) */
+    --prob: #b8860b;       /* probability / detections (gold) */
+    --wave: #1f6fd1;       /* wave brightness in the trajectory figure */
+    --plot-bg: #fbfcfe;
+    --grid: #e6edf6;
+    --tint: #eef4fb;
+    --font-body: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --navy: #0c2340; --blue: #6aa8ff; --blue-hover: #8fbcff; --ink: #dde5f0; --muted: #9aa8b9;
+      --paper: #0d1522; --surface: #152033; --line: #2a3a52;
+      --upper: #3fc3e0; --lower: #f08c3c; --prob: #e2b33c; --wave: #4d9bff;
+      --plot-bg: #101a2a; --grid: #1f2c40; --tint: #182a44; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --navy: #0c2340; --blue: #6aa8ff; --blue-hover: #8fbcff; --ink: #dde5f0; --muted: #9aa8b9;
+    --paper: #0d1522; --surface: #152033; --line: #2a3a52;
+    --upper: #3fc3e0; --lower: #f08c3c; --prob: #e2b33c; --wave: #4d9bff;
+    --plot-bg: #101a2a; --grid: #1f2c40; --tint: #182a44; color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--font-body); font-size: 16px; line-height: 1.65;
+  }
+  a { color: var(--blue); }
+  a:hover { color: var(--blue-hover); }
+  :focus-visible { outline: 3px solid var(--upper); outline-offset: 2px; }
+
+  .site-banner {
+    background: var(--navy); color: #fff; text-align: center;
+    padding-block: 1rem;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .site-banner .brand { margin: 0; font-size: 2rem; font-weight: 750; line-height: 1.1; color: #fff; }
+  .site-banner p { margin: 0.4rem 0 0; color: #fff; font-size: 1rem; }
+
+  .wrap {
+    width: 100%; max-width: 1120px; margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 0 3.5rem;
+  }
+  .prose { max-width: 70ch; }
+
+  .hero { padding-block: 1.6rem 0.6rem; }
+  .kicker { margin: 0 0 0.4rem; color: var(--blue); font-size: 0.86rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+  .hero h1 { margin: 0; color: var(--navy); font-size: clamp(2rem, 5vw, 3rem); font-weight: 750; line-height: 1.1; text-wrap: balance; }
+  :root[data-theme="dark"] .hero h1, :root[data-theme="dark"] h2, :root[data-theme="dark"] h3 { color: var(--ink); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .hero h1, :root:not([data-theme="light"]) h2, :root:not([data-theme="light"]) h3 { color: var(--ink); } }
+  .hero .lede { margin: 0.9rem 0 0; color: var(--muted); font-size: 1.1rem; max-width: 62ch; }
+
+  .intro-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 1.6rem; align-items: start; margin-top: 1.2rem; }
+  @media (max-width: 820px) { .intro-grid { grid-template-columns: 1fr; } }
+  .intro-grid > * { min-width: 0; }
+
+  .note-box {
+    padding: 1rem 1.1rem; border: 1px solid var(--line); border-left: 4px solid var(--upper);
+    border-radius: 8px; background: var(--surface);
+  }
+  .note-box h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
+  .plan { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.6rem; }
+  .plan li { display: grid; grid-template-columns: 7.2rem minmax(0, 1fr); gap: 0.6rem; }
+  .plan b { color: var(--navy); }
+  :root[data-theme="dark"] .plan b { color: var(--ink); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .plan b { color: var(--ink); } }
+
+  .toc { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1.4rem 0 2.2rem; }
+  .toc a {
+    display: inline-flex; align-items: center; min-height: 38px; padding: 0.4rem 0.75rem;
+    border: 1px solid var(--line); border-radius: 4px; background: var(--surface);
+    color: var(--ink); font-weight: 650; font-size: 0.92rem; text-decoration: none;
+  }
+  .toc a:hover { border-color: var(--blue); }
+  .toc a span { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 0.35rem; }
+
+  section { margin-bottom: 3rem; scroll-margin-top: 1rem; }
+  h2 { margin: 0 0 0.7rem; color: var(--navy); font-size: 1.55rem; line-height: 1.25; text-wrap: balance; }
+  h2 .num { color: var(--blue); font-variant-numeric: tabular-nums; margin-right: 0.4rem; }
+  h3 { margin: 1.4rem 0 0.4rem; color: var(--navy); font-size: 1.1rem; }
+  p { margin: 0 0 1rem; }
+
+  .btn, .btn-primary {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;
+    min-height: 40px; padding: 0.45rem 0.85rem; border-radius: 4px;
+    font: 650 0.92rem/1.2 var(--font-body); cursor: pointer; text-decoration: none;
+  }
+  .btn { border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+  .btn:hover { border-color: var(--blue); }
+  .btn[aria-pressed="true"] { background: var(--tint); border-color: var(--blue); color: var(--blue); }
+  .btn-primary { border: 1px solid var(--blue); background: var(--blue); color: #fff; }
+  .btn-primary:hover { background: var(--blue-hover); border-color: var(--blue-hover); color: #fff; }
+  :root[data-theme="dark"] .btn-primary { color: #08121f; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn-primary, :root:not([data-theme="light"]) .btn-primary:hover { color: #08121f; } }
+
+  .figure {
+    margin: 1.2rem 0 1.4rem; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--surface); overflow: hidden;
+  }
+  .figure canvas { display: block; width: 100%; background: var(--plot-bg); touch-action: pan-y; }
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 0.6rem 1.2rem; align-items: center;
+    padding: 0.75rem 0.9rem; border-top: 1px solid var(--line);
+  }
+  .controls .group { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+  .slider { display: grid; grid-template-columns: auto minmax(110px, 180px) 4.8rem; gap: 0.5rem; align-items: center; font-size: 0.92rem; }
+  .slider output { font-family: var(--font-mono); font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+  .slider input { width: 100%; accent-color: var(--blue); }
+  .check { display: inline-flex; gap: 0.4rem; align-items: center; font-size: 0.92rem; }
+  .readout {
+    display: flex; flex-wrap: wrap; gap: 0.3rem 1.2rem; padding: 0.55rem 0.9rem;
+    border-top: 1px solid var(--line); background: var(--tint);
+    font-family: var(--font-mono); font-size: 0.84rem; font-variant-numeric: tabular-nums;
+  }
+  .legend { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; padding: 0.55rem 0.9rem 0; font-size: 0.86rem; color: var(--muted); }
+  .key { display: inline-flex; align-items: center; gap: 0.35rem; }
+  .swatch { width: 18px; height: 3px; border-radius: 2px; display: inline-block; }
+  .swatch.dash { background: repeating-linear-gradient(90deg, currentColor 0 4px, transparent 4px 7px) !important; height: 2px; }
+
+  .predict {
+    margin: 1rem 0; padding: 0.85rem 1rem; border-radius: 8px;
+    background: var(--tint); border: 1px solid var(--line);
+  }
+  .predict .label { display: block; font-size: 0.78rem; font-weight: 750; letter-spacing: 0.06em; text-transform: uppercase; color: var(--blue); margin-bottom: 0.2rem; }
+  .predict p:last-child { margin-bottom: 0; }
+  details { margin: 0.6rem 0 0; }
+  summary { cursor: pointer; font-weight: 650; color: var(--blue); }
+  details > div { padding-top: 0.5rem; }
+
+  .app-box {
+    margin: 1.2rem 0; padding: 0.9rem 1rem; border: 1px dashed var(--blue); border-radius: 8px; background: var(--surface);
+    display: grid; gap: 0.5rem;
+  }
+  .app-box h3 { margin: 0; font-size: 1rem; }
+  .app-box ol { margin: 0; padding-left: 1.25rem; }
+  .app-box li { margin: 0.2rem 0; }
+  .app-box .links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .ui { font-family: var(--font-mono); font-size: 0.86em; padding: 0.05rem 0.3rem; border-radius: 3px; background: var(--tint); white-space: nowrap; }
+
+  .views { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.2rem 0; }
+  @media (max-width: 900px) { .views { grid-template-columns: 1fr; } }
+  .view-card { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 1rem; display: grid; gap: 0.5rem; align-content: start; min-width: 0; }
+  .view-card h3 { margin: 0; }
+  .view-card p { margin: 0; }
+  .view-card .tag { font-size: 0.78rem; font-weight: 750; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .view-card .btn { justify-self: start; }
+
+  .questions { counter-reset: q; list-style: none; padding: 0; margin: 1rem 0; display: grid; gap: 0.5rem; }
+  .questions li { counter-increment: q; display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: 0.4rem; padding: 0.55rem 0.8rem; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+  .questions li::before { content: "Q" counter(q); font-weight: 750; color: var(--blue); font-variant-numeric: tabular-nums; }
+
+  .table-wrap { overflow-x: auto; margin: 1rem 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 0.92rem; }
+  th, td { border-bottom: 1px solid var(--line); padding: 0.55rem 0.7rem; text-align: left; vertical-align: top; }
+  th { background: var(--tint); color: var(--ink); font-weight: 700; }
+  td.blank { height: 3.2rem; }
+  tr:last-child td { border-bottom: none; }
+
+  .refs { padding-left: 1.2rem; font-size: 0.92rem; }
+  .refs li { margin: 0.35rem 0; }
+  .eq-box { overflow-x: auto; }
+  .muted { color: var(--muted); }
+  .small { font-size: 0.9rem; }
+
+  footer.page-foot {
+    border-top: 1px solid var(--line); margin-top: 2rem; padding-block: 1.2rem; color: var(--muted); font-size: 0.88rem;
+  }
+</style>
+</head>
+<body>
+
+<header class="site-banner">
+  <p class="brand">Q-Ontic Lab</p>
+  <p>Interactive quantum simulations and notebooks</p>
+</header>
+
+<div class="wrap">
+
+  <div class="hero">
+    <p class="kicker">Notebook · Double-slit module</p>
+    <h1>One electron, two slits</h1>
+    <p class="lede">The double-slit experiment in seven short parts. Every figure on this page uses the same wave model as the Q-Ontic analytical double-slit app, with the same default settings, so what you see here is what you will see there.</p>
+  </div>
+
+  <div class="intro-grid">
+    <div class="prose">
+      <p>Electrons are sent one at a time toward a wall with two narrow openings. Behind the wall is a detector screen. Each electron makes one small spot. After many electrons, the spots form bright and dark bands.</p>
+      <p>Everyone agrees on that pattern, and on how to calculate it. The disagreement is about what is going on between the source and the screen. This notebook first builds the calculation, then shows three accounts of what it describes: <b>Orthodox</b>, <b>Pilot-Wave</b> and <b>Many-Worlds</b>.</p>
+      <p><a class="btn-primary" href="../../apps/comparative/double-slit-analytical/#sep=300&amp;src=225&amp;det=1000&amp;scr=1200&amp;wl=50&amp;view=copenhagen&amp;slits=11&amp;wp=none" target="_blank" rel="noopener">Open the double-slit app</a></p>
+    </div>
+    <aside class="note-box" aria-labelledby="plan-h">
+      <h2 id="plan-h">How this notebook is used in class</h2>
+      <ul class="plan">
+        <li><b>Class 1</b><span>Parts 1–4 together, then explore the app with the boxes marked <i>In the app</i>.</span></li>
+        <li><b>During the week</b><span>The short task at the end of Part 4. Bring one screenshot.</span></li>
+        <li><b>Class 2</b><span>Part 5 in teams, one team per account. Each team presents its answers to the questions in Part 6.</span></li>
+      </ul>
+    </aside>
+  </div>
+
+  <nav class="toc" aria-label="Notebook sections">
+    <a href="#puzzle"><span>1</span>The puzzle</a>
+    <a href="#dots"><span>2</span>One electron, one dot</a>
+    <a href="#phasors"><span>3</span>Add, then square</a>
+    <a href="#whichslit"><span>4</span>Which slit?</a>
+    <a href="#stories"><span>5</span>Three accounts</a>
+    <a href="#teams"><span>6</span>Team questions</a>
+    <a href="#model"><span>7</span>About the model</a>
+  </nav>
+
+  <!-- ===================== PART 1 ===================== -->
+  <section id="puzzle">
+    <h2><span class="num">1</span>The puzzle</h2>
+    <div class="prose">
+      <p>Start with one slit open. Electrons arriving at the screen spread into a single broad hump. Close it and open the other slit: another hump, shifted a little. Now open both.</p>
+      <div class="predict">
+        <span class="label">Predict first</span>
+        <p>If each electron goes through one slit or the other, what should the screen show with both slits open? Sketch it before you press <b>Both slits</b>.</p>
+      </div>
+    </div>
+
+    <div class="figure" id="fig1">
+      <div class="legend" id="fig1-legend"></div>
+      <canvas id="c1" height="300" aria-label="Screen pattern for one slit, the sum of two single slits, and both slits open"></canvas>
+      <div class="controls">
+        <div class="group" role="group" aria-label="Which slits are open">
+          <button class="btn" id="f1-upper" type="button" aria-pressed="false">Upper slit</button>
+          <button class="btn" id="f1-lower" type="button" aria-pressed="false">Lower slit</button>
+          <button class="btn" id="f1-sum" type="button" aria-pressed="false">Add the two humps</button>
+          <button class="btn" id="f1-both" type="button" aria-pressed="false">Both slits</button>
+        </div>
+        <label class="slider" for="f1-lam">λ <input id="f1-lam" type="range" min="20" max="50" step="1" value="50"><output id="f1-lam-o">50 nm</output></label>
+        <label class="slider" for="f1-d">d <input id="f1-d" type="range" min="150" max="600" step="10" value="300"><output id="f1-d-o">300 nm</output></label>
+      </div>
+      <div class="readout" id="f1-read"></div>
+    </div>
+
+    <div class="prose">
+      <p>The two-slit pattern is not the sum of the two one-slit patterns. Some places that each slit alone would reach are nearly empty when both are open. Opening a second slit made it <i>less</i> likely for an electron to arrive there.</p>
+      <p>The spacing of the bands depends on the wavelength λ and the slit separation d. For a screen at distance Z behind the wall, the bright bands are separated by roughly</p>
+      <div class="eq-box">\[ \Delta y \approx \frac{\lambda Z}{d}. \]</div>
+      <p>Move the sliders and check this against the readout. A longer wavelength spreads the bands apart. Moving the slits apart squeezes them together.</p>
+      <details>
+        <summary>Where does λ come from for an electron?</summary>
+        <div><p>De Broglie's relation λ = h/p assigns a wavelength to any particle with momentum p. The app's default, λ = 50 nm, corresponds to a very slow electron. The app keeps all lengths in nanometers so that the source, the slits and the screen fit on one picture. Real electron experiments use other scales, but the pattern has the same structure. Bach and coworkers (2013) carried out the full version with electrons, opening and closing each slit with a movable mask (Part 7).</p></div>
+      </details>
+    </div>
+
+    <div class="app-box">
+      <h3>In the app</h3>
+      <ol>
+        <li>Open the app in Orthodox view and press <span class="ui">Start</span>. Watch the hits build up.</li>
+        <li>Press <span class="ui">Both Slits</span> to cycle to one slit, then the other. Compare the histograms.</li>
+        <li>In the <span class="ui">Physics</span> tab, change λ and the slit separation. Does Δy ≈ λZ/d hold?</li>
+      </ol>
+      <div class="links">
+        <a class="btn" target="_blank" rel="noopener" href="../../apps/comparative/double-slit-analytical/#sep=300&amp;src=225&amp;det=1000&amp;scr=1200&amp;wl=50&amp;view=copenhagen&amp;slits=11&amp;wp=none">Both slits</a>
+        <a class="btn" target="_blank" rel="noopener" href="../../apps/comparative/double-slit-analytical/#sep=300&amp;src=225&amp;det=1000&amp;scr=1200&amp;wl=50&amp;view=copenhagen&amp;slits=10&amp;wp=none">One slit only</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PART 2 ===================== -->
+  <section id="dots">
+    <h2><span class="num">2</span>One electron, one dot</h2>
+    <div class="prose">
+      <p>The smooth curve in Part 1 is never seen directly. What the screen records are single events. Each electron produces one localized spot, at one place.</p>
+      <div class="predict">
+        <span class="label">Predict first</span>
+        <p>Press <b>Send one</b>. Will the screen show one spot, two spots (one per slit), or a faint copy of the whole pattern?</p>
+      </div>
+    </div>
+
+    <div class="figure">
+      <div class="legend">
+        <span class="key"><span class="swatch" style="background:var(--prob)"></span>counted hits per detector pixel</span>
+        <span class="key" style="color:var(--ink)"><span class="swatch" style="background:var(--ink)"></span>predicted counts from |ψ|²</span>
+      </div>
+      <canvas id="c2" height="320" aria-label="Detector screen with individual hits and a histogram"></canvas>
+      <div class="controls">
+        <div class="group">
+          <button class="btn-primary" id="f2-one" type="button">Send one</button>
+          <button class="btn" id="f2-ten" type="button">Send 10</button>
+          <button class="btn" id="f2-hund" type="button">Send 100</button>
+          <button class="btn" id="f2-thou" type="button">Send 1000</button>
+          <button class="btn" id="f2-clear" type="button">Clear</button>
+        </div>
+      </div>
+      <div class="readout" id="f2-read"></div>
+    </div>
+
+    <div class="prose">
+      <p>One run gives one dot. Where that dot lands cannot be predicted. Only the frequencies can: after many electrons, the histogram follows the curve. The rule connecting the two is the Born rule. The probability of a hit near position y on the screen is proportional to |ψ(y)|², the squared magnitude of the wavefunction there.</p>
+      <p>Each electron is sent alone. The pattern is not produced by electrons interacting with each other. It is a property of the setup, revealed one electron at a time. This was first shown cleanly for electrons by Tonomura and coworkers in 1989.</p>
+    </div>
+  </section>
+
+  <!-- ===================== PART 3 ===================== -->
+  <section id="phasors">
+    <h2><span class="num">3</span>Add, then square</h2>
+    <div class="prose">
+      <p>With both slits open, the wavefunction at the screen is a sum of two parts: one coming from the upper opening and one from the lower opening.</p>
+      <div class="eq-box">\[ \psi = \psi_U + \psi_L \]</div>
+      <p>Each part is a complex number at every point: it has a size and a direction, drawn below as an arrow. The rule is to add the arrows first and square the result afterwards.</p>
+      <div class="eq-box">\[ |\psi_U+\psi_L|^2 \;=\; |\psi_U|^2 + |\psi_L|^2 \;+\; \underbrace{2\,\mathrm{Re}\!\left(\psi_U^{*}\psi_L\right)}_{\text{interference term}} \]</div>
+      <p>The first two terms are the two humps from Part 1. The last term can be positive or negative. It is what makes bright and dark bands.</p>
+      <div class="predict">
+        <span class="label">Try it</span>
+        <p>Move the screen point until the two arrows point in opposite directions. What happens to the probability there?</p>
+      </div>
+    </div>
+
+    <div class="figure">
+      <div class="legend">
+        <span class="key"><span class="swatch" style="background:var(--upper)"></span>ψ<sub>U</sub>, from the upper slit</span>
+        <span class="key"><span class="swatch" style="background:var(--lower)"></span>ψ<sub>L</sub>, from the lower slit</span>
+        <span class="key" style="color:var(--ink)"><span class="swatch" style="background:var(--ink)"></span>sum ψ<sub>U</sub> + ψ<sub>L</sub></span>
+      </div>
+      <canvas id="c3" height="300" aria-label="Screen pattern with a selected point and the two complex amplitudes drawn as arrows"></canvas>
+      <div class="controls">
+        <label class="slider" for="f3-y" style="grid-template-columns:auto minmax(160px, 320px) 5.6rem">Screen point y <input id="f3-y" type="range" min="-580" max="580" step="2" value="0"><output id="f3-y-o">0 nm</output></label>
+      </div>
+      <div class="readout" id="f3-read"></div>
+    </div>
+
+    <div class="prose">
+      <p>At a dark band the two arrows have about the same length and point in opposite directions. They cancel. The two alternatives are not two electrons colliding: they are two terms in the description of a single electron.</p>
+      <p>Why do the arrows turn as you move along the screen? From a point at height y, the distances to the two openings differ. Every extra wavelength of path turns the arrow once around. The relative angle between the arrows grows by 2π each time the path difference grows by λ, which gives the band spacing λZ/d.</p>
+    </div>
+  </section>
+
+  <!-- ===================== PART 4 ===================== -->
+  <section id="whichslit">
+    <h2><span class="num">4</span>Which slit?</h2>
+    <div class="prose">
+      <p>Suppose we place a detector at the upper slit that records whether the electron passed there. The record can be anything physical: a click, a flipped spin, a changed atom. Nobody needs to look at it.</p>
+      <div class="predict">
+        <span class="label">Predict first</span>
+        <p>With a reliable record at one slit, what happens to the bands? Move the slider from <b>No record</b> to <b>Reliable record</b>.</p>
+      </div>
+    </div>
+
+    <div class="figure">
+      <div class="legend">
+        <span class="key"><span class="swatch" style="background:var(--prob)"></span>screen pattern with this record</span>
+        <span class="key" style="color:var(--ink)"><span class="swatch dash" style="color:var(--ink)"></span>no record (full bands)</span>
+        <span class="key" style="color:var(--muted)"><span class="swatch dash" style="color:var(--muted)"></span>reliable record (two humps added)</span>
+      </div>
+      <canvas id="c4" height="300" aria-label="Screen pattern as the which-slit record becomes more reliable"></canvas>
+      <div class="controls">
+        <div class="group" role="group" aria-label="Record quality presets">
+          <button class="btn" id="f4-none" type="button">No record</button>
+          <button class="btn" id="f4-part" type="button">Partial record</button>
+          <button class="btn" id="f4-full" type="button">Reliable record</button>
+        </div>
+        <label class="slider" for="f4-g">Overlap γ <input id="f4-g" type="range" min="0" max="1" step="0.01" value="1"><output id="f4-g-o">1.00</output></label>
+      </div>
+      <div class="readout" id="f4-read"></div>
+    </div>
+
+    <div class="prose">
+      <p>A record correlates the electron with the detector. The full state is then</p>
+      <div class="eq-box">\[ \psi_U\,|\text{record: upper}\rangle \;+\; \psi_L\,|\text{record: lower}\rangle . \]</div>
+      <p>The interference term gets multiplied by the overlap γ between the two possible detector states. If the records are perfectly distinguishable, γ = 0 and the bands disappear: the screen shows the two humps added. If the records cannot be told apart, γ = 1 and the bands are complete. In between, the bands fade.</p>
+      <p>The app's which-slit detector is an ideal one: it always corresponds to γ = 0. The slider here lets you see the in-between cases.</p>
+    </div>
+
+    <div class="app-box">
+      <h3>In the app</h3>
+      <ol>
+        <li>Press <span class="ui">No Detector</span> to cycle to a detector at one slit. The two components are drawn in cyan and orange.</li>
+        <li>Run until the histogram is clear. Then switch the detector off and compare.</li>
+      </ol>
+      <div class="links">
+        <a class="btn" target="_blank" rel="noopener" href="../../apps/comparative/double-slit-analytical/#sep=300&amp;src=225&amp;det=1000&amp;scr=1200&amp;wl=50&amp;view=copenhagen&amp;slits=11&amp;wp=slit1">Detector at one slit</a>
+      </div>
+    </div>
+
+    <div class="note-box prose" style="border-left-color:var(--prob)">
+      <h2 style="font-size:1.05rem">Task for the week</h2>
+      <p style="margin-bottom:0.5rem">In the app, find settings of λ and slit separation that put exactly three bright bands on the screen. Before you check, use Δy ≈ λZ/d to predict values that should work. Bring a screenshot, your prediction, and the values that worked. If they disagree, say why you think they do.</p>
+    </div>
+  </section>
+
+  <!-- ===================== PART 5 ===================== -->
+  <section id="stories">
+    <h2><span class="num">5</span>Same pattern, three accounts</h2>
+    <div class="prose">
+      <p>Everything so far is shared. All three accounts below use the same wavefunction and predict the same screen statistics. They disagree about what exists and what happens between the source and the screen. The app has one view for each.</p>
+    </div>
+
+    <div class="views">
+      <article class="view-card">
+        <span class="tag">View 1</span>
+        <h3>Orthodox</h3>
+        <p>The wavefunction is the complete description of the electron, and it gives probabilities for measurement results. No path is assigned between source and screen. At detection, one result occurs and the wavefunction is replaced by one that matches it. This step, often called collapse, is not described by the Schrödinger equation.</p>
+        <p class="small muted">In the app: no trajectories are drawn. The packet fades as hits are registered.</p>
+        <a class="btn" target="_blank" rel="noopener" href="../../apps/comparative/double-slit-analytical/#sep=300&amp;src=225&amp;det=1000&amp;scr=1200&amp;wl=50&amp;view=copenhagen&amp;slits=11&amp;wp=none">Open in Orthodox view</a>
+      </article>
+      <article class="view-card">
+        <span class="tag">View 2</span>
+        <h3>Pilot-Wave</h3>
+        <p>The electron is a particle with a definite position at all times. The wavefunction is also real, and it guides the particle. The particle goes through one slit. The wave goes through both, and the particle's motion depends on both parts. The randomness comes from not knowing the exact starting position.</p>
+        <p class="small muted">In the app: each sampled particle is drawn with its trajectory.</p>
+        <a class="btn" target="_blank" rel="noopener" href="../../apps/comparative/double-slit-analytical/#sep=300&amp;src=225&amp;det=1000&amp;scr=1200&amp;wl=50&amp;view=bohmian&amp;slits=11&amp;wp=none">Open in Pilot-Wave view</a>
+      </article>
+      <article class="view-card">
+        <span class="tag">View 3</span>
+        <h3>Many-Worlds</h3>
+        <p>The wavefunction is everything, and it never collapses. When the electron reaches the screen, the screen and the electron become correlated: each possible hit position goes with a detector showing that hit. Each of these branches is equally real. An observer in one branch sees one hit.</p>
+        <p class="small muted">In the app: turn on <span class="ui">Slow-motion branching</span> to watch the split.</p>
+        <a class="btn" target="_blank" rel="noopener" href="../../apps/comparative/double-slit-analytical/#sep=300&amp;src=225&amp;det=1000&amp;scr=1200&amp;wl=50&amp;view=manyworlds&amp;slits=11&amp;wp=none">Open in Many-Worlds view</a>
+      </article>
+    </div>
+
+    <h3>Pilot-wave trajectories, computed here</h3>
+    <div class="prose">
+      <p>Trajectories are the one picture that can be drawn only for the Pilot-Wave account, so this figure computes them directly. Each particle starts at a random position in the source beam and follows the guidance equation, using the same wavefunction as Parts 1–4. Particles that hit the wall are absorbed and not shown. Cyan particles went through the upper slit, orange through the lower.</p>
+    </div>
+
+    <div class="figure">
+      <canvas id="c5" height="560" aria-label="Pilot-wave trajectories from source through the slits to the screen, with a histogram of hits"></canvas>
+      <div class="controls">
+        <div class="group">
+          <button class="btn-primary" id="f5-one" type="button">Send 1</button>
+          <button class="btn" id="f5-20" type="button">Send 20</button>
+          <button class="btn" id="f5-100" type="button">Send 100</button>
+          <button class="btn" id="f5-clear" type="button">Clear</button>
+        </div>
+        <label class="check" for="f5-wp"><input id="f5-wp" type="checkbox"> Which-slit detector</label>
+        <label class="check" for="f5-wave"><input id="f5-wave" type="checkbox" checked> Show wave</label>
+        <label class="slider" for="f5-d">d <input id="f5-d" type="range" min="150" max="500" step="10" value="300"><output id="f5-d-o">300 nm</output></label>
+      </div>
+      <div class="readout" id="f5-read"></div>
+    </div>
+
+    <div class="prose">
+      <p>Look at the histogram on the right. Without a detector, every cyan particle lands on the upper half of the screen and every orange one on the lower half. The trajectories never cross the center line. This follows from the guidance equation and the symmetry of the setup. Turn on the detector and the rule breaks: each particle is now guided by one component alone.</p>
+      <details>
+        <summary>The guidance equation used here</summary>
+        <div>
+          <p>The particle moves forward at the packet speed. Its sideways motion follows the phase of the wavefunction:</p>
+          <div class="eq-box">\[ \frac{dy}{dx} \;=\; \frac{1}{k}\,\mathrm{Im}\!\left(\frac{\partial_y\psi}{\psi}\right), \qquad k=\frac{2\pi}{\lambda}. \]</div>
+          <p>This is the same law the app uses. It is integrated here with a fourth-order Runge–Kutta step of about 2 nm. The first published pictures of double-slit trajectories of this kind are in Philippidis, Dewdney and Hiley (1979). For photons, Kocsis and coworkers (2011) reconstructed average trajectories with weak measurements; they show the same pattern of paths that bunch into the bright bands without crossing the center line.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ===================== PART 6 ===================== -->
+  <section id="teams">
+    <h2><span class="num">6</span>Team questions</h2>
+    <div class="prose">
+      <p>Each team takes one account and explains the double-slit experiment from inside it. Every team answers the same five questions, so the presentations can be compared side by side.</p>
+    </div>
+    <ol class="questions">
+      <li><span>What exists between the source and the screen?</span></li>
+      <li><span>What goes through the slits: through one, through both, or neither?</span></li>
+      <li><span>Where does the randomness of the hit positions come from?</span></li>
+      <li><span>What happens when the electron reaches the screen?</span></li>
+      <li><span>Why does a which-slit record make the bands disappear?</span></li>
+    </ol>
+    <div class="prose">
+      <h3>What to bring</h3>
+      <ul>
+        <li>A five-minute presentation: your answers to Q1–Q5, with at least one app screenshot or live demo as evidence.</li>
+        <li>One thing your account finds hard to explain, or that critics object to. Be fair to your own side and to the others.</li>
+      </ul>
+      <h3>Comparison sheet</h3>
+      <p>Fill this in while the other teams present.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">Question</th><th scope="col">Orthodox</th><th scope="col">Pilot-Wave</th><th scope="col">Many-Worlds</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Q1 · What exists</th><td class="blank"></td><td class="blank"></td><td class="blank"></td></tr>
+          <tr><th scope="row">Q2 · Through the slits</th><td class="blank"></td><td class="blank"></td><td class="blank"></td></tr>
+          <tr><th scope="row">Q3 · Randomness</th><td class="blank"></td><td class="blank"></td><td class="blank"></td></tr>
+          <tr><th scope="row">Q4 · At the screen</th><td class="blank"></td><td class="blank"></td><td class="blank"></td></tr>
+          <tr><th scope="row">Q5 · Which-slit record</th><td class="blank"></td><td class="blank"></td><td class="blank"></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="predict prose">
+      <span class="label">Closing question</span>
+      <p>All three accounts give the same screen statistics. If no experiment of this kind can tell them apart, what else could make you prefer one over another?</p>
+    </div>
+  </section>
+
+  <!-- ===================== PART 7 ===================== -->
+  <section id="model">
+    <h2><span class="num">7</span>About the model, and going further</h2>
+    <div class="prose">
+      <p>The figures here and in the app use the same simplified model. The beam moves forward at constant speed and spreads only sideways, a standard approximation for narrow, nearly straight beams. The slits are smooth openings that absorb what they do not let through, rather than a detailed wall. Defaults: λ = 50 nm, slit separation 300 nm, slit width σ = 30 nm, source width σ = 200 nm, source-to-wall 225 nm, wall-to-screen Z = 1000 nm. The app's <span class="ui">Physics</span> tab gives the full equations and their limits.</p>
+      <h3>Going further</h3>
+      <ul>
+        <li><a href="../../apps/pilot-wave/double-slit-numerical/" target="_blank" rel="noopener">Double slit, numerical</a>: the wave equation solved on a grid, without the forward approximation.</li>
+        <li><a href="../../notebooks/double-slit-webgl/" target="_blank" rel="noopener">Pilot-wave double slit notebook</a>: many trajectories computed in real time.</li>
+        <li><a href="../../notebooks/delayed-choice/" target="_blank" rel="noopener">Delayed choice notebook</a>: what changes when the decision to look is made late.</li>
+      </ul>
+      <h3>References</h3>
+      <ol class="refs">
+        <li>A. Tonomura, J. Endo, T. Matsuda, T. Kawasaki and H. Ezawa, “Demonstration of single-electron buildup of an interference pattern,” <i>Am. J. Phys.</i> <b>57</b>, 117 (1989). <a href="https://doi.org/10.1119/1.16104" target="_blank" rel="noopener">doi:10.1119/1.16104</a></li>
+        <li>R. Bach, D. Pope, S.-H. Liou and H. Batelaan, “Controlled double-slit electron diffraction,” <i>New J. Phys.</i> <b>15</b>, 033018 (2013). <a href="https://doi.org/10.1088/1367-2630/15/3/033018" target="_blank" rel="noopener">doi:10.1088/1367-2630/15/3/033018</a></li>
+        <li>C. Philippidis, C. Dewdney and B. J. Hiley, “Quantum interference and the quantum potential,” <i>Il Nuovo Cimento B</i> <b>52</b>, 15–28 (1979). <a href="https://doi.org/10.1007/BF02743566" target="_blank" rel="noopener">doi:10.1007/BF02743566</a></li>
+        <li>S. Kocsis, B. Braverman, S. Ravets, M. J. Stevens, R. P. Mirin, L. K. Shalm and A. M. Steinberg, “Observing the average trajectories of single photons in a two-slit interferometer,” <i>Science</i> <b>332</b>, 1170–1173 (2011). <a href="https://doi.org/10.1126/science.1202218" target="_blank" rel="noopener">doi:10.1126/science.1202218</a></li>
+      </ol>
+    </div>
+  </section>
+
+  <footer class="page-foot">Q-Ontic Lab · Rice University · Companion to the analytical double-slit app.</footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  // ---------- complex arithmetic ----------
+  const cadd = (a, b) => [a[0] + b[0], a[1] + b[1]];
+  const csub = (a, b) => [a[0] - b[0], a[1] - b[1]];
+  const cmul = (a, b) => [a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0]];
+  const cdiv = (a, b) => { const d = b[0] * b[0] + b[1] * b[1]; return [(a[0] * b[0] + a[1] * b[1]) / d, (a[1] * b[0] - a[0] * b[1]) / d]; };
+  const cexp = (a) => { const e = Math.exp(a[0]); return [e * Math.cos(a[1]), e * Math.sin(a[1])]; };
+  const clog = (a) => [Math.log(Math.hypot(a[0], a[1])), Math.atan2(a[1], a[0])];
+  const cscale = (a, s) => [a[0] * s, a[1] * s];
+  const abs2 = (a) => a[0] * a[0] + a[1] * a[1];
+
+  // ---------- the app's model ----------
+  // Transverse field phi(y, x) obeys i ∂x phi = -(1/2k) ∂y² phi (forward, paraxial).
+  // Each piece is exp(a y² + b y + g) with complex a, b, g; free propagation over z
+  // maps a -> s a/(a+s), b -> s b/(a+s), g -> g - b²/(4(a+s)) + ½ log(s/(a+s)), s = i k /(2z).
+  function propagate(c, z, k) {
+    if (z <= 1e-9) return c;
+    const s = [0, k / (2 * z)];
+    const den = cadd(c.a, s);
+    return {
+      a: cdiv(cmul(s, c.a), den),
+      b: cdiv(cmul(s, c.b), den),
+      g: cadd(csub(c.g, cdiv(cmul(c.b, c.b), cscale(den, 4))), cscale(clog(cdiv(s, den)), 0.5)),
+      tag: c.tag
+    };
+  }
+  const evalAt = (c, y) => cexp(cadd(cadd(cscale(c.a, y * y), cscale(c.b, y)), c.g));
+
+  const DEF = { lam: 50, d: 300, L: 225, Z: 1000, sigS: 200, sigA: 30, H: 1200 };
+
+  function buildModel(opts) {
+    const p = Object.assign({}, DEF, opts || {});
+    const k = 2 * Math.PI / p.lam;
+    const inc0 = { a: [-1 / (4 * p.sigS * p.sigS), 0], b: [0, 0], g: [-0.25 * Math.log(2 * Math.PI * p.sigS * p.sigS), 0], tag: "I" };
+    const incL = propagate(inc0, p.L, k);
+    const sa2 = 4 * p.sigA * p.sigA;
+    const Cn = 1 + Math.exp(-p.d * p.d / (16 * p.sigA * p.sigA));
+    const comps = [["U", p.d / 2], ["L", -p.d / 2]].map(([tag, yc]) => ({
+      tag, yc,
+      a: csub(incL.a, [1 / sa2, 0]),
+      b: cadd(incL.b, [2 * yc / sa2, 0]),
+      g: cadd(incL.g, [-yc * yc / sa2 - Math.log(Cn), 0])
+    }));
+    function screen(N) {
+      const pc = comps.map(c => propagate(c, p.Z, k));
+      const ys = [], U = [], Lo = [];
+      for (let i = 0; i < N; i++) {
+        const y = -p.H / 2 + p.H * i / (N - 1);
+        ys.push(y); U.push(evalAt(pc[0], y)); Lo.push(evalAt(pc[1], y));
+      }
+      return { ys, U, L: Lo };
+    }
+    const T = (y) => comps.reduce((s, c) => s + Math.exp(-((y - c.yc) ** 2) / sa2), 0) / Cn;
+    return { p, k, inc0, comps, screen, T };
+  }
+
+  // ---------- theme + canvas helpers ----------
+  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function prep(canvas) {
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth;
+    if (!canvas.dataset.h) canvas.dataset.h = canvas.getAttribute("height");
+    const h = Math.round(Number(canvas.dataset.h) * Math.min(1, Math.max(0.62, w / 900)));
+    canvas.style.height = h + "px";
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    }
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    return { ctx, w, h };
+  }
+
+  // Plot of screen curves vs y (screen coordinate along the horizontal axis).
+  function axes(ctx, box, ymin, ymax, opts) {
+    const { x0, y0, x1, y1 } = box;
+    ctx.save();
+    ctx.strokeStyle = css("--grid"); ctx.lineWidth = 1;
+    ctx.fillStyle = css("--muted"); ctx.font = "12px " + css("--font-body");
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    for (let t = -600; t <= 600; t += 200) {
+      const x = x0 + (t - ymin) / (ymax - ymin) * (x1 - x0);
+      ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y1); ctx.stroke();
+      ctx.fillText(t === 0 ? "0" : (t > 0 ? "+" : "−") + Math.abs(t), x, y1 + 6);
+    }
+    ctx.strokeStyle = css("--line");
+    ctx.beginPath(); ctx.moveTo(x0, y1); ctx.lineTo(x1, y1); ctx.stroke();
+    ctx.textAlign = "right"; ctx.fillText(opts && opts.xlabel || "position on screen y (nm)", x1, y1 + 22);
+    if (opts && opts.ylabel) { ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillText(opts.ylabel, x0 + 4, y0 + 2); }
+    ctx.restore();
+  }
+  function curve(ctx, box, xs, vals, vmax, color, width, dash, fill) {
+    const { x0, y0, x1, y1 } = box;
+    const X = (v) => x0 + (v - xs[0]) / (xs[xs.length - 1] - xs[0]) * (x1 - x0);
+    const Y = (v) => y1 - v / vmax * (y1 - y0);
+    ctx.save();
+    ctx.beginPath();
+    xs.forEach((x, i) => { const px = X(x), py = Y(vals[i]); if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); });
+    if (fill) {
+      ctx.lineTo(X(xs[xs.length - 1]), y1); ctx.lineTo(X(xs[0]), y1); ctx.closePath();
+      ctx.globalAlpha = 0.16; ctx.fillStyle = color; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.beginPath(); xs.forEach((x, i) => { const px = X(x), py = Y(vals[i]); if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); });
+    }
+    ctx.strokeStyle = color; ctx.lineWidth = width; ctx.setLineDash(dash || []);
+    ctx.stroke(); ctx.restore();
+  }
+  const plotBox = (w, h, padTop) => ({ x0: 16, y0: padTop || 18, x1: w - 16, y1: h - 42 });
+  const fmt = (v, n) => v.toFixed(n === undefined ? 0 : n);
+
+  // =========================================================
+  // Figure 1: one slit, the sum, both slits
+  // =========================================================
+  const f1 = { show: "both", lam: 50, d: 300 };
+  const f1Btns = { upper: "f1-upper", lower: "f1-lower", sum: "f1-sum", both: "f1-both" };
+  function drawF1() {
+    const m = buildModel({ lam: f1.lam, d: f1.d });
+    const sc = m.screen(700);
+    const pu = sc.U.map(abs2), pl = sc.L.map(abs2);
+    const sum = pu.map((v, i) => v + pl[i]);
+    const both = sc.U.map((u, i) => abs2(cadd(u, sc.L[i])));
+    const vmax = Math.max(...both, ...sum) * 1.08;
+    const { ctx, w, h } = prep(document.getElementById("c1"));
+    const box = plotBox(w, h);
+    axes(ctx, box, -600, 600, { ylabel: "relative probability" });
+    const ink = css("--ink");
+    const legend = [];
+    if (f1.show === "upper" || f1.show === "sum") { curve(ctx, box, sc.ys, pu, vmax, css("--upper"), 2, null, f1.show === "upper"); legend.push(["--upper", "upper slit only"]); }
+    if (f1.show === "lower" || f1.show === "sum") { curve(ctx, box, sc.ys, pl, vmax, css("--lower"), 2, null, f1.show === "lower"); legend.push(["--lower", "lower slit only"]); }
+    if (f1.show === "sum") { curve(ctx, box, sc.ys, sum, vmax, ink, 2.2, [6, 4]); legend.push(["--ink", "the two humps added"]); }
+    if (f1.show === "both") {
+      curve(ctx, box, sc.ys, sum, vmax, css("--muted"), 1.5, [5, 4]);
+      curve(ctx, box, sc.ys, both, vmax, css("--prob"), 2.6, null, true);
+      legend.push(["--prob", "both slits open"], ["--muted", "the two humps added (for comparison)"]);
+    }
+    document.getElementById("fig1-legend").innerHTML = legend.map(([c, t]) =>
+      `<span class="key" style="color:var(${c})"><span class="swatch" style="background:var(${c})"></span><span style="color:var(--muted)">${t}</span></span>`).join("");
+    const dy = f1.lam * DEF.Z / f1.d;
+    document.getElementById("f1-read").innerHTML =
+      `<span>λ = ${f1.lam} nm</span><span>d = ${f1.d} nm</span><span>Z = ${DEF.Z} nm</span><span>λZ/d ≈ ${fmt(dy)} nm</span>`;
+    Object.entries(f1Btns).forEach(([k, id]) => document.getElementById(id).setAttribute("aria-pressed", String(k === f1.show)));
+  }
+  Object.entries(f1Btns).forEach(([k, id]) => document.getElementById(id).addEventListener("click", () => { f1.show = k; drawF1(); }));
+  const bindSlider = (id, fn, unit, digits) => {
+    const el = document.getElementById(id), out = document.getElementById(id + "-o");
+    const upd = () => { out.textContent = Number(el.value).toFixed(digits || 0) + (unit || ""); fn(Number(el.value)); };
+    el.addEventListener("input", upd); return upd;
+  };
+  bindSlider("f1-lam", v => { f1.lam = v; drawF1(); }, " nm");
+  bindSlider("f1-d", v => { f1.d = v; drawF1(); }, " nm");
+  f1.show = "upper";
+
+  // =========================================================
+  // Figure 2: single hits build the pattern
+  // =========================================================
+  const NB = 60;
+  const f2 = { hits: new Array(NB).fill(0), dots: [], n: 0, flash: null };
+  const m2 = buildModel();
+  const sc2 = m2.screen(1200);
+  const dens2 = sc2.U.map((u, i) => abs2(cadd(u, sc2.L[i])));
+  const cdf2 = []; { let s = 0; dens2.forEach(v => { s += v; cdf2.push(s); }); cdf2.forEach((v, i) => cdf2[i] = v / s); }
+  const pBin = new Array(NB).fill(0);
+  dens2.forEach((v, i) => { const b = Math.min(NB - 1, Math.floor((sc2.ys[i] + DEF.H / 2) / DEF.H * NB)); pBin[b] += v; });
+  { const s = pBin.reduce((a, b) => a + b, 0); pBin.forEach((v, i) => pBin[i] = v / s); }
+  function sampleScreen() {
+    const r = Math.random(); let lo = 0, hi = cdf2.length - 1;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (cdf2[mid] < r) lo = mid + 1; else hi = mid; }
+    const step = DEF.H / (cdf2.length - 1);
+    return sc2.ys[lo] + (Math.random() - 0.5) * step;
+  }
+  function addHits(n) {
+    for (let i = 0; i < n; i++) {
+      const y = sampleScreen();
+      const b = Math.min(NB - 1, Math.max(0, Math.floor((y + DEF.H / 2) / DEF.H * NB)));
+      f2.hits[b]++; f2.n++;
+      f2.dots.push([y, Math.random()]);
+      if (n === 1) f2.flash = { y, t: performance.now() };
+    }
+    if (f2.dots.length > 3000) f2.dots.splice(0, f2.dots.length - 3000);
+    drawF2();
+    if (n === 1 && !reduceMotion) animateFlash();
+  }
+  function animateFlash() {
+    const step = () => { drawF2(); if (f2.flash && performance.now() - f2.flash.t < 900) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  }
+  function drawF2() {
+    const { ctx, w, h } = prep(document.getElementById("c2"));
+    const strip = { x0: 16, x1: w - 16, y0: 12, y1: Math.round(h * 0.28) };
+    const box = { x0: 16, x1: w - 16, y0: strip.y1 + 24, y1: h - 42 };
+    // screen strip
+    ctx.fillStyle = css("--tint"); ctx.fillRect(strip.x0, strip.y0, strip.x1 - strip.x0, strip.y1 - strip.y0);
+    ctx.fillStyle = css("--muted"); ctx.font = "12px " + css("--font-body"); ctx.textBaseline = "top"; ctx.textAlign = "left";
+    const X = (y) => strip.x0 + (y + DEF.H / 2) / DEF.H * (strip.x1 - strip.x0);
+    ctx.fillStyle = css("--prob");
+    const rad = f2.n > 400 ? 1.2 : 2.2;
+    f2.dots.forEach(([y, r]) => { ctx.globalAlpha = 0.75; ctx.beginPath(); ctx.arc(X(y), strip.y0 + 5 + r * (strip.y1 - strip.y0 - 10), rad, 0, 7); ctx.fill(); });
+    ctx.globalAlpha = 1;
+    if (f2.flash) {
+      const age = (performance.now() - f2.flash.t) / 900;
+      if (age < 1) { ctx.strokeStyle = css("--prob"); ctx.lineWidth = 2; ctx.globalAlpha = 1 - age; ctx.beginPath(); ctx.arc(X(f2.flash.y), (strip.y0 + strip.y1) / 2, 6 + 22 * age, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
+    }
+    ctx.fillStyle = css("--muted"); ctx.fillText("detector screen (each dot is one electron)", strip.x0 + 6, strip.y1 + 4);
+    // histogram
+    axes(ctx, box, -600, 600, { ylabel: "hits per pixel" });
+    const expectedMax = Math.max(...pBin) * Math.max(1, f2.n);
+    const obsMax = Math.max(...f2.hits.map(v => v + Math.sqrt(v)));
+    const vmax = Math.max(expectedMax, obsMax, 1) * 1.1;
+    const bw = (box.x1 - box.x0) / NB;
+    ctx.fillStyle = css("--prob");
+    f2.hits.forEach((c, i) => { if (!c) return; const bh = c / vmax * (box.y1 - box.y0); ctx.globalAlpha = 0.85; ctx.fillRect(box.x0 + i * bw + 1, box.y1 - bh, bw - 2, bh); });
+    ctx.globalAlpha = 1;
+    const xs = pBin.map((_, i) => -600 + (i + 0.5) * DEF.H / NB);
+    // smooth predicted curve in counts
+    const step = DEF.H / (sc2.ys.length - 1);
+    const total = dens2.reduce((a, b) => a + b, 0);
+    const pred = dens2.map(v => v / total * (DEF.H / NB) / step * Math.max(1, f2.n));
+    curve(ctx, box, sc2.ys, pred, vmax, css("--ink"), 1.8);
+    document.getElementById("f2-read").innerHTML = `<span>electrons sent: ${f2.n}</span><span>detector pixels: ${NB} × ${DEF.H / NB} nm</span>` +
+      (f2.n === 1 ? `<span>this one landed at y = ${fmt(f2.dots[f2.dots.length - 1][0])} nm</span>` : "");
+  }
+  document.getElementById("f2-one").addEventListener("click", () => addHits(1));
+  document.getElementById("f2-ten").addEventListener("click", () => addHits(10));
+  document.getElementById("f2-hund").addEventListener("click", () => addHits(100));
+  document.getElementById("f2-thou").addEventListener("click", () => addHits(1000));
+  document.getElementById("f2-clear").addEventListener("click", () => { f2.hits.fill(0); f2.dots = []; f2.n = 0; f2.flash = null; drawF2(); });
+
+  // =========================================================
+  // Figure 3: phasors at one screen point
+  // =========================================================
+  const f3 = { y: 0 };
+  const m3 = buildModel();
+  const sc3 = m3.screen(700);
+  const both3 = sc3.U.map((u, i) => abs2(cadd(u, sc3.L[i])));
+  const sum3 = sc3.U.map((u, i) => abs2(u) + abs2(sc3.L[i]));
+  const ampMax3 = Math.sqrt(Math.max(...sc3.U.map(abs2)));
+  function drawF3() {
+    const { ctx, w, h } = prep(document.getElementById("c3"));
+    const narrow = w < 640;
+    const pw = narrow ? w : Math.round(w * 0.62);
+    const box = plotBox(pw, narrow ? h * 0.55 : h);
+    axes(ctx, box, -600, 600, { ylabel: "relative probability" });
+    const vmax = Math.max(...both3) * 1.08;
+    curve(ctx, box, sc3.ys, sum3, vmax, css("--muted"), 1.4, [5, 4]);
+    curve(ctx, box, sc3.ys, both3, vmax, css("--prob"), 2.4, null, true);
+    const pc = m3.comps.map(c => propagate(c, DEF.Z, m3.k));
+    const u = evalAt(pc[0], f3.y), l = evalAt(pc[1], f3.y);
+    const X = box.x0 + (f3.y + 600) / 1200 * (box.x1 - box.x0);
+    ctx.strokeStyle = css("--ink"); ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(X, box.y0); ctx.lineTo(X, box.y1); ctx.stroke(); ctx.setLineDash([]);
+    // phasor panel
+    const R = narrow ? Math.min(w, h * 0.45) * 0.42 : Math.min(w - pw, h) * 0.36;
+    const cx = narrow ? w / 2 : pw + (w - pw) / 2, cy = narrow ? h * 0.55 + (h * 0.45) / 2 : h / 2;
+    ctx.strokeStyle = css("--grid"); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx - R * 1.1, cy); ctx.lineTo(cx + R * 1.1, cy); ctx.moveTo(cx, cy - R * 1.1); ctx.lineTo(cx, cy + R * 1.1); ctx.stroke();
+    // rotate so psi_U points right; scale so |sum| max = 2 ampMax3 fits radius
+    const ph = Math.atan2(u[1], u[0]);
+    const rot = (z) => { const c = Math.cos(-ph), s = Math.sin(-ph); return [z[0] * c - z[1] * s, z[0] * s + z[1] * c]; };
+    const sc = R / (2 * ampMax3);
+    const ur = rot(u), lr = rot(l);
+    const arrow = (x0, y0, dx, dy, color, wdt) => {
+      const x1 = x0 + dx * sc, y1 = y0 - dy * sc;
+      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = wdt;
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      const a = Math.atan2(y1 - y0, x1 - x0), L = Math.hypot(x1 - x0, y1 - y0);
+      if (L > 4) { const hs = Math.min(10, L * 0.4); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x1 - hs * Math.cos(a - 0.4), y1 - hs * Math.sin(a - 0.4)); ctx.lineTo(x1 - hs * Math.cos(a + 0.4), y1 - hs * Math.sin(a + 0.4)); ctx.closePath(); ctx.fill(); }
+      return [x1, y1];
+    };
+    const tip = arrow(cx, cy, ur[0], ur[1], css("--upper"), 3);
+    arrow(tip[0], tip[1], lr[0], lr[1], css("--lower"), 3);
+    arrow(cx, cy, ur[0] + lr[0], ur[1] + lr[1], css("--ink"), 2);
+    ctx.fillStyle = css("--muted"); ctx.font = "12px " + css("--font-body"); ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.fillText("arrows at the selected point", cx, cy + R * 1.12);
+    let dphi = Math.atan2(l[1], l[0]) - ph; dphi = Math.atan2(Math.sin(dphi), Math.cos(dphi));
+    const n = ampMax3 * ampMax3;
+    document.getElementById("f3-read").innerHTML =
+      `<span>angle between arrows: ${fmt(Math.abs(dphi) * 180 / Math.PI)}°</span>` +
+      `<span>|ψU|² + |ψL|² = ${fmt((abs2(u) + abs2(l)) / n, 2)}</span>` +
+      `<span>|ψU + ψL|² = ${fmt(abs2(cadd(u, l)) / n, 2)}</span>` +
+      `<span class="muted">(units: peak of one slit alone = 1)</span>`;
+  }
+  bindSlider("f3-y", v => { f3.y = v; drawF3(); }, " nm");
+
+  // =========================================================
+  // Figure 4: which-slit record, overlap gamma
+  // =========================================================
+  const f4 = { g: 1 };
+  const m4 = buildModel();
+  const sc4 = m4.screen(700);
+  function drawF4() {
+    const { ctx, w, h } = prep(document.getElementById("c4"));
+    const box = plotBox(w, h);
+    axes(ctx, box, -600, 600, { ylabel: "relative probability" });
+    const pu = sc4.U.map(abs2), pl = sc4.L.map(abs2);
+    const cross = sc4.U.map((u, i) => 2 * (u[0] * sc4.L[i][0] + u[1] * sc4.L[i][1]));
+    const full = pu.map((v, i) => v + pl[i] + cross[i]);
+    const inc = pu.map((v, i) => v + pl[i]);
+    const cur = pu.map((v, i) => v + pl[i] + f4.g * cross[i]);
+    const vmax = Math.max(...full) * 1.08;
+    curve(ctx, box, sc4.ys, full, vmax, css("--ink"), 1.3, [5, 4]);
+    curve(ctx, box, sc4.ys, inc, vmax, css("--muted"), 1.3, [2, 4]);
+    curve(ctx, box, sc4.ys, cur, vmax, css("--prob"), 2.6, null, true);
+    const mx = Math.max(...cur), mid = cur.length >> 1;
+    let mn = Infinity; for (let i = mid - 60; i < mid + 60; i++) mn = Math.min(mn, cur[i]);
+    const vis = (Math.max(...cur.slice(mid - 60, mid + 60)) - mn) / (Math.max(...cur.slice(mid - 60, mid + 60)) + mn);
+    document.getElementById("f4-read").innerHTML =
+      `<span>γ = ${f4.g.toFixed(2)}</span><span>${f4.g >= 0.99 ? "records indistinguishable" : f4.g <= 0.01 ? "records perfectly distinguishable (the app's detector)" : "records partly distinguishable"}</span><span>fringe visibility near center ≈ ${vis.toFixed(2)}</span>`;
+  }
+  const g4 = document.getElementById("f4-g");
+  const updG = bindSlider("f4-g", v => { f4.g = v; drawF4(); }, "", 2);
+  [["f4-none", 1], ["f4-part", 0.5], ["f4-full", 0]].forEach(([id, v]) => document.getElementById(id).addEventListener("click", () => { g4.value = v; updG(); }));
+
+  // =========================================================
+  // Figure 5: pilot-wave trajectories
+  // =========================================================
+  const f5 = { d: 300, wp: false, showWave: true, paths: [], absorbed: 0, img: null, imgKey: "", anim: null };
+  let m5 = buildModel({ d: f5.d });
+  let cache5 = null;
+  const HX = 1; // cache spacing in nm (half the RK4 step)
+  function buildCache() {
+    const p = m5.p, k = m5.k;
+    const nPre = Math.round(p.L / HX), nPost = Math.round(p.Z / HX);
+    const pre = [], post = [];
+    for (let i = 0; i <= nPre; i++) pre.push(propagate(m5.inc0, i * HX, k));
+    for (let i = 0; i <= nPost; i++) post.push(m5.comps.map(c => propagate(c, i * HX, k)));
+    cache5 = { pre, post, nPre, nPost };
+  }
+  function slope(list, y) {
+    let ps = [0, 0], dps = [0, 0];
+    for (const c of list) {
+      const e = evalAt(c, y);
+      ps = cadd(ps, e);
+      dps = cadd(dps, cmul(cadd(cscale(c.a, 2 * y), c.b), e));
+    }
+    if (abs2(ps) < 1e-300) return 0;
+    return cdiv(dps, ps)[1] / m5.k;
+  }
+  function integrate(lists, y, nCells) {
+    // RK4 with step 2*HX over cached half-steps; returns sampled points every 4 nm
+    const h = 2 * HX, pts = [y];
+    for (let i = 0; i + 2 <= nCells; i += 2) {
+      const k1 = slope(lists(i), y);
+      const k2 = slope(lists(i + 1), y + h * k1 / 2);
+      const k3 = slope(lists(i + 1), y + h * k2 / 2);
+      const k4 = slope(lists(i + 2), y + h * k3);
+      y += h * (k1 + 2 * k2 + 2 * k3 + k4) / 6;
+      if ((i / 2) % 2 === 1) pts.push(y);
+    }
+    return { y, pts };
+  }
+  function gauss() { let u = 0, v = 0; while (u === 0) u = Math.random(); while (v === 0) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+  function runParticle() {
+    const p = m5.p;
+    const y0 = p.sigS * gauss();
+    const pre = integrate(i => [cache5.pre[i]], y0, cache5.nPre);
+    const yw = pre.y;
+    if (Math.random() > m5.T(yw) ** 2) return { absorbed: true, pre: pre.pts };
+    let tag, lists;
+    if (f5.wp) {
+      const w = m5.comps.map(c => abs2(evalAt(c, yw)));
+      const j = Math.random() * (w[0] + w[1]) < w[0] ? 0 : 1;
+      tag = m5.comps[j].tag; lists = i => [cache5.post[i][j]];
+    } else {
+      tag = yw >= 0 ? "U" : "L"; lists = i => cache5.post[i];
+    }
+    const post = integrate(lists, yw, cache5.nPost);
+    return { absorbed: false, tag, pre: pre.pts, post: post.pts, yEnd: post.y };
+  }
+  function send5(n) {
+    let made = 0, tries = 0;
+    const fresh = [];
+    while (made < n && tries < n * 400) {
+      tries++;
+      const r = runParticle();
+      if (r.absorbed) { f5.absorbed++; continue; }
+      if (Math.abs(r.yEnd) > DEF.H / 2) { f5.absorbed++; continue; }
+      made++; fresh.push(r);
+    }
+    f5.paths.push(...fresh);
+    if (f5.paths.length > 600) f5.paths.splice(0, f5.paths.length - 600);
+    if (reduceMotion) { drawF5(); return; }
+    f5.anim = { start: performance.now(), dur: 1400, fresh: new Set(fresh) };
+    const step = () => { drawF5(); if (f5.anim && performance.now() - f5.anim.start < f5.anim.dur) requestAnimationFrame(step); else { f5.anim = null; drawF5(); } };
+    requestAnimationFrame(step);
+  }
+  function waveImage(nx, ny) {
+    const key = [f5.d, f5.wp, nx, ny, css("--wave"), css("--plot-bg")].join("|");
+    if (f5.img && f5.imgKey === key) return f5.img;
+    const p = m5.p, k = m5.k, D = p.L + p.Z;
+    const off = document.createElement("canvas"); off.width = nx; off.height = ny;
+    const octx = off.getContext("2d"); const im = octx.createImageData(nx, ny);
+    const hex = (s) => { const t = document.createElement("canvas").getContext("2d"); t.fillStyle = s; const v = t.fillStyle; return [parseInt(v.slice(1, 3), 16), parseInt(v.slice(3, 5), 16), parseInt(v.slice(5, 7), 16)]; };
+    const cw = hex(css("--wave")), cb = hex(css("--plot-bg"));
+    const col = new Float32Array(ny);
+    for (let ix = 0; ix < nx; ix++) {
+      const x = (ix + 0.5) / nx * D;
+      let mx = 0;
+      if (x < p.L) {
+        const c = propagate(m5.inc0, x, k);
+        for (let iy = 0; iy < ny; iy++) { const y = DEF.H / 2 - (iy + 0.5) / ny * DEF.H; col[iy] = abs2(evalAt(c, y)); mx = Math.max(mx, col[iy]); }
+      } else {
+        const cs = m5.comps.map(c => propagate(c, x - p.L, k));
+        for (let iy = 0; iy < ny; iy++) {
+          const y = DEF.H / 2 - (iy + 0.5) / ny * DEF.H;
+          const a = evalAt(cs[0], y), b = evalAt(cs[1], y);
+          col[iy] = f5.wp ? abs2(a) + abs2(b) : abs2(cadd(a, b)); mx = Math.max(mx, col[iy]);
+        }
+      }
+      for (let iy = 0; iy < ny; iy++) {
+        const t = mx > 0 ? Math.pow(col[iy] / mx, 0.6) * 0.85 : 0;
+        const o = (iy * nx + ix) * 4;
+        im.data[o] = cb[0] + (cw[0] - cb[0]) * t; im.data[o + 1] = cb[1] + (cw[1] - cb[1]) * t; im.data[o + 2] = cb[2] + (cw[2] - cb[2]) * t; im.data[o + 3] = 255;
+      }
+    }
+    octx.putImageData(im, 0, 0);
+    f5.img = off; f5.imgKey = key; return off;
+  }
+  function drawF5() {
+    const canvas = document.getElementById("c5");
+    const { ctx, w, h } = prep(canvas);
+    const p = m5.p, D = p.L + p.Z;
+    const histW = Math.max(70, Math.round(w * 0.16));
+    const area = { x0: 10, x1: w - histW - 14, y0: 10, y1: h - 30 };
+    const X = (x) => area.x0 + x / D * (area.x1 - area.x0);
+    const Y = (y) => area.y0 + (DEF.H / 2 - y) / DEF.H * (area.y1 - area.y0);
+    ctx.fillStyle = css("--plot-bg"); ctx.fillRect(area.x0, area.y0, area.x1 - area.x0, area.y1 - area.y0);
+    if (f5.showWave) {
+      const img = waveImage(Math.min(320, Math.round(area.x1 - area.x0)), Math.min(260, Math.round(area.y1 - area.y0)));
+      ctx.imageSmoothingEnabled = true; ctx.drawImage(img, area.x0, area.y0, area.x1 - area.x0, area.y1 - area.y0);
+    }
+    // wall with two openings (±1.5 σa cores, as drawn in the app)
+    const core = 1.5 * p.sigA;
+    ctx.fillStyle = css("--muted");
+    const wx = X(p.L) - 3, ww = 6;
+    const segs = [[DEF.H / 2, p.d / 2 + core], [p.d / 2 - core, -p.d / 2 + core], [-p.d / 2 - core, -DEF.H / 2]];
+    segs.forEach(([a, b]) => { if (a > b) ctx.fillRect(wx, Y(a), ww, Y(b) - Y(a)); });
+    if (f5.wp) { ctx.strokeStyle = css("--upper"); ctx.lineWidth = 2; ctx.strokeRect(wx - 4, Y(p.d / 2 + core), ww + 8, Y(p.d / 2 - core) - Y(p.d / 2 + core)); }
+    // screen
+    ctx.fillStyle = css("--ink"); ctx.fillRect(X(D) - 2, area.y0, 3, area.y1 - area.y0);
+    // center line
+    ctx.strokeStyle = css("--line"); ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(X(p.L), Y(0)); ctx.lineTo(X(D), Y(0)); ctx.stroke(); ctx.setLineDash([]);
+    // trajectories
+    const now = performance.now();
+    const prog = f5.anim ? Math.min(1, (now - f5.anim.start) / f5.anim.dur) : 1;
+    const many = f5.paths.length > 60;
+    f5.paths.forEach(r => {
+      const isFresh = f5.anim && f5.anim.fresh.has(r);
+      const color = css(r.tag === "U" ? "--upper" : "--lower");
+      const all = r.pre.map((y, i) => [i * 4, y]).concat(r.post.map((y, i) => [p.L + i * 4, y]));
+      const nShow = isFresh ? Math.max(2, Math.floor(all.length * prog)) : all.length;
+      ctx.strokeStyle = color; ctx.globalAlpha = isFresh ? 0.95 : (many ? 0.28 : 0.6); ctx.lineWidth = isFresh ? 1.6 : 1;
+      ctx.beginPath();
+      for (let i = 0; i < nShow; i++) { const [x, y] = all[i]; if (i) ctx.lineTo(X(Math.min(x, D)), Y(y)); else ctx.moveTo(X(x), Y(y)); }
+      ctx.stroke();
+      if (isFresh && nShow < all.length) { const [x, y] = all[nShow - 1]; ctx.globalAlpha = 1; ctx.fillStyle = color; ctx.beginPath(); ctx.arc(X(x), Y(y), 3.2, 0, 7); ctx.fill(); }
+    });
+    ctx.globalAlpha = 1;
+    // labels
+    ctx.fillStyle = css("--muted"); ctx.font = "12px " + css("--font-body"); ctx.textBaseline = "top";
+    if (X(p.L) - area.x0 > 90) { ctx.textAlign = "left"; ctx.fillText("source", area.x0 + 4, area.y1 + 8); }
+    ctx.textAlign = "center"; ctx.fillText("wall", X(p.L), area.y1 + 8);
+    ctx.textAlign = "right"; ctx.fillText("screen", X(D), area.y1 + 8);
+    // histogram, stacked by slit
+    const hx0 = w - histW - 2, hx1 = w - 8;
+    const NBH = 48, hu = new Array(NBH).fill(0), hl = new Array(NBH).fill(0);
+    f5.paths.forEach(r => {
+      if (f5.anim && f5.anim.fresh.has(r) && prog < 1) return;
+      const b = Math.min(NBH - 1, Math.max(0, Math.floor((DEF.H / 2 - r.yEnd) / DEF.H * NBH)));
+      (r.tag === "U" ? hu : hl)[b]++;
+    });
+    const hm = Math.max(1, ...hu.map((v, i) => v + hl[i]));
+    const bh = (area.y1 - area.y0) / NBH;
+    for (let i = 0; i < NBH; i++) {
+      const y = area.y0 + i * bh;
+      const lu = hu[i] / hm * (hx1 - hx0), ll = hl[i] / hm * (hx1 - hx0);
+      ctx.fillStyle = css("--upper"); ctx.fillRect(hx0, y + 0.5, lu, bh - 1);
+      ctx.fillStyle = css("--lower"); ctx.fillRect(hx0 + lu, y + 0.5, ll, bh - 1);
+    }
+    ctx.strokeStyle = css("--line"); ctx.beginPath(); ctx.moveTo(hx0, area.y0); ctx.lineTo(hx0, area.y1); ctx.stroke();
+    ctx.fillStyle = css("--muted"); ctx.textAlign = "center"; ctx.fillText("hits", (hx0 + hx1) / 2, area.y1 + 8);
+    // readout
+    const landed = f5.paths.filter(r => !(f5.anim && f5.anim.fresh.has(r) && prog < 1));
+    const same = landed.filter(r => (r.tag === "U") === (r.yEnd >= 0)).length;
+    document.getElementById("f5-read").innerHTML =
+      `<span>reached the screen: ${landed.length}</span><span>absorbed or missed: ${f5.absorbed}</span>` +
+      (landed.length ? `<span>landed on the same side as their slit: ${fmt(100 * same / landed.length)}%</span>` : "");
+  }
+  function rebuild5() { m5 = buildModel({ d: f5.d }); buildCache(); f5.paths = []; f5.absorbed = 0; f5.img = null; drawF5(); }
+  document.getElementById("f5-one").addEventListener("click", () => send5(1));
+  document.getElementById("f5-20").addEventListener("click", () => send5(20));
+  document.getElementById("f5-100").addEventListener("click", () => send5(100));
+  document.getElementById("f5-clear").addEventListener("click", () => { f5.paths = []; f5.absorbed = 0; drawF5(); });
+  document.getElementById("f5-wp").addEventListener("change", (e) => { f5.wp = e.target.checked; f5.paths = []; f5.absorbed = 0; f5.img = null; drawF5(); });
+  document.getElementById("f5-wave").addEventListener("change", (e) => { f5.showWave = e.target.checked; drawF5(); });
+  bindSlider("f5-d", v => { f5.d = v; rebuild5(); }, " nm");
+
+  // ---------- start ----------
+  function drawAll() { drawF1(); drawF2(); drawF3(); drawF4(); f5.img = null; drawF5(); }
+  buildCache();
+  drawAll();
+  send5(20);
+  let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(drawAll, 120); });
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  if (mq.addEventListener) mq.addEventListener("change", drawAll);
+  new MutationObserver(drawAll).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+})();
+</script>
+</body>
+</html>

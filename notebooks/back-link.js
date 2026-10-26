@@ -1,6 +1,7 @@
 (() => {
   const NOTEBOOKS = [
     { slug: "delayed-choice", title: "Delayed Choice" },
+    { slug: "double-slit", title: "Double Slit" },
     { slug: "double-slit-webgl", title: "Double Slit in Bohmian Mechanics" },
     { slug: "free-packet-2d", title: "Free Packet 2D" },
     { slug: "klein-tunneling", title: "Klein Tunneling" },
