@@ -244,16 +244,17 @@
   <section id="puzzle">
     <h2><span class="num">1</span>The puzzle</h2>
     <div class="prose">
-      <p>Start with one slit open. Electrons arriving at the screen spread into a single broad hump. Close it and open the other slit: another hump, shifted a little. Now open both.</p>
+      <p>The figure shows the experiment seen from above, with the same layout as the app. The source is on the left, the wall with two slits in the middle, the detector screen on the right. The blue shading is the wavefunction: brighter means larger |ψ|². It is rescaled at each distance from the source, so the pattern stays visible as the wave spreads. The curve to the right of the screen is the probability of a hit at each height y.</p>
+      <p>Start with only the upper slit open. Electrons arriving at the screen spread into a single broad hump. Switch to the lower slit: another hump, shifted down. Now open both.</p>
       <div class="predict">
         <span class="label">Predict first</span>
-        <p>If each electron goes through one slit or the other, what should the screen show with both slits open? Sketch it before you press <b>Both slits</b>.</p>
+        <p>If each electron goes through one slit or the other, what should the screen show with both slits open? Sketch it, then press <b>Add the two humps</b> to see that prediction, and <b>Both slits</b> to see what happens.</p>
       </div>
     </div>
 
     <div class="figure" id="fig1">
       <div class="legend" id="fig1-legend"></div>
-      <canvas id="c1" height="300" aria-label="Screen pattern for one slit, the sum of two single slits, and both slits open"></canvas>
+      <canvas id="c1" height="440" aria-label="The experiment seen from above: source, wall with slits, and screen, with the screen pattern beside it"></canvas>
       <div class="controls">
         <div class="group" role="group" aria-label="Which slits are open">
           <button class="btn" id="f1-upper" type="button" aria-pressed="false">Upper slit</button>
@@ -296,7 +297,7 @@
   <section id="dots">
     <h2><span class="num">2</span>One electron, one dot</h2>
     <div class="prose">
-      <p>The smooth curve in Part 1 is never seen directly. What the screen records are single events. Each electron produces one localized spot, at one place.</p>
+      <p>The smooth curve in Part 1 is never seen directly. What the screen records are single events. Each electron produces one localized spot, at one place. In the figure the hits appear on the screen itself, and the histogram beside it counts them.</p>
       <div class="predict">
         <span class="label">Predict first</span>
         <p>Press <b>Send one</b>. Will the screen show one spot, two spots (one per slit), or a faint copy of the whole pattern?</p>
@@ -305,10 +306,10 @@
 
     <div class="figure">
       <div class="legend">
-        <span class="key"><span class="swatch" style="background:var(--prob)"></span>counted hits per detector pixel</span>
+        <span class="key"><span class="swatch" style="background:var(--prob)"></span>hits on the screen, and counted per detector pixel</span>
         <span class="key" style="color:var(--ink)"><span class="swatch" style="background:var(--ink)"></span>predicted counts from |ψ|²</span>
       </div>
-      <canvas id="c2" height="320" aria-label="Detector screen with individual hits and a histogram"></canvas>
+      <canvas id="c2" height="440" aria-label="The experiment seen from above with single hits on the screen and a histogram beside it"></canvas>
       <div class="controls">
         <div class="group">
           <button class="btn-primary" id="f2-one" type="button">Send one</button>
@@ -333,12 +334,12 @@
     <div class="prose">
       <p>With both slits open, the wavefunction at the screen is a sum of two parts: one coming from the upper opening and one from the lower opening.</p>
       <div class="eq-box">\[ \psi = \psi_U + \psi_L \]</div>
-      <p>Each part is a complex number at every point: it has a size and a direction, drawn below as an arrow. The rule is to add the arrows first and square the result afterwards.</p>
+      <p>In the figure, the colored lines run from each slit to a point P on the screen. Each part of ψ at P is a complex number: it has a size and a direction, drawn on the right as an arrow. The rule is to add the arrows first and square the result afterwards.</p>
       <div class="eq-box">\[ |\psi_U+\psi_L|^2 \;=\; |\psi_U|^2 + |\psi_L|^2 \;+\; \underbrace{2\,\mathrm{Re}\!\left(\psi_U^{*}\psi_L\right)}_{\text{interference term}} \]</div>
       <p>The first two terms are the two humps from Part 1. The last term can be positive or negative. It is what makes bright and dark bands.</p>
       <div class="predict">
         <span class="label">Try it</span>
-        <p>Move the screen point until the two arrows point in opposite directions. What happens to the probability there?</p>
+        <p>Drag P along the screen, or use the slider, until the two arrows point in opposite directions. What happens to the probability there?</p>
       </div>
     </div>
 
@@ -347,17 +348,19 @@
         <span class="key"><span class="swatch" style="background:var(--upper)"></span>ψ<sub>U</sub>, from the upper slit</span>
         <span class="key"><span class="swatch" style="background:var(--lower)"></span>ψ<sub>L</sub>, from the lower slit</span>
         <span class="key" style="color:var(--ink)"><span class="swatch" style="background:var(--ink)"></span>sum ψ<sub>U</sub> + ψ<sub>L</sub></span>
+        <span class="key" style="color:var(--prob)"><span class="swatch" style="background:var(--prob)"></span><span style="color:var(--muted)">probability, both slits</span></span>
       </div>
-      <canvas id="c3" height="300" aria-label="Screen pattern with a selected point and the two complex amplitudes drawn as arrows"></canvas>
+      <canvas id="c3" height="440" aria-label="The experiment seen from above with the two paths from the slits to a screen point P, the screen pattern, and the two amplitudes at P drawn as arrows" style="cursor:ns-resize"></canvas>
+      <canvas id="c3b" height="220" hidden aria-label="The two amplitudes at P drawn as arrows"></canvas>
       <div class="controls">
-        <label class="slider" for="f3-y" style="grid-template-columns:auto minmax(160px, 320px) 5.6rem">Screen point y <input id="f3-y" type="range" min="-580" max="580" step="2" value="0"><output id="f3-y-o">0 nm</output></label>
+        <label class="slider" for="f3-y" style="grid-template-columns:auto minmax(160px, 320px) 5.6rem">Point P, y <input id="f3-y" type="range" min="-580" max="580" step="2" value="0"><output id="f3-y-o">0 nm</output></label>
       </div>
       <div class="readout" id="f3-read"></div>
     </div>
 
     <div class="prose">
       <p>At a dark band the two arrows have about the same length and point in opposite directions. They cancel. The two alternatives are not two electrons colliding: they are two terms in the description of a single electron.</p>
-      <p>Why do the arrows turn as you move along the screen? From a point at height y, the distances to the two openings differ. Every extra wavelength of path turns the arrow once around. The relative angle between the arrows grows by 2π each time the path difference grows by λ, which gives the band spacing λZ/d.</p>
+      <p>Why do the arrows turn as P moves? The two lines to P have different lengths, r<sub>U</sub> and r<sub>L</sub>. Every extra wavelength of path turns an arrow once around. Bright bands sit where r<sub>L</sub> − r<sub>U</sub> is a whole number of wavelengths, dark bands halfway between. Check this in the readout. The path difference grows by λ for every step of about λZ/d along the screen, which gives the band spacing.</p>
     </div>
   </section>
 
@@ -368,7 +371,7 @@
       <p>Suppose we place a detector at the upper slit that records whether the electron passed there. The record can be anything physical: a click, a flipped spin, a changed atom. Nobody needs to look at it.</p>
       <div class="predict">
         <span class="label">Predict first</span>
-        <p>With a reliable record at one slit, what happens to the bands? Move the slider from <b>No record</b> to <b>Reliable record</b>.</p>
+        <p>With a reliable record at the upper slit, what happens to the bands on the screen? Move the slider from <b>No record</b> to <b>Reliable record</b> and watch the wave behind the wall as well.</p>
       </div>
     </div>
 
@@ -378,7 +381,7 @@
         <span class="key" style="color:var(--ink)"><span class="swatch dash" style="color:var(--ink)"></span>no record (full bands)</span>
         <span class="key" style="color:var(--muted)"><span class="swatch dash" style="color:var(--muted)"></span>reliable record (two humps added)</span>
       </div>
-      <canvas id="c4" height="300" aria-label="Screen pattern as the which-slit record becomes more reliable"></canvas>
+      <canvas id="c4" height="440" aria-label="The experiment seen from above with a detector at the upper slit, and the screen pattern beside it"></canvas>
       <div class="controls">
         <div class="group" role="group" aria-label="Record quality presets">
           <button class="btn" id="f4-none" type="button">No record</button>
@@ -657,30 +660,146 @@
   const fmt = (v, n) => v.toFixed(n === undefined ? 0 : n);
 
   // =========================================================
+  // Shared apparatus view: the experiment seen from above
+  // (x = propagation, left to right; y = transverse, up = upper slit)
+  // =========================================================
+  const imgCache = new Map();
+  function hexRGB(s) {
+    const t = document.createElement("canvas").getContext("2d");
+    t.fillStyle = s; const v = t.fillStyle;
+    if (v[0] === "#") return [parseInt(v.slice(1, 3), 16), parseInt(v.slice(3, 5), 16), parseInt(v.slice(5, 7), 16)];
+    const m = v.match(/\d+/g); return m ? m.slice(0, 3).map(Number) : [0, 0, 0];
+  }
+  // Wave brightness |ψ|² in the x–y plane. cfg: u, l = slit open; g = coherence (1 full, 0 none).
+  function fieldImage(m, cfg, nx, ny) {
+    const key = [m.p.lam, m.p.d, cfg.u, cfg.l, cfg.g.toFixed(2), nx, ny, css("--wave"), css("--plot-bg")].join("|");
+    if (imgCache.has(key)) return imgCache.get(key);
+    if (imgCache.size > 40) imgCache.clear();
+    const p = m.p, k = m.k, D = p.L + p.Z;
+    const off = document.createElement("canvas"); off.width = nx; off.height = ny;
+    const octx = off.getContext("2d"); const im = octx.createImageData(nx, ny);
+    const cw = hexRGB(css("--wave")), cb = hexRGB(css("--plot-bg"));
+    const col = new Float32Array(ny);
+    for (let ix = 0; ix < nx; ix++) {
+      const x = (ix + 0.5) / nx * D;
+      let mx = 0;
+      if (x < p.L) {
+        const c = propagate(m.inc0, x, k);
+        for (let iy = 0; iy < ny; iy++) { const y = DEF.H / 2 - (iy + 0.5) / ny * DEF.H; col[iy] = abs2(evalAt(c, y)); if (col[iy] > mx) mx = col[iy]; }
+      } else {
+        const cs = m.comps.map(c => propagate(c, x - p.L, k));
+        for (let iy = 0; iy < ny; iy++) {
+          const y = DEF.H / 2 - (iy + 0.5) / ny * DEF.H;
+          const a = evalAt(cs[0], y), b = evalAt(cs[1], y);
+          let v = (cfg.u ? abs2(a) : 0) + (cfg.l ? abs2(b) : 0);
+          if (cfg.u && cfg.l) v += 2 * cfg.g * (a[0] * b[0] + a[1] * b[1]);
+          col[iy] = Math.max(0, v); if (col[iy] > mx) mx = col[iy];
+        }
+      }
+      for (let iy = 0; iy < ny; iy++) {
+        const t = mx > 0 ? Math.pow(col[iy] / mx, 0.6) * 0.85 : 0;
+        const o = (iy * nx + ix) * 4;
+        im.data[o] = cb[0] + (cw[0] - cb[0]) * t; im.data[o + 1] = cb[1] + (cw[1] - cb[1]) * t;
+        im.data[o + 2] = cb[2] + (cw[2] - cb[2]) * t; im.data[o + 3] = 255;
+      }
+    }
+    octx.putImageData(im, 0, 0);
+    imgCache.set(key, off); return off;
+  }
+  // Split a canvas into the apparatus, an optional profile strip on its right, and a label band.
+  function layout(w, h, profFrac, extraFrac) {
+    const band = 24, gap = 8;
+    const right = w * (extraFrac || 0);
+    const pw = Math.max(64, (w - right) * profFrac);
+    const app = { x0: 10, x1: w - right - pw - gap, y0: 10, y1: h - band };
+    const prof = { x0: app.x1 + gap, x1: w - right - 10, y0: app.y0, y1: app.y1 };
+    return { app, prof, right: { x0: w - right, x1: w, y0: app.y0, y1: app.y1 } };
+  }
+  function apparatus(ctx, R, m, cfg) {
+    const p = m.p, D = p.L + p.Z;
+    const X = (x) => R.x0 + x / D * (R.x1 - R.x0);
+    const Y = (y) => R.y0 + (DEF.H / 2 - y) / DEF.H * (R.y1 - R.y0);
+    ctx.fillStyle = css("--plot-bg"); ctx.fillRect(R.x0, R.y0, R.x1 - R.x0, R.y1 - R.y0);
+    if (cfg.wave !== false) {
+      const img = fieldImage(m, cfg, Math.min(300, Math.max(60, Math.round(R.x1 - R.x0))), Math.min(240, Math.max(60, Math.round(R.y1 - R.y0))));
+      ctx.save(); ctx.globalAlpha = cfg.waveAlpha === undefined ? 1 : cfg.waveAlpha;
+      ctx.imageSmoothingEnabled = true; ctx.drawImage(img, R.x0, R.y0, R.x1 - R.x0, R.y1 - R.y0); ctx.restore();
+    }
+    // wall: openings ±1.5 σa around each open slit, closed slits drawn solid
+    const core = 1.5 * p.sigA, wx = X(p.L) - 3, ww = 6;
+    const openings = [];
+    if (cfg.u) openings.push([p.d / 2 + core, p.d / 2 - core]);
+    if (cfg.l) openings.push([-p.d / 2 + core, -p.d / 2 - core]);
+    ctx.fillStyle = css("--muted");
+    let top = DEF.H / 2;
+    openings.forEach(([a, b]) => { ctx.fillRect(wx, Y(top), ww, Y(a) - Y(top)); top = b; });
+    ctx.fillRect(wx, Y(top), ww, Y(-DEF.H / 2) - Y(top));
+    if (cfg.det) {
+      ctx.save(); ctx.strokeStyle = css("--upper"); ctx.lineWidth = 2; ctx.globalAlpha = 0.35 + 0.65 * cfg.det;
+      ctx.strokeRect(wx - 6, Y(p.d / 2 + core) - 3, ww + 12, Y(p.d / 2 - core) - Y(p.d / 2 + core) + 6);
+      ctx.fillStyle = css("--upper"); ctx.font = "600 11px " + css("--font-body"); ctx.textAlign = "left"; ctx.textBaseline = "bottom";
+      ctx.fillText("detector", wx + ww + 9, Y(p.d / 2 + core) - 2); ctx.restore();
+    }
+    // screen
+    ctx.fillStyle = css("--ink"); ctx.fillRect(X(D) - 2, R.y0, 3, R.y1 - R.y0);
+    // labels
+    ctx.fillStyle = css("--muted"); ctx.font = "12px " + css("--font-body"); ctx.textBaseline = "top";
+    if (X(p.L) - R.x0 > 90) { ctx.textAlign = "left"; ctx.fillText("source", R.x0 + 4, R.y1 + 6); }
+    ctx.textAlign = "center"; ctx.fillText("wall", X(p.L), R.y1 + 6);
+    ctx.textAlign = "right"; ctx.fillText("screen", X(D) + 2, R.y1 + 6);
+    return { X, Y, D };
+  }
+  // Screen profile drawn sideways, aligned with the screen's y axis.
+  function profile(ctx, P, ys, series, vmax, label) {
+    const Y = (y) => P.y0 + (DEF.H / 2 - y) / DEF.H * (P.y1 - P.y0);
+    const V = (v) => P.x0 + v / vmax * (P.x1 - P.x0);
+    ctx.save();
+    ctx.strokeStyle = css("--grid"); ctx.lineWidth = 1;
+    ctx.fillStyle = css("--muted"); ctx.font = "11px " + css("--font-body"); ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    for (let t = -600; t <= 600; t += 300) {
+      ctx.beginPath(); ctx.moveTo(P.x0, Y(t)); ctx.lineTo(P.x1, Y(t)); ctx.stroke();
+      if (t > -600 && t < 600) ctx.fillText((t > 0 ? "+" : t < 0 ? "−" : "") + Math.abs(t), P.x1, Y(t) - 7);
+    }
+    ctx.strokeStyle = css("--line"); ctx.beginPath(); ctx.moveTo(P.x0, P.y0); ctx.lineTo(P.x0, P.y1); ctx.stroke();
+    series.forEach(s => {
+      const path = () => { ctx.beginPath(); ys.forEach((y, i) => { const px = V(s.vals[i]), py = Y(y); if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); }); };
+      if (s.fill) { path(); ctx.lineTo(P.x0, Y(ys[ys.length - 1])); ctx.lineTo(P.x0, Y(ys[0])); ctx.closePath(); ctx.globalAlpha = 0.18; ctx.fillStyle = s.color; ctx.fill(); ctx.globalAlpha = 1; }
+      path(); ctx.strokeStyle = s.color; ctx.lineWidth = s.width || 2; ctx.setLineDash(s.dash || []); ctx.stroke(); ctx.setLineDash([]);
+    });
+    ctx.fillStyle = css("--muted"); ctx.font = "12px " + css("--font-body"); ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText(label || "probability", P.x0 + 2, P.y1 + 6);
+    ctx.restore();
+    return { Y, V };
+  }
+
+  // =========================================================
   // Figure 1: one slit, the sum, both slits
   // =========================================================
-  const f1 = { show: "both", lam: 50, d: 300 };
+  const f1 = { show: "upper", lam: 50, d: 300 };
   const f1Btns = { upper: "f1-upper", lower: "f1-lower", sum: "f1-sum", both: "f1-both" };
+  const f1Cfg = { upper: { u: true, l: false, g: 1 }, lower: { u: false, l: true, g: 1 }, sum: { u: true, l: true, g: 0 }, both: { u: true, l: true, g: 1 } };
   function drawF1() {
     const m = buildModel({ lam: f1.lam, d: f1.d });
-    const sc = m.screen(700);
+    const sc = m.screen(500);
     const pu = sc.U.map(abs2), pl = sc.L.map(abs2);
     const sum = pu.map((v, i) => v + pl[i]);
     const both = sc.U.map((u, i) => abs2(cadd(u, sc.L[i])));
     const vmax = Math.max(...both, ...sum) * 1.08;
     const { ctx, w, h } = prep(document.getElementById("c1"));
-    const box = plotBox(w, h);
-    axes(ctx, box, -600, 600, { ylabel: "relative probability" });
-    const ink = css("--ink");
-    const legend = [];
-    if (f1.show === "upper" || f1.show === "sum") { curve(ctx, box, sc.ys, pu, vmax, css("--upper"), 2, null, f1.show === "upper"); legend.push(["--upper", "upper slit only"]); }
-    if (f1.show === "lower" || f1.show === "sum") { curve(ctx, box, sc.ys, pl, vmax, css("--lower"), 2, null, f1.show === "lower"); legend.push(["--lower", "lower slit only"]); }
-    if (f1.show === "sum") { curve(ctx, box, sc.ys, sum, vmax, ink, 2.2, [6, 4]); legend.push(["--ink", "the two humps added"]); }
-    if (f1.show === "both") {
-      curve(ctx, box, sc.ys, sum, vmax, css("--muted"), 1.5, [5, 4]);
-      curve(ctx, box, sc.ys, both, vmax, css("--prob"), 2.6, null, true);
-      legend.push(["--prob", "both slits open"], ["--muted", "the two humps added (for comparison)"]);
+    const L = layout(w, h, w < 560 ? 0.3 : 0.24);
+    apparatus(ctx, L.app, m, f1Cfg[f1.show]);
+    const ser = [], legend = [];
+    if (f1.show === "upper") { ser.push({ vals: pu, color: css("--upper"), fill: true }); legend.push(["--upper", "upper slit only"]); }
+    if (f1.show === "lower") { ser.push({ vals: pl, color: css("--lower"), fill: true }); legend.push(["--lower", "lower slit only"]); }
+    if (f1.show === "sum") {
+      ser.push({ vals: pu, color: css("--upper"), width: 1.5 }, { vals: pl, color: css("--lower"), width: 1.5 }, { vals: sum, color: css("--ink"), width: 2.2, dash: [6, 4] });
+      legend.push(["--ink", "the two one-slit patterns added (what each-slit-or-the-other predicts)"]);
     }
+    if (f1.show === "both") {
+      ser.push({ vals: sum, color: css("--muted"), width: 1.4, dash: [5, 4] }, { vals: both, color: css("--prob"), width: 2.6, fill: true });
+      legend.push(["--prob", "both slits open"], ["--muted", "the two one-slit patterns added, for comparison"]);
+    }
+    profile(ctx, L.prof, sc.ys, ser, vmax);
     document.getElementById("fig1-legend").innerHTML = legend.map(([c, t]) =>
       `<span class="key" style="color:var(${c})"><span class="swatch" style="background:var(${c})"></span><span style="color:var(--muted)">${t}</span></span>`).join("");
     const dy = f1.lam * DEF.Z / f1.d;
@@ -696,10 +815,9 @@
   };
   bindSlider("f1-lam", v => { f1.lam = v; drawF1(); }, " nm");
   bindSlider("f1-d", v => { f1.d = v; drawF1(); }, " nm");
-  f1.show = "upper";
 
   // =========================================================
-  // Figure 2: single hits build the pattern
+  // Figure 2: single hits on the screen build the pattern
   // =========================================================
   const NB = 60;
   const f2 = { hits: new Array(NB).fill(0), dots: [], n: 0, flash: null };
@@ -726,44 +844,37 @@
     }
     if (f2.dots.length > 3000) f2.dots.splice(0, f2.dots.length - 3000);
     drawF2();
-    if (n === 1 && !reduceMotion) animateFlash();
-  }
-  function animateFlash() {
-    const step = () => { drawF2(); if (f2.flash && performance.now() - f2.flash.t < 900) requestAnimationFrame(step); };
-    requestAnimationFrame(step);
+    if (n === 1 && !reduceMotion) {
+      const step = () => { drawF2(); if (f2.flash && performance.now() - f2.flash.t < 900) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    }
   }
   function drawF2() {
     const { ctx, w, h } = prep(document.getElementById("c2"));
-    const strip = { x0: 16, x1: w - 16, y0: 12, y1: Math.round(h * 0.28) };
-    const box = { x0: 16, x1: w - 16, y0: strip.y1 + 24, y1: h - 42 };
-    // screen strip
-    ctx.fillStyle = css("--tint"); ctx.fillRect(strip.x0, strip.y0, strip.x1 - strip.x0, strip.y1 - strip.y0);
-    ctx.fillStyle = css("--muted"); ctx.font = "12px " + css("--font-body"); ctx.textBaseline = "top"; ctx.textAlign = "left";
-    const X = (y) => strip.x0 + (y + DEF.H / 2) / DEF.H * (strip.x1 - strip.x0);
+    const L = layout(w, h, w < 560 ? 0.3 : 0.24);
+    const A = apparatus(ctx, L.app, m2, { u: true, l: true, g: 1, waveAlpha: 0.45 });
+    // the screen as a band where hits land
+    const sx1 = A.X(A.D), sx0 = Math.max(L.app.x0, sx1 - 18);
+    ctx.fillStyle = css("--tint"); ctx.globalAlpha = 0.9; ctx.fillRect(sx0, L.app.y0, sx1 - sx0, L.app.y1 - L.app.y0); ctx.globalAlpha = 1;
     ctx.fillStyle = css("--prob");
-    const rad = f2.n > 400 ? 1.2 : 2.2;
-    f2.dots.forEach(([y, r]) => { ctx.globalAlpha = 0.75; ctx.beginPath(); ctx.arc(X(y), strip.y0 + 5 + r * (strip.y1 - strip.y0 - 10), rad, 0, 7); ctx.fill(); });
+    const rad = f2.n > 400 ? 1.1 : 2;
+    f2.dots.forEach(([y, r]) => { ctx.globalAlpha = 0.8; ctx.beginPath(); ctx.arc(sx0 + 2 + r * (sx1 - sx0 - 4), A.Y(y), rad, 0, 7); ctx.fill(); });
     ctx.globalAlpha = 1;
     if (f2.flash) {
       const age = (performance.now() - f2.flash.t) / 900;
-      if (age < 1) { ctx.strokeStyle = css("--prob"); ctx.lineWidth = 2; ctx.globalAlpha = 1 - age; ctx.beginPath(); ctx.arc(X(f2.flash.y), (strip.y0 + strip.y1) / 2, 6 + 22 * age, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
+      if (age < 1) { ctx.strokeStyle = css("--prob"); ctx.lineWidth = 2; ctx.globalAlpha = 1 - age; ctx.beginPath(); ctx.arc((sx0 + sx1) / 2, A.Y(f2.flash.y), 6 + 22 * age, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
     }
-    ctx.fillStyle = css("--muted"); ctx.fillText("detector screen (each dot is one electron)", strip.x0 + 6, strip.y1 + 4);
-    // histogram
-    axes(ctx, box, -600, 600, { ylabel: "hits per pixel" });
+    // histogram, sideways
     const expectedMax = Math.max(...pBin) * Math.max(1, f2.n);
     const obsMax = Math.max(...f2.hits.map(v => v + Math.sqrt(v)));
     const vmax = Math.max(expectedMax, obsMax, 1) * 1.1;
-    const bw = (box.x1 - box.x0) / NB;
-    ctx.fillStyle = css("--prob");
-    f2.hits.forEach((c, i) => { if (!c) return; const bh = c / vmax * (box.y1 - box.y0); ctx.globalAlpha = 0.85; ctx.fillRect(box.x0 + i * bw + 1, box.y1 - bh, bw - 2, bh); });
-    ctx.globalAlpha = 1;
-    const xs = pBin.map((_, i) => -600 + (i + 0.5) * DEF.H / NB);
-    // smooth predicted curve in counts
-    const step = DEF.H / (sc2.ys.length - 1);
-    const total = dens2.reduce((a, b) => a + b, 0);
+    const step = DEF.H / (sc2.ys.length - 1), total = dens2.reduce((a, b) => a + b, 0);
     const pred = dens2.map(v => v / total * (DEF.H / NB) / step * Math.max(1, f2.n));
-    curve(ctx, box, sc2.ys, pred, vmax, css("--ink"), 1.8);
+    const bh = (L.prof.y1 - L.prof.y0) / NB, V = (c) => c / vmax * (L.prof.x1 - L.prof.x0);
+    ctx.fillStyle = css("--prob");
+    f2.hits.forEach((c, i) => { if (!c) return; const y = L.prof.y1 - (i + 1) * bh; ctx.globalAlpha = 0.85; ctx.fillRect(L.prof.x0, y + 0.5, V(c), Math.max(1, bh - 1)); });
+    ctx.globalAlpha = 1;
+    profile(ctx, L.prof, sc2.ys, [{ vals: pred, color: css("--ink"), width: 1.8 }], vmax, "hits per pixel");
     document.getElementById("f2-read").innerHTML = `<span>electrons sent: ${f2.n}</span><span>detector pixels: ${NB} × ${DEF.H / NB} nm</span>` +
       (f2.n === 1 ? `<span>this one landed at y = ${fmt(f2.dots[f2.dots.length - 1][0])} nm</span>` : "");
   }
@@ -774,86 +885,132 @@
   document.getElementById("f2-clear").addEventListener("click", () => { f2.hits.fill(0); f2.dots = []; f2.n = 0; f2.flash = null; drawF2(); });
 
   // =========================================================
-  // Figure 3: phasors at one screen point
+  // Figure 3: two paths to one screen point, and their arrows
   // =========================================================
   const f3 = { y: 0 };
   const m3 = buildModel();
-  const sc3 = m3.screen(700);
+  const sc3 = m3.screen(500);
   const both3 = sc3.U.map((u, i) => abs2(cadd(u, sc3.L[i])));
   const sum3 = sc3.U.map((u, i) => abs2(u) + abs2(sc3.L[i]));
   const ampMax3 = Math.sqrt(Math.max(...sc3.U.map(abs2)));
+  const pc3 = m3.comps.map(c => propagate(c, DEF.Z, m3.k));
+  let f3geom = null;
   function drawF3() {
-    const { ctx, w, h } = prep(document.getElementById("c3"));
+    const c3 = document.getElementById("c3");
+    const { ctx, w, h } = prep(c3);
     const narrow = w < 640;
-    const pw = narrow ? w : Math.round(w * 0.62);
-    const box = plotBox(pw, narrow ? h * 0.55 : h);
-    axes(ctx, box, -600, 600, { ylabel: "relative probability" });
+    const L = narrow ? layout(w, h, 0.3) : layout(w, h, 0.17, 0.3);
+    const A = apparatus(ctx, L.app, m3, { u: true, l: true, g: 1, waveAlpha: 0.55 });
     const vmax = Math.max(...both3) * 1.08;
-    curve(ctx, box, sc3.ys, sum3, vmax, css("--muted"), 1.4, [5, 4]);
-    curve(ctx, box, sc3.ys, both3, vmax, css("--prob"), 2.4, null, true);
-    const pc = m3.comps.map(c => propagate(c, DEF.Z, m3.k));
-    const u = evalAt(pc[0], f3.y), l = evalAt(pc[1], f3.y);
-    const X = box.x0 + (f3.y + 600) / 1200 * (box.x1 - box.x0);
-    ctx.strokeStyle = css("--ink"); ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]);
-    ctx.beginPath(); ctx.moveTo(X, box.y0); ctx.lineTo(X, box.y1); ctx.stroke(); ctx.setLineDash([]);
+    const P = profile(ctx, L.prof, sc3.ys, [{ vals: sum3, color: css("--muted"), width: 1.3, dash: [5, 4] }, { vals: both3, color: css("--prob"), width: 2.4, fill: true }], vmax);
+    f3geom = { app: L.app, prof: L.prof, Y: A.Y };
+    // paths from each slit to the selected point
+    const p = m3.p, py = A.Y(f3.y), sx = A.X(p.L), dx = A.X(A.D);
+    [[p.d / 2, "--upper"], [-p.d / 2, "--lower"]].forEach(([yc, c]) => {
+      ctx.strokeStyle = css(c); ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(sx, A.Y(yc)); ctx.lineTo(dx, py); ctx.stroke();
+    });
+    ctx.fillStyle = css("--ink"); ctx.beginPath(); ctx.arc(dx, py, 5, 0, 7); ctx.fill();
+    ctx.strokeStyle = css("--ink"); ctx.lineWidth = 1.2; ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(L.prof.x0, py); ctx.lineTo(L.prof.x1, py); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = css("--ink"); ctx.font = "600 12px " + css("--font-body"); ctx.textAlign = "right"; ctx.textBaseline = "bottom";
+    ctx.fillText("P", dx - 6, py - 4);
     // phasor panel
-    const R = narrow ? Math.min(w, h * 0.45) * 0.42 : Math.min(w - pw, h) * 0.36;
-    const cx = narrow ? w / 2 : pw + (w - pw) / 2, cy = narrow ? h * 0.55 + (h * 0.45) / 2 : h / 2;
-    ctx.strokeStyle = css("--grid"); ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx - R * 1.1, cy); ctx.lineTo(cx + R * 1.1, cy); ctx.moveTo(cx, cy - R * 1.1); ctx.lineTo(cx, cy + R * 1.1); ctx.stroke();
-    // rotate so psi_U points right; scale so |sum| max = 2 ampMax3 fits radius
+    const u = evalAt(pc3[0], f3.y), l = evalAt(pc3[1], f3.y);
+    let cx, cy, R;
+    if (narrow) { R = 0; } else { cx = (L.right.x0 + L.right.x1) / 2; cy = (L.right.y0 + L.right.y1) / 2; R = Math.min(L.right.x1 - L.right.x0, L.right.y1 - L.right.y0) * 0.36; }
+    if (R > 0) {
+      ctx.strokeStyle = css("--grid"); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx - R * 1.1, cy); ctx.lineTo(cx + R * 1.1, cy); ctx.moveTo(cx, cy - R * 1.1); ctx.lineTo(cx, cy + R * 1.1); ctx.stroke();
+      const ph = Math.atan2(u[1], u[0]);
+      const rot = (z) => { const c = Math.cos(-ph), s = Math.sin(-ph); return [z[0] * c - z[1] * s, z[0] * s + z[1] * c]; };
+      const k = R / (2 * ampMax3), ur = rot(u), lr = rot(l);
+      const arrow = (x0, y0, dxv, dyv, color, wdt) => {
+        const x1 = x0 + dxv * k, y1 = y0 - dyv * k;
+        ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = wdt;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+        const a = Math.atan2(y1 - y0, x1 - x0), len = Math.hypot(x1 - x0, y1 - y0);
+        if (len > 4) { const hs = Math.min(10, len * 0.4); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x1 - hs * Math.cos(a - 0.4), y1 - hs * Math.sin(a - 0.4)); ctx.lineTo(x1 - hs * Math.cos(a + 0.4), y1 - hs * Math.sin(a + 0.4)); ctx.closePath(); ctx.fill(); }
+        return [x1, y1];
+      };
+      const tip = arrow(cx, cy, ur[0], ur[1], css("--upper"), 3);
+      arrow(tip[0], tip[1], lr[0], lr[1], css("--lower"), 3);
+      arrow(cx, cy, ur[0] + lr[0], ur[1] + lr[1], css("--ink"), 2);
+      ctx.fillStyle = css("--muted"); ctx.font = "12px " + css("--font-body"); ctx.textAlign = "center"; ctx.textBaseline = "top";
+      ctx.fillText("arrows at P", cx, cy + R * 1.15);
+    }
+    drawPhasorSmall(u, l, narrow);
+    // readout
     const ph = Math.atan2(u[1], u[0]);
-    const rot = (z) => { const c = Math.cos(-ph), s = Math.sin(-ph); return [z[0] * c - z[1] * s, z[0] * s + z[1] * c]; };
-    const sc = R / (2 * ampMax3);
-    const ur = rot(u), lr = rot(l);
-    const arrow = (x0, y0, dx, dy, color, wdt) => {
-      const x1 = x0 + dx * sc, y1 = y0 - dy * sc;
-      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = wdt;
-      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
-      const a = Math.atan2(y1 - y0, x1 - x0), L = Math.hypot(x1 - x0, y1 - y0);
-      if (L > 4) { const hs = Math.min(10, L * 0.4); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x1 - hs * Math.cos(a - 0.4), y1 - hs * Math.sin(a - 0.4)); ctx.lineTo(x1 - hs * Math.cos(a + 0.4), y1 - hs * Math.sin(a + 0.4)); ctx.closePath(); ctx.fill(); }
-      return [x1, y1];
-    };
-    const tip = arrow(cx, cy, ur[0], ur[1], css("--upper"), 3);
-    arrow(tip[0], tip[1], lr[0], lr[1], css("--lower"), 3);
-    arrow(cx, cy, ur[0] + lr[0], ur[1] + lr[1], css("--ink"), 2);
-    ctx.fillStyle = css("--muted"); ctx.font = "12px " + css("--font-body"); ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillText("arrows at the selected point", cx, cy + R * 1.12);
     let dphi = Math.atan2(l[1], l[0]) - ph; dphi = Math.atan2(Math.sin(dphi), Math.cos(dphi));
+    const rU = Math.hypot(p.Z, f3.y - p.d / 2), rL = Math.hypot(p.Z, f3.y + p.d / 2);
     const n = ampMax3 * ampMax3;
     document.getElementById("f3-read").innerHTML =
+      `<span>r<sub>L</sub> − r<sub>U</sub> = ${(rL - rU).toFixed(1)} nm = ${((rL - rU) / p.lam).toFixed(2)} λ</span>` +
       `<span>angle between arrows: ${fmt(Math.abs(dphi) * 180 / Math.PI)}°</span>` +
       `<span>|ψU|² + |ψL|² = ${fmt((abs2(u) + abs2(l)) / n, 2)}</span>` +
       `<span>|ψU + ψL|² = ${fmt(abs2(cadd(u, l)) / n, 2)}</span>` +
-      `<span class="muted">(units: peak of one slit alone = 1)</span>`;
+      `<span class="muted">(peak of one slit alone = 1)</span>`;
   }
-  bindSlider("f3-y", v => { f3.y = v; drawF3(); }, " nm");
+  // On narrow screens the arrows get their own small canvas under the figure.
+  function drawPhasorSmall(u, l, show) {
+    const cv = document.getElementById("c3b");
+    cv.hidden = !show; if (!show) return;
+    const { ctx, w, h } = prep(cv);
+    const R = Math.min(w, h) * 0.36, cx = w / 2, cy = h / 2;
+    ctx.strokeStyle = css("--grid"); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.stroke();
+    const ph = Math.atan2(u[1], u[0]);
+    const rot = (z) => { const c = Math.cos(-ph), s = Math.sin(-ph); return [z[0] * c - z[1] * s, z[0] * s + z[1] * c]; };
+    const k = R / (2 * ampMax3), ur = rot(u), lr = rot(l);
+    const seg = (x0, y0, v, color, wdt) => { const x1 = x0 + v[0] * k, y1 = y0 - v[1] * k; ctx.strokeStyle = color; ctx.lineWidth = wdt; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); return [x1, y1]; };
+    const t = seg(cx, cy, ur, css("--upper"), 3); seg(t[0], t[1], lr, css("--lower"), 3); seg(cx, cy, [ur[0] + lr[0], ur[1] + lr[1]], css("--ink"), 2);
+    ctx.fillStyle = css("--muted"); ctx.font = "12px " + css("--font-body"); ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillText("arrows at P", cx, cy + R + 6);
+  }
+  const f3y = document.getElementById("f3-y");
+  const updY3 = bindSlider("f3-y", v => { f3.y = v; drawF3(); }, " nm");
+  // drag on the screen or the profile to move P
+  (() => {
+    const c3 = document.getElementById("c3"); let drag = false;
+    const setFrom = (ev) => {
+      if (!f3geom) return;
+      const r = c3.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top;
+      const yy = DEF.H / 2 - (y - f3geom.app.y0) / (f3geom.app.y1 - f3geom.app.y0) * DEF.H;
+      f3y.value = Math.max(-580, Math.min(580, Math.round(yy / 2) * 2)); updY3();
+    };
+    c3.addEventListener("pointerdown", (ev) => {
+      if (!f3geom) return;
+      const r = c3.getBoundingClientRect(), x = ev.clientX - r.left;
+      if (x < f3geom.app.x1 - (f3geom.app.x1 - f3geom.app.x0) * 0.25 || x > f3geom.prof.x1) return;
+      drag = true; c3.setPointerCapture(ev.pointerId); setFrom(ev);
+    });
+    c3.addEventListener("pointermove", (ev) => { if (drag) setFrom(ev); });
+    c3.addEventListener("pointerup", () => { drag = false; });
+  })();
 
   // =========================================================
   // Figure 4: which-slit record, overlap gamma
   // =========================================================
   const f4 = { g: 1 };
   const m4 = buildModel();
-  const sc4 = m4.screen(700);
+  const sc4 = m4.screen(500);
   function drawF4() {
     const { ctx, w, h } = prep(document.getElementById("c4"));
-    const box = plotBox(w, h);
-    axes(ctx, box, -600, 600, { ylabel: "relative probability" });
+    const L = layout(w, h, w < 560 ? 0.3 : 0.24);
+    apparatus(ctx, L.app, m4, { u: true, l: true, g: Math.round(f4.g * 20) / 20, det: 1 - f4.g });
     const pu = sc4.U.map(abs2), pl = sc4.L.map(abs2);
     const cross = sc4.U.map((u, i) => 2 * (u[0] * sc4.L[i][0] + u[1] * sc4.L[i][1]));
     const full = pu.map((v, i) => v + pl[i] + cross[i]);
     const inc = pu.map((v, i) => v + pl[i]);
     const cur = pu.map((v, i) => v + pl[i] + f4.g * cross[i]);
     const vmax = Math.max(...full) * 1.08;
-    curve(ctx, box, sc4.ys, full, vmax, css("--ink"), 1.3, [5, 4]);
-    curve(ctx, box, sc4.ys, inc, vmax, css("--muted"), 1.3, [2, 4]);
-    curve(ctx, box, sc4.ys, cur, vmax, css("--prob"), 2.6, null, true);
-    const mx = Math.max(...cur), mid = cur.length >> 1;
-    let mn = Infinity; for (let i = mid - 60; i < mid + 60; i++) mn = Math.min(mn, cur[i]);
-    const vis = (Math.max(...cur.slice(mid - 60, mid + 60)) - mn) / (Math.max(...cur.slice(mid - 60, mid + 60)) + mn);
+    profile(ctx, L.prof, sc4.ys, [
+      { vals: full, color: css("--ink"), width: 1.3, dash: [5, 4] },
+      { vals: inc, color: css("--muted"), width: 1.3, dash: [2, 4] },
+      { vals: cur, color: css("--prob"), width: 2.6, fill: true }], vmax);
+    const mid = cur.length >> 1, win = cur.slice(mid - 45, mid + 45);
+    const mx = Math.max(...win), mn = Math.min(...win);
     document.getElementById("f4-read").innerHTML =
-      `<span>γ = ${f4.g.toFixed(2)}</span><span>${f4.g >= 0.99 ? "records indistinguishable" : f4.g <= 0.01 ? "records perfectly distinguishable (the app's detector)" : "records partly distinguishable"}</span><span>fringe visibility near center ≈ ${vis.toFixed(2)}</span>`;
+      `<span>γ = ${f4.g.toFixed(2)}</span><span>${f4.g >= 0.99 ? "records indistinguishable" : f4.g <= 0.01 ? "records perfectly distinguishable (the app's detector)" : "records partly distinguishable"}</span><span>fringe visibility near center ≈ ${((mx - mn) / (mx + mn)).toFixed(2)}</span>`;
   }
   const g4 = document.getElementById("f4-g");
   const updG = bindSlider("f4-g", v => { f4.g = v; drawF4(); }, "", 2);
