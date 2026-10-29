@@ -64,6 +64,7 @@ vec2 initialPacketAtPx(vec2 xPx, float t){
   float amp = exp(-dot(d,d)/(2.0*sqr(uPacketSigmaPx)));
 
   float k  = uP0/uHBAR;
+  // Oblique incidence is intentional: the incoming packet has equal x and y momentum.
   vec2 dir = normalize(vec2(1.0, 1.0));
   float phaseSpace = k * dot(dir, d);
   float phaseTime  = -kineticEnergy() * t / uHBAR;

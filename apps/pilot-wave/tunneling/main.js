@@ -1,5 +1,11 @@
+import "../../../shared/qontic-controls.js";
+import { mountQonticShell } from "../../../shared/qontic-shell.js";
+import { mountQonticMedia } from "../../../shared/qontic-media.js";
+import { mountCoordinateTools, mountDistanceScale } from "../../../shared/qontic-overlays.js";
+import { mountQonticShortcuts } from "../../../shared/qontic-shortcuts.js";
+
 const canvas = document.getElementById("c");
-const gl = canvas.getContext("webgl2", { antialias: false, alpha: false, depth: false, stencil: false });
+const gl = canvas.getContext("webgl2", { antialias: false, alpha: false, depth: false, stencil: false, preserveDrawingBuffer: true });
 if (!gl) throw new Error("WebGL2 not available.");
 
 gl.disable(gl.DEPTH_TEST);
@@ -49,7 +55,7 @@ const params = {
   dotGain: 1.,
 
   showTrail: 1,
-  trailHalfLife: 100.0,
+  trailHalfLife: 99.0,
   trailVisGain: .8,
   trailVisGamma: 1,
   trailStampGain: 0.55,
@@ -57,6 +63,7 @@ const params = {
   trailBlendMode: 1,
 
   paletteId: 5,
+  nmPerGridCell: 1.0,
 };
 
 const PALETTE_NAMES = [
@@ -95,6 +102,8 @@ const GUIDING_MODE_NAMES = [
 const BARRIER_V0_MAX = 12.0;
 
 let paused = false;
+let autoRun = true;
+let elapsedSimulationTime = 0;
 const RECORDING_CONFIG = {
   fps: 60,
   videoBitsPerSecond: 14_000_000,
@@ -114,7 +123,31 @@ const recordingState = {
   pendingFileName: "",
 };
 
-const controls = document.getElementById("controls");
+mountQonticShell({ title: "Quantum Tunneling", purpose: "Explore the wave packet and pilot-wave paths through a finite potential barrier.", badge: "Pilot Wave", navigation: "breadcrumbs", compactHeader: true, homeHref: "../../../index.html", version: "Quantum Tunneling · 2026-09-28" });
+const commonControls = document.querySelector("qontic-controls");
+const panes = Object.fromEntries([...document.querySelectorAll("[data-control-pane]")].map(node => [node.dataset.controlPane, node]));
+let controls = panes.core;
+commonControls.addEventListener("qontic:tab", ({ detail }) => {
+  for (const [name, pane] of Object.entries(panes)) pane.hidden = name !== detail.tab;
+});
+for (const button of document.querySelectorAll("[data-view]")) button.addEventListener("click", () => {
+  const view = button.dataset.view;
+  for (const tab of document.querySelectorAll("[data-view]")) tab.classList.toggle("active", tab === button);
+  for (const panel of document.querySelectorAll("[data-panel]")) panel.hidden = panel.dataset.panel !== view;
+  if (view === "demo") requestAnimationFrame(() => {
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    if (canvas.width !== Math.floor(canvas.clientWidth * dpr) || canvas.height !== Math.floor(canvas.clientHeight * dpr)) rebuildSimulation();
+    applyViewTransform();
+  });
+});
+const stageResize = new ResizeObserver(() => {
+  if (document.querySelector('[data-panel="demo"]').hidden || !simW) return;
+  const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  if (canvas.width === Math.floor(canvas.clientWidth * dpr) && canvas.height === Math.floor(canvas.clientHeight * dpr)) return;
+  rebuildSimulation();
+  applyViewTransform();
+});
+stageResize.observe(document.getElementById("wrap"));
 const statsEl = document.getElementById("stats");
 
 function fmt(v) {
@@ -123,9 +156,64 @@ function fmt(v) {
   return v.toFixed(3).replace(/\.?0+$/, "");
 }
 
-function addSlider(key, label, min, max, step, onChange = null) {
+// The solver uses dimensionless grid steps. Interpret one step as L meters and
+// one model mass as the electron mass; the physical scales then follow from ℏ.
+const SI = {
+  hbar: 1.054571817e-34, electronMass: 9.1093837139e-31,
+  electronVolt: 1.602176634e-19, lightSpeed: 299792458,
+};
+function physicalScale() {
+  const length = params.nmPerGridCell * 1e-9;
+  const momentum = SI.hbar / (params.hbar * length);
+  return {
+    momentumEVc: momentum * SI.lightSpeed / SI.electronVolt,
+    energyMeV: momentum * momentum * params.mass / (SI.electronMass * SI.electronVolt) * 1000,
+    timeFs: params.hbar * SI.electronMass * length * length / (SI.hbar * params.mass) * 1e15,
+  };
+}
+function formatDistance(value) {
+  return Math.abs(value) >= 1000 ? `${fmt(value / 1000)} µm` : `${fmt(value)} nm`;
+}
+function formatEnergy(meV) {
+  return Math.abs(meV) >= 1000 ? `${fmt(meV / 1000)} eV` : `${fmt(meV)} meV`;
+}
+function formatTime(fs) {
+  return Math.abs(fs) >= 1000 ? `${fmt(fs / 1000)} ps` : `${fmt(fs)} fs`;
+}
+function sliderDisplay(key, value) {
+  const units = physicalScale();
+  switch (key) {
+    case "p0": return { value: value * units.momentumEVc, unit: "eV/c", factor: units.momentumEVc };
+    case "V0": return { value: value * units.energyMeV, unit: "meV", factor: units.energyMeV };
+    case "packetSigma": case "barrierThick": case "absorbPx":
+      return { value: value * params.nmPerGridCell, unit: "nm", factor: params.nmPerGridCell };
+    case "dt": return { value: value * units.timeFs, unit: "fs", factor: units.timeFs };
+    case "trailHalfLife": return { value: value * units.timeFs / 1000, unit: "ps", factor: units.timeFs / 1000 };
+    case "spinMagnitude": return { value, unit: "ℏ", factor: 1 };
+    case "dotSize": case "trailWidth": return { value, unit: "screen px", factor: 1 };
+    case "dotGain": case "simScale": return { value, unit: "×", factor: 1 };
+    case "stepsPerFrame": return { value, unit: "steps/frame", factor: 1 };
+    case "nParticles": return { value, unit: "particles", factor: 1 };
+    case "nmPerGridCell": return { value, unit: "nm/step", factor: 1 };
+    default: return { value, unit: "", factor: 1 };
+  }
+}
+function sliderNumber(value) {
+  return String(Number(value.toPrecision(5)));
+}
+const sliderReadouts = [];
+function refreshSliderReadouts() {
+  for (const { key, input, number, unit } of sliderReadouts) {
+    const display = sliderDisplay(key, parseFloat(input.value));
+    number.value = sliderNumber(display.value);
+    unit.textContent = display.unit;
+    input.setAttribute("aria-valuetext", `${number.value} ${display.unit}`.trim());
+  }
+}
+
+function addSlider(key, label, min, max, step, onChange = null, commitOnly = false) {
   const row = document.createElement("div");
-  row.className = "row";
+  row.className = "row slider-row";
 
   const lab = document.createElement("label");
   lab.textContent = label;
@@ -136,22 +224,46 @@ function addSlider(key, label, min, max, step, onChange = null) {
   input.max = max;
   input.step = step;
   input.value = params[key];
+  input.id = `control-${key}`;
+  lab.htmlFor = input.id;
 
-  const val = document.createElement("div");
-  val.className = "val";
-  val.textContent = fmt(params[key]);
+  const number = document.createElement("input");
+  number.className = "slider-number";
+  number.type = "number";
+  number.step = "any";
+  number.setAttribute("aria-label", `${label} value`);
+  const unit = document.createElement("span");
+  unit.className = "slider-unit";
+
+  function commitValue(raw) {
+    if (!Number.isFinite(raw)) { refreshSliderReadouts(); return; }
+    const clamped = Math.min(max, Math.max(min, raw));
+    const snapped = Math.min(max, Math.max(min, min + Math.round((clamped - min) / step) * step));
+    input.value = String(Number(snapped.toFixed(8)));
+    params[key] = parseFloat(input.value);
+    refreshSliderReadouts();
+    if (onChange) onChange();
+  }
 
   input.addEventListener("input", () => {
     const v = parseFloat(input.value);
-    params[key] = v;
-    val.textContent = fmt(v);
+    if (!commitOnly) params[key] = v;
+    refreshSliderReadouts();
   });
-  input.addEventListener("change", () => onChange && onChange());
+  input.addEventListener("change", () => {
+    commitValue(parseFloat(input.value));
+  });
+  number.addEventListener("change", () => {
+    commitValue(parseFloat(number.value) / sliderDisplay(key, parseFloat(input.value)).factor);
+  });
 
   row.appendChild(lab);
   row.appendChild(input);
-  row.appendChild(val);
+  row.appendChild(number);
+  row.appendChild(unit);
   controls.appendChild(row);
+  sliderReadouts.push({ key, input, number, unit });
+  refreshSliderReadouts();
 }
 
 function addToggleInt(key, label) {
@@ -222,20 +334,26 @@ function addSectionHeader(label) {
   controls.appendChild(header);
 }
 
+controls = panes.advanced;
 addSectionHeader("Performance");
-addSlider("simScale", "sim scale", 0.25, 1.0, 0.05, () => rebuildSimulation());
+addSlider("simScale", "Grid resolution", 0.25, 1.0, 0.05, () => rebuildSimulation());
 addSlider("stepsPerFrame", "Steps/frame", 1, 100, 1);
 
+controls = panes.core;
 addSectionHeader("Physical Parameters");
-addSlider("p0", "momentum p", 0.5, 8.0, 0.1, () => resetAll());
-addSlider("dt", "dt", 0.01, 0.04, 0.001);
+addSlider("p0", "Momentum p", 0.5, 8.0, 0.1, () => resetAll());
+controls = panes.advanced;
+addSlider("dt", "Time step", 0.01, 0.04, 0.001);
+controls = panes.core;
 //addSlider("packetX", "packet start x", 0.05, 0.95, 0.01, () => resetAll());
 //addSlider("packetY", "packet start y", 0.05, 0.95, 0.01, () => resetAll());
-addSlider("packetSigma", "packet sigma", 8.0, 80.0, 1.0, () => resetAll());
-addSlider("V0", "barrier V0", 0.0, BARRIER_V0_MAX, 0.1, () => resetAll());
-addSlider("barrierThick", "barrier thickness", 4.0, 150.0, 1.0, () => resetAll());
-addSlider("absorbPx", "absorb boundary", 0.0, 60.0, 1.0);
-addSlider("spinMagnitude", "spin |s|", 0.0, 2.0, 0.5);
+addSlider("packetSigma", "Packet width σ", 8.0, 80.0, 1.0, () => resetAll());
+addSlider("V0", "Barrier height", 0.0, BARRIER_V0_MAX, 0.1, () => resetAll());
+addSlider("barrierThick", "Barrier width", 4.0, 150.0, 1.0, () => resetAll());
+controls = panes.advanced;
+addSlider("absorbPx", "Absorber width", 0.0, 60.0, 1.0);
+addSlider("spinMagnitude", "Spin |s|", 0.0, 2.0, 0.5);
+controls = panes.core;
 {
   const row = document.createElement("div");
   row.className = "row";
@@ -293,42 +411,63 @@ addSlider("spinMagnitude", "spin |s|", 0.0, 2.0, 0.5);
   row.appendChild(val);
   controls.appendChild(row);
 }
+const guidanceNote = document.createElement("p");
+guidanceNote.className = "calibration-note";
+guidanceNote.textContent = "Pauli spin guidance can curve paths before the barrier. Select Schrodinger to see paths without the spin current.";
+panes.core.appendChild(guidanceNote);
 
+controls = panes.display;
 addSectionHeader("Visual Parameters");
+addCycleButton("paletteId", "wave palette", PALETTE_NAMES);
 addToggleInt("showPhase", "show phase");
 addToggleInt("showParticles", "show particles");
-addSlider("nParticles", "particle count", 1, 3000, 1, () => rebuildParticles());
-addSlider("dotSize", "particle size", 2.0, 16.0, 0.5);
-addSlider("dotGain", "particle brightness", 0.1, 3.0, 0.1);
+controls = panes.core;
+addSlider("nParticles", "Particle count", 1, 3000, 1, () => {
+  if (!simW) return; // The initial build will use the selected count.
+  resetAll();
+  paused = false;
+  commonControls.setAttribute("running", "true");
+}, true);
+controls = panes.display;
+addSlider("dotSize", "Marker size", 2.0, 16.0, 0.5);
+addSlider("dotGain", "Brightness", 0.1, 3.0, 0.1);
 
 addToggleInt("showTrail", "draw trails");
 addSlider("trailHalfLife", "trail half-life", 1.0, 100.0, 1.0);
 //addSlider("trailVisGain", "trail gain", 0.1, 1.0, 0.1);
 //addSlider("trailVisGamma", "trail gamma", 0.4, 2.0, 0.05);
-addSlider("trailWidth", "trail width (px)", 1, 9.0, 1);
+addSlider("trailWidth", "Trail width", 1, 9.0, 1);
+addSectionHeader("Scale calibration");
+addSlider("nmPerGridCell", "Length scale", 0.1, 10.0, 0.1, () => { scale.update(); coordinates.update(); });
+const calibrationNote = document.createElement("p");
+calibrationNote.className = "calibration-note";
+calibrationNote.textContent = "Electron mass assumed. The length scale sets the physical interpretation of the run; length, momentum, energy, and time labels change together without changing trajectories.";
+controls.appendChild(calibrationNote);
 
 //addSlider("visGain", "wave gain", 0.5, 20.0, 0.5);
 //addSlider("visGamma", "wave gamma", 0.3, 2.0, 0.05);
 
-document.getElementById("reset").onclick = () => resetAll();
-const pauseButton = document.getElementById("pause");
 const recordButton = document.getElementById("record");
-
-function syncPauseButton() {
-  pauseButton.textContent = paused ? "Resume" : "Pause";
-}
-
+recordButton.hidden = true;
+commonControls.addEventListener("qontic:start", () => { paused = false; });
+commonControls.addEventListener("qontic:stop", () => { paused = true; });
+commonControls.addEventListener("qontic:reset", () => resetAll());
+commonControls.addEventListener("qontic:autorun", ({ detail }) => { autoRun = detail.autoRun; });
+commonControls.addEventListener("qontic:theme", ({ detail }) => {
+  document.documentElement.classList.toggle("qontic-light", detail.theme === "light");
+});
 function togglePause() {
   paused = !paused;
-  syncPauseButton();
-}
-
-function canRecordCanvas() {
-  return typeof MediaRecorder !== "undefined" && typeof canvas.captureStream === "function" && !!chooseRecordingMimeType();
+  commonControls.setAttribute("running", String(!paused));
 }
 
 function isRecording() {
   return recordingState.recorder?.state === "recording";
+}
+
+function canRecordCanvas() {
+  return typeof MediaRecorder !== "undefined" &&
+    typeof canvas.captureStream === "function" && !!chooseRecordingMimeType();
 }
 
 function chooseRecordingMimeType() {
@@ -500,50 +639,51 @@ function downloadPendingRecording(clearAfterClick) {
   }
 }
 
-pauseButton.onclick = togglePause;
 recordButton.onclick = toggleRecording;
-syncPauseButton();
 syncRecordingButton();
-
-window.addEventListener("keydown", (e) => {
-  if (e.key.toLowerCase() === "r") resetAll();
-  if (e.key === " ") togglePause();
+mountQonticShortcuts({
+  togglePlayback: togglePause,
+  reset: resetAll,
+  screenshot: () => document.querySelector("#wrap .qontic-media-toolbar button[aria-label='Screenshot']")?.click(),
 });
-
-const uiBody = document.getElementById("uibody");
-const minBtn = document.getElementById("minui");
-minBtn.textContent = "-";
-
-let uiMinimized = false;
-minBtn.onclick = () => {
-  uiMinimized = !uiMinimized;
-  uiBody.style.display = uiMinimized ? "none" : "block";
-  minBtn.textContent = uiMinimized ? "+" : "-";
-};
-
-const theoryPanel = document.getElementById("theory");
-const theoryBody = document.getElementById("theorybody");
-const theoryBtn = document.getElementById("mintheory");
-
-let theoryMinimized = true;
-function syncTheoryPanel() {
-  theoryPanel.classList.toggle("is-minimized", theoryMinimized);
-  theoryBody.hidden = theoryMinimized;
-  theoryBtn.textContent = theoryMinimized ? "+" : "-";
-  theoryBtn.setAttribute("aria-expanded", String(!theoryMinimized));
-}
-
-theoryBtn.onclick = () => {
-  theoryMinimized = !theoryMinimized;
-  syncTheoryPanel();
-};
-syncTheoryPanel();
 
 const view = {
   zoom: 1,
   offsetX: 0,
   offsetY: 0,
 };
+
+const canvasHost = document.getElementById("canvas-host");
+const gridUnitsPerPixel = () => ({
+  x: params.nmPerGridCell * Math.max(64, Math.floor(canvas.width * params.simScale)) / Math.max(1, canvas.clientWidth * view.zoom),
+  y: params.nmPerGridCell * Math.max(64, Math.floor(canvas.height * params.simScale)) / Math.max(1, canvas.clientHeight * view.zoom),
+});
+const scale = mountDistanceScale({
+  host: canvasHost,
+  getUnitsPerPixel: gridUnitsPerPixel,
+  format: formatDistance,
+  storageKey: "qontic-tunneling-scale-position",
+});
+const coordinates = mountCoordinateTools({
+  host: canvasHost,
+  getBounds: () => {
+    const units = gridUnitsPerPixel();
+    return {
+      xMin: -view.offsetX * units.x,
+      xMax: (canvasHost.clientWidth - view.offsetX) * units.x,
+      yMin: -view.offsetY * units.y,
+      yMax: (canvasHost.clientHeight - view.offsetY) * units.y,
+    };
+  },
+  formatValue: formatDistance,
+  storageKey: "qontic-tunneling-grid-visible",
+});
+mountQonticMedia({
+  stage: document.getElementById("wrap"), controls: commonControls,
+  filename: "qontic-tunneling", onRecord: () => recordButton.click(),
+  scaleControl: scale, coordinateControl: coordinates,
+  getCanvases: () => [canvas, scale.canvas, coordinates.canvas],
+});
 
 function clampViewOffset() {
   const w = canvas.clientWidth;
@@ -558,6 +698,8 @@ function applyViewTransform() {
   clampViewOffset();
   canvas.style.transformOrigin = "0 0";
   canvas.style.transform = `translate(${view.offsetX}px, ${view.offsetY}px) scale(${view.zoom})`;
+  scale.update();
+  coordinates.update();
 }
 
 canvas.addEventListener("wheel", (e) => {
@@ -668,7 +810,7 @@ async function loadShaders() {
     "density_step.frag",
     "density_render.frag",
   ];
-  await Promise.all(files.map(async (f) => { SH[f] = await loadText(base + f); }));
+  await Promise.all(files.map(async (f) => { SH[f] = await loadText(base + f + "?v=3.6"); }));
 }
 
 let progWaveInit, progWaveStep, progWaveRender;
@@ -804,6 +946,7 @@ let densW = 0, densH = 0;
 let densTexA = null, densTexB = null, densFboA = null, densFboB = null, densFlip = 0;
 
 function resizeCanvas() {
+  if (!canvas.clientWidth || !canvas.clientHeight) return;
   const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
   const w = Math.floor(canvas.clientWidth * dpr);
   const h = Math.floor(canvas.clientHeight * dpr);
@@ -1069,8 +1212,8 @@ function drawKillBoundary() {
   const base = params.absorbPx + params.particleKillMargin;
   const absDistX = 1.5 * base;
   const absDistY = 1.0 * base;
-  const freezeDistX = 1.5 * absDistX;
-  const freezeDistY = 1.5 * absDistY;
+  const freezeDistX = 0.75 * absDistX;
+  const freezeDistY = 0.75 * absDistY;
 
   const scaleX = canvas.width / simW;
   const scaleY = canvas.height / simH;
@@ -1279,15 +1422,22 @@ function render() {
 
 function guidingModeLabel() {
   if ((params.guidingMode | 0) === 1) {
-    return `${GUIDING_MODE_NAMES[1]} (${params.spinSign > 0 ? "up" : "down"}, |s| = ${fmt(params.spinMagnitude)} hbar)`;
+    return `${GUIDING_MODE_NAMES[1]} (${params.spinSign > 0 ? "up" : "down"}, |s| = ${fmt(params.spinMagnitude)} ℏ)`;
   }
   return GUIDING_MODE_NAMES[params.guidingMode | 0] ?? GUIDING_MODE_NAMES[0];
 }
 
 function updateStats() {
+  const units = physicalScale();
+  const incomingEnergy = params.p0 * params.p0 / (2 * params.mass) * units.energyMeV;
+  const normalEnergy = incomingEnergy / 2; // The launch direction is (1, 1)/sqrt(2).
+  const barrierEnergy = params.V0 * units.energyMeV;
   statsEl.innerHTML =
     `<b>Guiding</b>: ${guidingModeLabel()}<br>` +
-    `<b>Sim Grid</b>: ${simW} x ${simH} (${fmt(params.simScale)}x)`;
+    `<b>Domain</b>: ${formatDistance(simW * params.nmPerGridCell)} × ${formatDistance(simH * params.nmPerGridCell)}<br>` +
+    `<b>Incoming E</b>: ${formatEnergy(incomingEnergy)}; <b>normal E</b>: ${formatEnergy(normalEnergy)}<br>` +
+    `<b>Barrier</b>: ${formatEnergy(barrierEnergy)} (central normal E ${normalEnergy < barrierEnergy ? "below" : "at or above"} barrier)<br>` +
+    `<b>Elapsed</b>: ${formatTime(elapsedSimulationTime * units.timeFs)}`;
 }
 
 function rebuildSimulation() {
@@ -1305,26 +1455,23 @@ function rebuildSimulation() {
   resetWave();
   rebuildParticles();
   rebuildDensity();
+  elapsedSimulationTime = 0;
+  scale.update();
+  coordinates.update();
 }
 
 function resetAll() {
   resetWave();
   rebuildParticles();
   clearDensity();
+  elapsedSimulationTime = 0;
 }
-
-window.addEventListener("resize", () => {
-  rebuildSimulation();
-  applyViewTransform();
-});
 
 async function main() {
   await loadShaders();
   buildPrograms();
   rebuildSimulation();
   updateStats();
-
-  params.trailHalfLife*=0.99;
 
   requestAnimationFrame(function loop() {
     resizeCanvas();
@@ -1336,6 +1483,9 @@ async function main() {
         particleUpdate();
       }
       densityStepAndStamp();
+      elapsedSimulationTime += steps * params.dt;
+      // Let the reflected and transmitted packets leave through the absorbing edges.
+      if (autoRun && elapsedSimulationTime >= 2.5 * simH * params.mass / Math.max(0.1, params.p0)) resetAll();
     }
 
     render();

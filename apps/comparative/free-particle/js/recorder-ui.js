@@ -20,7 +20,8 @@ function fpCreateVideoSnapshot(start = 'beginning') {
   state.running = false;
   state.animId = null;
   state._lastFrameTime_ms = null;
-  return { state, layout, sizes, start, seed: crypto.getRandomValues(new Uint32Array(1))[0] };
+  return { state, layout, sizes, start, theme: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
+    seed: crypto.getRandomValues(new Uint32Array(1))[0] };
 }
 
 function fpInitRecorder() {

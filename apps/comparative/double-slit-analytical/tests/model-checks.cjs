@@ -1,60 +1,95 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const vm = require('node:vm');
 const path = require('node:path');
-const root = path.resolve(__dirname, '..');
-const source = fs.readFileSync(path.join(root, 'js/double-slit.js'), 'utf8');
-const ctx = vm.createContext({console, Float64Array, Math, performance, setTimeout, clearTimeout, document:{}, $:()=>({ready(){}})});
-vm.runInContext(source, ctx);
-vm.runInContext(`k=2*Math.PI/100; omega=1; wallXWorld=0; sourceXWorld=-500; sourceYWorld=600;
-slit1XWorld=0; slit2XWorld=0; slit1YWorld=350; slit2YWorld=850; worldCanvasDy=1200;
-detectorXWorld=1000; particleType='electron'; slit1Open=true; slit2Open=true; whichPathDetector='none';
-detectorArrayFull=precomputeYArrayWithFixedX(1000,0,4000);
-singleSlitArray1=precomputeSingleSlitArray(1000,1,2000);
-singleSlitArray2=precomputeSingleSlitArray(1000,2,2000);`,ctx);
-assert.equal(vm.runInContext('getDetectionDistribution() === detectorArrayFull',ctx),true);
-assert.equal(vm.runInContext('slit2Open=false; getDetectionDistribution() === singleSlitArray1',ctx),true);
-assert.equal(vm.runInContext("whichPathDetector='slit1'; getDetectionDistribution() === singleSlitArray1",ctx),true);
-assert.equal(vm.runInContext('slit2Open=true; slit1Open=false; getDetectionDistribution() === singleSlitArray2',ctx),true);
-assert.equal(vm.runInContext('slit2Open=false; getDetectionDistribution()',ctx),null);
-vm.runInContext("slit1Open=true; slit2Open=true; whichPathDetector='none';",ctx);
-// Symmetry forbids transverse flow on the center line in this stationary setup.
-for (const x of [20,100,500,1000]) assert.ok(Math.abs(vm.runInContext(`computeBohmianVelocity(${x},600,0,0).vy`,ctx)) < 1e-8);
-// Photon normalization must agree with the declared nanometre/nanosecond units.
-assert.ok(Math.abs(vm.runInContext("particleType='photon'; Math.hypot(...Object.values(computeBohmianVelocity(500,500,0,0)))",ctx)-299792458)<1e-6);
-// Run real worker precomputation; it must echo the request id and match the main-thread full CDF.
-let reply;
-const worker = vm.createContext({Math,Float64Array,self:{postMessage:r=>reply=r}});
-vm.runInContext(fs.readFileSync(path.join(root,'js/precompute-worker.js'),'utf8'),worker);
-worker.self.onmessage({data:{seq:17,k:2*Math.PI/100,omega:1,wallXWorld:0,sourceXWorld:-500,sourceYWorld:600,
-slit1XWorld:0,slit2XWorld:0,slit1YWorld:350,slit2YWorld:850,worldCanvasDy:1200,detectorXWorld:1000,
-particleType:'electron',slit1Open:true,slit2Open:true,whichPathDetector:'none',radiusPre:5}});
-assert.equal(reply.seq,17);
-const mainCDF=vm.runInContext('detectorArrayFull.cdf',ctx);
-reply.detectorArrayFull.cdf.forEach((v,i)=>assert.ok(Math.abs(v-mainCDF[i])<1e-12));
-assert.equal(reply.detectorArrayFull.cdf.at(-1),1);
-// Validate the worker response guard against actual out-of-order delivery.
-ctx.sent=[];
-vm.runInContext('precomputeWorker={postMessage:p=>sent.push(p)}; runPrecomputeAsync(); runPrecomputeAsync();',ctx);
-assert.equal(ctx.sent.length,2);
-ctx.precomputeWorker.onmessage({data:{...reply,seq:ctx.sent[0].seq}});
-assert.equal(vm.runInContext('precomputePending',ctx),true);
-ctx.precomputeWorker.onmessage({data:{...reply,seq:ctx.sent[1].seq}});
-assert.equal(vm.runInContext('precomputePending',ctx),false);
-// Exercise the actual mode transition while isolating rendering functions.
-ctx.$=()=>({text(){return this;}});
-vm.runInContext(`hits=[2,3]; trajectories=[{}]; nHits=5; logNBranches=10;
-updateViewButton=()=>{}; updateInterpretationDisplay=()=>{}; updateMathFormulas=()=>{};
-syncMathButtons=()=>{}; drawSystem=()=>{}; changeInterpretation('manyworlds');`,ctx);
-assert.equal(ctx.nHits,0);
-assert.equal(vm.runInContext('logNBranches',ctx),0);
-assert.equal(ctx.trajectories.length,0);
-assert.equal(vm.runInContext('interpretation',ctx),'manyworlds');
-console.log('PASS: open-slit sampling, full-screen CDF, symmetry, photon units, worker parity, stale results, and clean mode transitions.');
 
-// Worker failure must restore synchronous sampling instead of blocking particles.
-vm.runInContext(`precomputePending=true; precomputeWorker={terminate(){}};
-setupGeo=()=>{precomputePending=false;}; recoverPrecompute();`,ctx);
-assert.equal(vm.runInContext('precomputePending',ctx),false);
-assert.equal(ctx.precomputeWorker,null);
-console.log('PASS: worker recovery cannot leave particle generation waiting.');
+const root = path.resolve(__dirname, '..');
+const read = relative => fs.readFileSync(path.join(root, relative), 'utf8');
+const shell = read('js/double-slit.js');
+const engine = read('js/packet-engine.js');
+const model = read('js/source-packet-model.js');
+const surface = read('js/packet-surface-3d.js');
+const template = read('js/qontic-template.js');
+const palette = read('js/palette.js');
+const content = read('js/physics-content.js');
+const html = read('index.html');
+
+// The legacy shell delegates active physics and drawing to the packet engine,
+// without retaining the retired point-source guidance implementation.
+for (const method of ['reset', 'histogram', 'drawWave', 'draw', 'frame']) {
+  assert(new RegExp(`qonticPacketEngine\\??\\.${method}\\(`).test(shell), `missing packet-engine hook ${method}`);
+}
+for (const retired of ['psiPointFunction', 'computeBohmianVelocity', 'precomputeYArrayWithFixedX']) {
+  assert(!shell.includes(retired), `retired 1/r routine still shipped: ${retired}`);
+}
+
+// Physics and Views have one authoritative source. Static HTML contains empty
+// mount points instead of the obsolete stationary-wave explanation.
+assert.match(html, /id="math-container" aria-busy="true"><\/div>/);
+assert.match(html, /id="rationale" aria-busy="true"><\/div>/);
+for (const stale of ['outgoing point-source waves', 'screen endpoints and backtracked', 'stationary analytical construction']) {
+  assert(!html.includes(stale), `stale explanatory text remains: ${stale}`);
+}
+
+// Displayed equations and prose describe the implemented reduced model.
+for (const equation of ['schrodinger', 'exactEnvelope', 'approxEnvelope', 'packet', 'propagation', 'mask', 'probability', 'guidance']) {
+  assert(content.includes(`"${equation}"`), `missing displayed equation ${equation}`);
+}
+for (const statement of ['forward, paraxial approximation', 'Direct PW', 'Part./packet', 'Phase colors show cos θ']) {
+  assert(content.includes(statement), `missing current Views/Physics statement: ${statement}`);
+}
+assert(content.includes('orthogonal which-slit detector records'));
+assert(content.includes('incoherent sum'));
+
+// New packets and in-flight interpretation changes use analytical conditional
+// transmission sampling; no bounded rejection loop remains.
+assert(model.includes('finite Gaussian mixture'));
+assert(engine.includes('sampleTransmittedSource(p,Math.random,a.x0,directed.checked?3:null)'));
+assert(!engine.includes('const attempts=') && !engine.includes('attempt<20000'));
+
+// Slit coloring is display-only metadata assigned from the analytically known
+// aperture-plane crossing at injection, and remains stable across the wall.
+assert(model.includes('const slitSide=classifySlitSide(wallY,p)'));
+assert(model.includes('a.slitSide=classifySlitSide(a.y,p)'));
+assert(engine.includes('packet-particle-color'));
+assert(engine.includes('<option value="spectrum">Spectrum</option>'));
+assert(engine.includes('spectrumIndex(a.wallY)'));
+assert(model.includes('wallY:yWall'));
+assert(engine.includes('event.wallY'));
+assert(engine.includes("particleColorMode.value==='uniform')markerColor=colorPart"));
+assert(engine.includes('spectrumHitSums[i]/spectrumHitCounts[i]'));
+assert(engine.includes('packet-core-options'));
+assert(engine.includes('packet-slit-balance'));
+assert(engine.includes('apertureWeights'));
+assert(engine.includes('return (sourcePos+detectorDistance)/.7'));
+// Saved settings restore values only; the creation ranges (e.g. lambda <= 50 nm) stay authoritative.
+assert(shell.includes("restoreParameterValue('detector-distance', state.detectorDistance)"));
+assert(!/updateParameter\('wavelength', 1, 500/.test(shell), 'saved settings must not widen the wavelength range');
+assert(engine.includes("slitColors={upper:'#22d3ee',lower:'#ff9f43'}"));
+assert(engine.includes('pending.push({index,cohort:a.cohort,slitSide:a.slitSide,wallY:a.wallY})'));
+assert(engine.includes("directedRow.innerHTML='Direct PW <input"));
+assert(!engine.includes('coreConditionedProfile'));
+assert(!model.includes('coreConditionedProfile'));
+assert(engine.includes('const upperDisplay=upper+'));
+assert(engine.includes('const markerColor=upperDisplay>=lowerDisplay?slitColors.upper:slitColors.lower'));
+assert(engine.includes('packet-balance-equal'));
+assert(engine.includes("balance.value='0'"));
+assert(shell.includes("$('#animationStep-group').hide()"));
+assert(engine.includes('clearHitsForPreview()'));
+assert(engine.includes('sampleTransmittedSource(p,Math.random,null,3)'));
+assert(engine.includes("const displayExtentSigma=()=>interpretation==='bohmian'&&directed.checked?3:"));
+assert(engine.includes('const half=displayExtentSigma()*(slitPreviewWidth??p.sy*100)*toCanvasY'));
+assert(engine.includes('maximumCoreSafeSeparation'));
+assert(content.includes('finite slit core extending ±nσₐ'));
+assert(model.includes('sourceComponents'));
+assert(model.includes('if(p.whichPath)'));
+assert(engine.includes("whichPathDetector!=='none'&&next.centers.length===2"));
+assert(engine.includes('setWhichPath(){resetEngine();draw();}'));
+// 2.125: Pilot-Wave particles stay on the apparatus zero plane; the wave is see-through in Pilot-Wave.
+assert(surface.includes('particleZ=(u,v,lift)=>fixedZ+(state.pilotWave?pwStyle.height/100*SURFACE_HEIGHT:0)+lift'));
+assert(surface.includes('seeThrough=!!state.pilotWave'));
+assert(engine.includes("colors=[[34,211,238],[255,159,67]]"));
+assert(template.includes('context.createLinearGradient(0, 0, canvas.width, 0)'));
+assert(template.includes('window.qonticUpdateWavePalettePreview = updateWavePalettePreview'));
+assert(palette.includes('window.qonticUpdateWavePalettePreview?.()'));
+
+console.log('PASS: packet engine is authoritative; Physics and Views match the active model.');

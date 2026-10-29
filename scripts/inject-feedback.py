@@ -36,6 +36,15 @@ def relative_script(target, site_root):
 
 
 def main():
+    # 2026-10-21: the floating feedback widget is retired (no responses in three
+    # months). Pages carry a contact address (qonticlab@rice.edu) instead. Kept as a
+    # no-op so a workflow that still calls this script keeps working.
+    print("Feedback widget retired; nothing injected.")
+    return 0
+
+
+def _retired_main():
+
     parser = argparse.ArgumentParser(description="Inject the Q-Ontic feedback widget into deployed pages.")
     parser.add_argument("source_root", type=Path)
     parser.add_argument("site_root", type=Path)

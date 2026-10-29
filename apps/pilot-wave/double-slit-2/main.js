@@ -5,13 +5,27 @@ import { WhichSlitMeasurement } from "./which-slit.js";
 import { assignRadialGroups } from "./particle-colors.js";
 import { paintPhaseLegend, phaseLegendLayout } from "./phase-legend.js";
 import { sampleWhichSlitStart } from "./which-slit-launch.js";
+import { installTemplateShell } from "./template-shell.js?v=4";
+import { mountQonticMedia } from "../../../shared/qontic-media.js";
+import { mountDistanceScale, mountCoordinateTools } from "../../../shared/qontic-overlays.js";
+import { mountQonticShortcuts } from "../../../shared/qontic-shortcuts.js";
+
+const template = installTemplateShell();
 
 const canvas = document.getElementById("c");
 const phaseLegendCanvas = document.getElementById("phase-legend");
 let phaseLegendPlacement = null;
 const rightHistogram = new RightDetectorHistogram(document.getElementById("detector-histogram"));
 const gl = canvas.getContext("webgl2", { antialias: false, alpha: false, depth: false, stencil: false });
-if (!gl) throw new Error("WebGL2 not available.");
+if (!gl) {
+  if (template) {
+    const notice = document.createElement("p");
+    notice.className = "webgl-notice";
+    notice.textContent = "This simulation requires WebGL2. Open it in a desktop browser with WebGL2 enabled.";
+    template.wrap.append(notice);
+  }
+  throw new Error("WebGL2 not available.");
+}
 
 gl.disable(gl.DEPTH_TEST);
 gl.disable(gl.CULL_FACE);
@@ -78,6 +92,7 @@ const params = {
   trailBlendMode: 1,
 
   paletteId: 0,
+  nmPerGridStep: 1,
 };
 
 const DEFAULT_AUTO_RESTART_MOMENTUM = params.p0;
@@ -214,7 +229,7 @@ function beginInitialHold() {
   resetPlaybackClock();
 }
 
-const controls = document.getElementById("controls");
+let controls = template?.panes.core ?? document.getElementById("controls");
 const statsEl = document.getElementById("stats");
 
 function fmt(v) {
@@ -435,7 +450,7 @@ function addSectionHeader(label) {
 }
 
 function removeEmptySectionHeaders() {
-  controls.querySelectorAll(".section-header").forEach((header) => {
+  document.querySelectorAll("#controls .section-header").forEach((header) => {
     let hasControls = false;
     let node = header.nextElementSibling;
 
@@ -457,7 +472,7 @@ function syncWhichSlitControls() {
   const button = document.getElementById("which-slit");
   button?.setAttribute("aria-pressed", String(Boolean(params.whichSlit)));
   button?.classList.toggle("is-active", Boolean(params.whichSlit));
-  const count = controls.querySelector('[data-param="nParticles"]');
+  const count = document.querySelector('#controls [data-param="nParticles"]');
   if (count) {
     count.disabled = Boolean(params.whichSlit);
     count.value = String(params.nParticles);
@@ -515,11 +530,13 @@ addSectionHeader("Experiment");
   row.append(label, button);
   controls.append(row);
 }
+if (template) controls = template.panes.advanced;
 addSectionHeader("Performance");
 addSlider("simScale", "sim scale", 0.3, 1.0, 0.1, () => rebuildSimulation());
 addSlider("stepsPerFrame", "Steps/frame", 1, 100, 1);
 addSlider("edgePadding", "offscreen space", 128, 512, 32, () => rebuildSimulation(), "Space for wave absorption above and below the stage. More space reduces reflections and uses more graphics power. Changing it restarts the run.");
 
+if (template) controls = template.panes.core;
 addSectionHeader("Physical Parameters");
 addSlider("p0", "Momentum p", 0.5, 5.0, 0.1, () => resetAll());
 addSlider("dt", "dt", 0.01, 0.03, 0.01);
@@ -534,6 +551,15 @@ addChoiceButtons("guidingChoice", "guiding law", GUIDING_CHOICE_NAMES, (choice) 
   resetAll();
 });
 
+if (template) controls = template.panes.display;
+if (template) {
+  addSectionHeader("Scale calibration");
+  addSlider("nmPerGridStep", "nm / grid step", 0.1, 10, 0.1, () => { overlayScale?.update(); overlayCoordinates?.update(); });
+  const note = document.createElement("p");
+  note.className = "scale-note";
+  note.textContent = "Chosen length calibration for the ruler and coordinates; changing it does not alter the simulation.";
+  controls.append(note);
+}
 addSectionHeader("Visual Parameters");
 addChoiceButtons("stageView", "stage view", ["Close", "Wide"], () => {
   userAdjustedView = false;
@@ -542,7 +568,9 @@ addChoiceButtons("stageView", "stage view", ["Close", "Wide"], () => {
 addToggleInt("showPhase", "show phase");
 addToggleInt("showParticles", "show particles");
 addPathColorControls();
+if (template) controls = template.panes.core;
 addSlider("nParticles", "particle count", 1, 3000, 1, () => resetAll());
+if (template) controls = template.panes.display;
 
 addSlider("dotSize", "particle size", 2.0, 16.0, 0.5);
 addSlider("dotGain", "particle brightness", 0.1, 3.0, 0.1);
@@ -563,6 +591,7 @@ const pauseButton = document.getElementById("pause");
 function togglePause() {
   paused = !paused;
   pauseButton.textContent = paused ? "Resume" : "Pause";
+  template?.commonControls.setAttribute("running", String(!paused));
   resetPlaybackClock();
 }
 
@@ -570,10 +599,34 @@ document.addEventListener("visibilitychange", resetPlaybackClock);
 
 document.getElementById("reset").onclick = () => resetAll();
 pauseButton.onclick = () => togglePause();
+if (template) {
+  const common = template.commonControls;
+  common.addEventListener("qontic:start", () => { paused = false; pauseButton.textContent = "Pause"; resetPlaybackClock(); });
+  common.addEventListener("qontic:stop", () => { paused = true; pauseButton.textContent = "Resume"; resetPlaybackClock(); });
+  common.addEventListener("qontic:reset", () => resetAll());
+  common.addEventListener("qontic:speed", ({detail}) => setSimulationSpeed(detail.speed));
+  common.addEventListener("qontic:theme", ({detail}) => {
+    document.documentElement.classList.toggle("qontic-light", detail.theme === "light");
+  });
+  mountQonticShortcuts({
+    togglePlayback: () => { if (!frameRecordingActive) togglePause(); },
+    reset: () => { if (!frameRecordingActive) resetAll(); },
+    screenshot: () => { if (!frameRecordingActive) template.stage.querySelector('.qontic-media-toolbar button[aria-label="Screenshot"]')?.click(); },
+  });
+  window.addEventListener("qontic:view-change", () => {
+    resetPlaybackClock();
+    if (!template.workspace.hidden && simulationReady) requestAnimationFrame(() => {
+      const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      if (canvas.width !== Math.floor(canvas.clientWidth * dpr) || canvas.height !== Math.floor(canvas.clientHeight * dpr)) rebuildSimulation();
+      applyViewTransform();
+      overlayScale?.update(); overlayCoordinates?.update();
+    });
+  });
+}
 
 if (isEmbedded) {
   canvas.addEventListener("click", () => togglePause());
-} else {
+} else if (!template) {
   window.addEventListener("keydown", (e) => {
     if (frameRecordingActive || e.target.closest("input, select, textarea, button")) return;
     if (e.key.toLowerCase() === "r") resetAll();
@@ -596,7 +649,7 @@ const theoryPanel = document.getElementById("theory");
 const theoryBody = document.getElementById("theorybody");
 const theoryBtn = document.getElementById("mintheory");
 
-let theoryMinimized = true;
+let theoryMinimized = !template;
 function syncTheoryPanel() {
   theoryPanel.classList.toggle("is-minimized", theoryMinimized);
   theoryBody.hidden = theoryMinimized;
@@ -615,6 +668,7 @@ const view = {
   offsetX: 0,
   offsetY: 0,
 };
+let overlayScale = null, overlayCoordinates = null;
 
 const INITIAL_ZOOM_FRACTION = 0.65;
 const INITIAL_VIEW_SHIFT_X = 0.20;
@@ -658,6 +712,8 @@ function applyViewTransform() {
   clampViewOffset();
   canvas.style.transformOrigin = "0 0";
   canvas.style.transform = `translate(${view.offsetX}px, ${view.offsetY}px) scale(${view.zoom})`;
+  overlayScale?.update();
+  overlayCoordinates?.update();
 }
 
 function applyInitialViewTransform() {
@@ -1694,6 +1750,8 @@ function rebuildSimulation() {
   beginWhichSlitRun();
   physicsFrame = 0;
   beginInitialHold();
+  overlayScale?.update();
+  overlayCoordinates?.update();
 }
 
 function resetAll({ preserveHistogram = Boolean(params.whichSlit) } = {}) {
@@ -1709,9 +1767,26 @@ function resetAll({ preserveHistogram = Boolean(params.whichSlit) } = {}) {
   beginInitialHold();
 }
 
-window.addEventListener("resize", () => {
+window.addEventListener("resize", event => {
+  if (!simulationReady && !frameRecordingActive) return;
+  if (template?.workspace.hidden) return;
   if (frameRecordingActive) {
     resizeDuringRecording = true;
+    return;
+  }
+  // The shared Expand/Restore control dispatches a synthetic resize after
+  // moving the stage. Keep the wave, particle buffers, and detector counts.
+  if (template && !event.isTrusted) {
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const previousWidth = canvas.width / dpr;
+    const previousHeight = canvas.height / dpr;
+    if (previousWidth > 0 && previousHeight > 0) {
+      view.offsetX *= canvas.clientWidth / previousWidth;
+      view.offsetY *= canvas.clientHeight / previousHeight;
+    }
+    resizeCanvas();
+    applyViewTransform();
+    render();
     return;
   }
   rebuildSimulation();
@@ -1783,6 +1858,7 @@ function shouldAdvancePhysics(frameSeconds) {
 }
 
 function drawSimulationFrame(advancePhysics, presentationDt = 1 / 60) {
+  if (template?.workspace.hidden) return;
   resizeCanvas();
 
   if (advancePhysics) {
@@ -1917,10 +1993,20 @@ window.BohmianDoubleSlit = {
     recordingViewport = { width: canvas.clientWidth, height: canvas.clientHeight };
     resizeDuringRecording = false;
     frameRecordingActive = true;
+    if (template) {
+      template.commonControls.setAttribute("disabled", "true");
+      template.stage.querySelector(".qontic-media-toolbar").inert = true;
+      document.querySelector("main.shell .tabs").inert = true;
+    }
     resetPlaybackClock();
   },
   endFrameRecording() {
     frameRecordingActive = false;
+    if (template) {
+      template.commonControls.removeAttribute("disabled");
+      template.stage.querySelector(".qontic-media-toolbar").inert = false;
+      document.querySelector("main.shell .tabs").inert = false;
+    }
     if (resizeDuringRecording && recordingViewport) {
       // Resizing during export must not reset the saved live run.
       view.offsetX *= canvas.clientWidth / recordingViewport.width;
@@ -1952,6 +2038,69 @@ window.BohmianDoubleSlit = {
   },
 };
 
+if (template) {
+  const gridLength = () => params.nmPerGridStep;
+  const unitsPerPixel = () => ({
+    x: gridLength() * Math.max(1, stageW) / Math.max(1, canvas.clientWidth * view.zoom),
+    y: gridLength() * Math.max(1, stageH) / Math.max(1, canvas.clientHeight * view.zoom),
+  });
+  const formatDistance = nm => Math.abs(nm) >= 1000
+    ? `${Number((nm / 1000).toPrecision(3))} µm`
+    : `${Number(nm.toPrecision(3))} nm`;
+  overlayScale = mountDistanceScale({
+    host: template.wrap, getUnitsPerPixel: unitsPerPixel, format: formatDistance,
+    storageKey: "qontic-double-slit-2-scale-position",
+  });
+  overlayCoordinates = mountCoordinateTools({
+    host: template.wrap,
+    getBounds: () => {
+      const units = unitsPerPixel();
+      return {
+        xMin: -view.offsetX * units.x,
+        xMax: (canvas.clientWidth - view.offsetX) * units.x,
+        yMin: -view.offsetY * units.y,
+        yMax: (canvas.clientHeight - view.offsetY) * units.y,
+      };
+    },
+    formatValue: formatDistance,
+    storageKey: "qontic-double-slit-2-grid-visible",
+  });
+  // The WebGL canvas is translated and zoomed. Compose the clipped stage for
+  // the shared screenshot action, including the independently drawn overlays.
+  const screenshotSurface = document.createElement("canvas");
+  screenshotSurface.className = "template-screenshot-surface";
+  screenshotSurface.setAttribute("aria-hidden", "true");
+  template.wrap.append(screenshotSurface);
+  const captureStage = () => {
+    render(); // Read the WebGL drawing buffer in the same task as the capture.
+    screenshotSurface.width = canvas.width;
+    screenshotSurface.height = canvas.height;
+    const ctx = screenshotSurface.getContext("2d");
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, screenshotSurface.width, screenshotSurface.height);
+    const hostRect = template.wrap.getBoundingClientRect();
+    const sx = screenshotSurface.width / hostRect.width;
+    const sy = screenshotSurface.height / hostRect.height;
+    for (const layer of [canvas, rightHistogram.canvas, phaseLegendCanvas, overlayCoordinates.canvas, overlayScale.canvas]) {
+      const rect = layer.getBoundingClientRect();
+      if (!(rect.width > 0 && rect.height > 0)) continue;
+      ctx.drawImage(layer, (rect.left - hostRect.left) * sx, (rect.top - hostRect.top) * sy, rect.width * sx, rect.height * sy);
+    }
+    return [screenshotSurface];
+  };
+  mountQonticMedia({
+    stage: template.stage, controls: template.commonControls,
+    filename: "qontic-double-slit-2",
+    scaleControl: overlayScale, coordinateControl: overlayCoordinates,
+    getCanvases: captureStage,
+    onRecord: () => {
+      template.setActivePane("advanced");
+      document.getElementById("export-options").open = true;
+      document.getElementById("export-options").scrollIntoView({block:"nearest"});
+    },
+  });
+}
+
 async function main() {
   await loadShaders();
   buildPrograms();
@@ -1973,7 +2122,7 @@ async function main() {
     lastFrameTime = now;
     if (!frameRecordingActive) {
       setSimulationFrameDuration(Math.min(0.05, elapsedSeconds));
-      drawSimulationFrame(!document.hidden && shouldAdvancePhysics(elapsedSeconds), Math.min(0.05, elapsedSeconds));
+      drawSimulationFrame(!template?.workspace.hidden && !document.hidden && shouldAdvancePhysics(elapsedSeconds), Math.min(0.05, elapsedSeconds));
     }
 
     requestAnimationFrame(loop);

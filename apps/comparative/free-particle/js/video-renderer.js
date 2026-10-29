@@ -12,6 +12,8 @@
       if (!['pilotwave', 'collapse'].includes(snapshot.state.interpMode)) {
         throw new Error('Choose Pilot-Wave or Collapse before recording.');
       }
+      document.documentElement.dataset.theme = snapshot.theme === 'light' ? 'light' : 'dark';
+      fpLightCanvas = document.documentElement.dataset.theme === 'light';
       // Keep all physical parameters, canvas geometry, and integration steps
       // fixed. Only the canvas backing stores scale with export resolution.
       fpRenderScale = Math.max(2, Math.ceil(2 * outputWidth / snapshot.layout.width));
