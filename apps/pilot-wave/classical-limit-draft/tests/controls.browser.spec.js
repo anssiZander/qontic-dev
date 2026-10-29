@@ -30,7 +30,7 @@ for (const scene of ['free', 'barrier']) {
     await page.locator('#show-particles').uncheck();
     hidden = await snapshot(page);
     expect(hidden.appearance.showParticles).toBe(false); expect(hidden.appearance.showTrails).toBe(false);
-    await expect(page.locator('#reference-legend')).toBeVisible();
+    await expect(page.getByRole('img', { name: /Classical particle/ })).toBeVisible();
     // Verify only the independent classical particle and trail are drawn.
     const captureDraws = () => page.evaluate(async () => {
       const { Renderer } = await import('/src/renderer.js');
@@ -49,7 +49,7 @@ for (const scene of ['free', 'barrier']) {
     ]);
     await page.locator('#show-reference').uncheck();
     expect(await captureDraws()).toEqual([]);
-    await expect(page.locator('#reference-legend')).toBeHidden();
+    await expect(page.getByRole('img', { name: /Classical particle/ })).toBeHidden();
     await page.locator('#show-reference').check();
     expect((await snapshot(page)).historyLength).toBe(1);
     await page.locator('#show-wave').check(); await page.locator('#show-particles').check();
@@ -58,7 +58,7 @@ for (const scene of ['free', 'barrier']) {
     expect(visible.appearance.showParticles && visible.appearance.showTrails).toBe(true);
     expect(visible.settings.seed).toBe(before.settings.seed);
     expect(visible.appearance.trailStartTime).toBe(visible.time);
-    await expect(page.locator('#reference-legend')).toBeVisible();
+    await expect(page.getByRole('img', { name: /Classical particle/ })).toBeVisible();
     expect(visible.glError).toBe(0); expect(errors).toEqual([]);
     await page.screenshot({ path: `validation/simplified-controls-${scene}.png` });
   });

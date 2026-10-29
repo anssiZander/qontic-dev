@@ -58,7 +58,7 @@
       } finally { fpDeferRender = false; }
       fpRender();
       nextFrame++;
-      return { ...canvases, state: { time: fp.time_fs, detected: fp.bDetected,
+      return { ...canvases, densityLegend: fpDensityLegendVisible(), state: { time: fp.time_fs, detected: fp.bDetected,
         section: fp.bDetectedSection, trials: fp.nTrials, hits: fp.sectionHits.slice(),
         collapseElapsed: fp.collapseElapsed_ms } };
     },

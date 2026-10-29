@@ -1,6 +1,8 @@
 import { createExperiment, sceneKey } from './experiments.js';
 import { Renderer, TrailHistory } from './renderer.js';
 import { paintPhaseLegend, phaseLegendLayout } from './phase-legend.js';
+import { paintParticleLegend, particleLegendLayout, particleLegendEntries } from './particle-legend.js';
+import { paintDensityLegend, densityLegendLayout } from './density-legend.js';
 
 export const EXPORT_FPS = 30;
 export const EXPORT_WIDTHS = [1920, 2560];
@@ -34,12 +36,19 @@ export async function renderVideo({ settings, appearance, view, width = 2560, du
   const { scale: legendScale, margin } = phaseLegendLayout(displayWidth, width);
   const legend = paintPhaseLegend(document.createElement('canvas'), legendScale);
   const legendMargin = Math.round(margin);
+  const particleLayout = particleLegendLayout(appearance, displayWidth, width);
+  const particleLabels = particleLegendEntries(appearance).map(entry => entry.label);
+  const particleLegend = particleLabels.length ? paintParticleLegend(document.createElement('canvas'), appearance, particleLayout.scale) : null;
+  const densityLayout = densityLegendLayout(displayWidth, width);
+  const densityLegend = appearance.showWave && !appearance.showPhase
+    ? paintDensityLegend(document.createElement('canvas'), densityLayout.scale) : null;
   // A current-time export respects the most recent trail toggle. A fresh launch
   // starts its trails at zero along with its separately reconstructed wave.
   const trailStartTime = startTime > 0 ? Math.min(startTime, Math.max(0, appearance.trailStartTime || 0)) : 0;
   let renderer, experiment, output;
   const report = { width, height, fps: EXPORT_FPS, frames: 0, duration: total / EXPORT_FPS,
-    startTime, trailStartTime, playback: appearance.playback, codec, bitrate, scene: sceneKey(settings), settings: { ...settings } };
+    startTime, trailStartTime, playback: appearance.playback, codec, bitrate, scene: sceneKey(settings), settings: { ...settings }, particleLegends: particleLabels,
+    densityLegend: densityLegend ? { reference: 'shared fixed density', frames: 0 } : null };
   try {
     renderer = new Renderer(canvas);
     const gl = renderer.gl;
@@ -88,6 +97,12 @@ export async function renderVideo({ settings, appearance, view, width = 2560, du
       if (gl.isContextLost() || gl.getError() !== gl.NO_ERROR) throw new Error('The GPU could not render a video frame. Try a smaller video size.');
       context.drawImage(canvas, 0, 0, width, height);
       if (appearance.showWave && appearance.showPhase) context.drawImage(legend, width - legend.width - legendMargin, height - legend.height - legendMargin);
+      if (densityLegend) {
+        const inset = Math.round(densityLayout.margin);
+        context.drawImage(densityLegend, width - densityLegend.width - inset, height - densityLegend.height - inset);
+        report.densityLegend.frames++;
+      }
+      if (particleLegend) context.drawImage(particleLegend, Math.round(particleLayout.margin), Math.round(particleLayout.margin));
       await onFrame?.(outputCanvas, frame, experiment.diagnostics());
       await source.add(frame / EXPORT_FPS, 1 / EXPORT_FPS);
       onProgress({ stage: 'Rendering', completed: frame + 1, total });

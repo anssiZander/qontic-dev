@@ -1,5 +1,7 @@
 import { readdir } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
+import { syncDensityColors } from '../../../shared/sync-density-colors.mjs';
+await syncDensityColors(true);
 const files = ['server.mjs', 'playwright.config.js'];
 for (const directory of ['src', 'scripts', 'tests']) {
   for (const file of await readdir(new URL(`../${directory}/`, import.meta.url))) {

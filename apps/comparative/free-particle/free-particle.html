@@ -879,7 +879,7 @@
           <label for="fp-record-start">Start from</label>
           <select id="fp-record-start"><option value="beginning">Beginning</option><option value="current">Current time</option></select>
         </div>
-        <p class="fp-record-hint">Records the wave, particle, detector histogram, and both density profiles using the current framing. Controls stay out of the video. Rendering may take longer than playback.</p>
+        <p class="fp-record-hint">Records the wave, particle, detector histogram, density profiles, and visible density color legend using the current framing. Controls stay out of the video. Rendering may take longer than playback.</p>
         <button type="button" class="fp-btn primary" id="fp-record-render">Render video · 30 fps</button>
         <progress id="fp-record-progress" value="0" max="300" aria-label="Video rendering progress" hidden></progress>
         <div id="fp-record-preview"></div>
@@ -1129,7 +1129,8 @@
      also updated by JS.
 ================================================================ -->
 
-<script src="js/free-particle.js?v=20260914-7"></script>
+<script src="js/density-colors.js?v=20260928-3"></script>
+<script src="js/free-particle.js?v=20260928-3"></script>
 <script src="js/recorder-ui.js?v=20260914-1"></script>
 <script>
 // ================================================================

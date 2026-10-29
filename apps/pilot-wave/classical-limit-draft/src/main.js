@@ -3,6 +3,8 @@ import { Renderer, TrailHistory } from './renderer.js';
 import { createExperiment, SCENES, sceneKey } from './experiments.js';
 import { renderVideo } from './export.js';
 import { paintPhaseLegend, phaseLegendLayout } from './phase-legend.js';
+import { paintParticleLegend, particleLegendLayout } from './particle-legend.js';
+import { paintDensityLegend, densityLegendLayout } from './density-legend.js';
 
 const $ = id => document.getElementById(id);
 const query = new URLSearchParams(location.search);
@@ -101,6 +103,10 @@ function setPaused(value) {
 function syncLegendSize() {
   const { width, height, margin } = phaseLegendLayout($('canvas').clientWidth);
   Object.assign($('phase-legend').style, { width: `${width}px`, height: `${height}px`, right: `${margin}px`, bottom: `${margin}px` });
+  const particles = particleLegendLayout(appearance, $('canvas').clientWidth);
+  Object.assign($('particle-legend').style, { width: `${particles.width}px`, height: `${particles.height}px`, left: `${particles.margin}px`, top: `${particles.margin}px` });
+  const density = densityLegendLayout($('canvas').clientWidth);
+  Object.assign($('density-legend').style, { width: `${density.width}px`, height: `${density.height}px`, right: `${density.margin}px`, bottom: `${density.margin}px` });
 }
 
 function syncCanvasLayout() {
@@ -190,9 +196,14 @@ function syncVisibility() {
     $(`wave-${mode}`).setAttribute('aria-pressed', String(appearance.waveView === mode));
   }
   $('phase-legend').hidden = !(appearance.showWave && appearance.showPhase);
+  $('density-legend').hidden = !(appearance.showWave && !appearance.showPhase);
+  paintDensityLegend($('density-legend-canvas'));
   appearance.showParticles = appearance.showTrails = $('show-particles').checked;
   appearance.showReference = $('show-reference').checked;
-  $('reference-legend').hidden = !appearance.showReference;
+  $('particle-legend').hidden = !(appearance.showParticles || appearance.showReference);
+  $('wave-legend').hidden = !appearance.showWave;
+  paintParticleLegend($('particle-legend-canvas'), appearance);
+  syncLegendSize();
   drawingDirty = true;
 }
 for (const mode of ['phase', 'density']) $(`wave-${mode}`).addEventListener('click', () => {

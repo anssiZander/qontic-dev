@@ -68,9 +68,9 @@
     <section class="stage" aria-label="Bohmian particle in a reflecting box">
       <div class="stage-heading"><div><span id="regime-name">WAVE DOMINATED</span><span class="separator">/</span><span id="scene-name">REFLECTING BOX</span></div><div class="live-badge" id="status" role="status"><i></i><span>Starting…</span></div></div>
       <div class="canvas-slot" id="canvas-slot">
-        <div class="canvas-wrap" id="canvas-wrap"><canvas id="canvas" aria-label="Wave density, Bohmian particles and their trajectories"></canvas><figure id="phase-legend" class="phase-key"><canvas id="phase-legend-canvas" width="336" height="296"></canvas></figure><div id="error" role="alert" hidden></div><div id="paused-badge" hidden>PAUSED</div></div>
+        <div class="canvas-wrap" id="canvas-wrap"><canvas id="canvas" aria-label="Wave density, Bohmian particles and their trajectories"></canvas><figure id="phase-legend" class="phase-key"><canvas id="phase-legend-canvas" width="336" height="296"></canvas></figure><figure id="density-legend" class="density-key" hidden><canvas id="density-legend-canvas"></canvas></figure><figure id="particle-legend" class="particle-key"><canvas id="particle-legend-canvas"></canvas></figure><div id="error" role="alert" hidden></div><div id="paused-badge" hidden>PAUSED</div></div>
       </div>
-      <div class="stage-footer"><div class="legend"><span><i class="legend-wave"></i>Probability density</span><span><i class="particle-dot"></i>Bohmian particle</span><span id="reference-legend"><i class="reference-dot"></i>Classical comparison</span></div><button id="reset-view" title="Restore the full box">Reset view ↗</button></div>
+      <div class="stage-footer"><div class="legend"><span id="wave-legend"><i class="legend-wave"></i>Probability density</span></div><button id="reset-view" title="Restore the full box">Reset view ↗</button></div>
       <p class="canvas-hint">Scroll to zoom · drag to pan · double-click to reset</p>
     </section>
   </main>

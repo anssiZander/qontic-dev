@@ -1,5 +1,8 @@
 import { VelocityField } from './velocity-field.js';
 import { BOX, clamp, classicalPosition } from './physics.js';
+import './density-colors.js';
+
+const densityColors = globalThis.QonticDensityColors;
 
 export const TRAIL_WIDTH_RATIO = 0.6;
 const PARTICLE_COLOR = [0.08 + Math.cos(2 * Math.PI * 0.93), 0.06 + 0.9 * Math.cos(2 * Math.PI * 1.03), 0.02 + 0.4 * Math.cos(2 * Math.PI * 1.13)];
@@ -16,6 +19,7 @@ precision highp sampler2D;
 uniform sampler2D waveX;
 uniform sampler2D waveY;
 uniform sampler2D field;
+uniform sampler2D densityPalette;
 uniform bool fullWave;
 uniform vec2 waveGrid;
 uniform vec3 obstacle;
@@ -83,14 +87,7 @@ vec3 freePacketPhaseColor(float ph){
     *(fadeProgress*(fadeProgress*6.0-15.0)+10.0);
   return mix(branchColor,magenta,seamBlend)*phaseVisibility;
 }
-// RelaxationBox2D/shaders/wave_render.frag, top-down density view.
-// Use its exact cosine palette and default gain/gamma. Normalize rho to the
-// current peak because these packets span very different density scales.
-vec3 relaxationDensityColor(float rho){
-  float intensity=pow(clamp(1.0-exp(-2.0*brightness*rho),0.0,1.0),0.5);
-  vec3 a=vec3(0.22,0.32,0.28),b=vec3(0.40,0.45,0.35),d=vec3(0.15,0.55,0.75);
-  return max(vec3(0.0),(a+b*cos(6.283185*(intensity+d)))*intensity);
-}
+${densityColors.glsl}
 void main(){
   vec2 world=center+(uv-0.5)/zoom;
   vec3 bg=vec3(0.008,0.012,0.028);
@@ -101,8 +98,9 @@ void main(){
   vec2 psi;float density;
   if(fullWave){vec4 a=sampleField(world);psi=a.xy;density=a.z;}
   else{vec4 a=sampleWave(waveX,world.x),b=sampleWave(waveY,world.y);density=a.z*b.z;psi=vec2(a.x*b.x-a.y*b.y,a.x*b.y+a.y*b.x);}
+  // Fixed scene units: no peak, packet-width, zoom or time normalization.
+  if(densityView){color=vec4(drawEdge(fixedDensityColor(density*${densityColors.CLASSICAL_LIMIT_AREA.toFixed(1)}),world),1);return;}
   float rho=max(density,0.0)/max(peak,1e-8);
-  if(densityView){color=vec4(drawEdge(bg+relaxationDensityColor(rho),world),1);return;}
   float intensity=pow(1.0-exp(-3.1*brightness*pow(rho,0.66)),1.08);
   // Restore the earlier palette, with a small contrast lift in the density.
   // Attenuate only phase detail too fine for the final output pixels.
@@ -303,6 +301,13 @@ export class Renderer {
     if (!gl) throw new Error('WebGL2 is unavailable. Enable hardware acceleration in your browser and reload.');
     if (!gl.getExtension('EXT_color_buffer_float')) throw new Error('Floating-point rendering is needed for the luminous trails. Enable hardware acceleration and reload.');
     this.gl = gl; this.center = [0.5, 0.5]; this.zoom = 1;
+    this.densityPalette = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.densityPalette);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, densityColors.SIZE, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, densityColors.rgba);
     this.wave = program(gl, vertex, waveFragment);
     this.lines = program(gl, lineVertex, lineFragment);
     this.points = program(gl, pointVertex, pointFragment);
@@ -425,6 +430,8 @@ export class Renderer {
     gl.bindVertexArray(this.emptyVAO);
     for (let i = 0; i < 2; i++) { gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, experiment.is2D ? experiment.waveTexture : this.textures[i]); }
     gl.uniform1i(this.wave.uniform('waveX'), 0); gl.uniform1i(this.wave.uniform('waveY'), 1);
+    gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, this.densityPalette);
+    gl.uniform1i(this.wave.uniform('densityPalette'), 2);
     gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, experiment.is2D ? experiment.waveTexture : this.textures[0]);
     gl.uniform1i(this.wave.uniform('field'), 3); gl.uniform1i(this.wave.uniform('fullWave'), experiment.is2D ? 1 : 0);
     gl.uniform2f(this.wave.uniform('waveGrid'), experiment.params.nx || 1, experiment.params.ny || 1);
@@ -469,6 +476,7 @@ export class Renderer {
     this.velocityField.dispose();
     const gl = this.gl;
     for (const t of this.textures) gl.deleteTexture(t);
+    gl.deleteTexture(this.densityPalette);
     gl.deleteTexture(this.trailMask); gl.deleteFramebuffer(this.trailFramebuffer);
     for (const p of [this.wave, this.lines, this.points, this.trails, this.trailComposite]) gl.deleteProgram(p.p);
     for (const b of [this.lineBuffer, this.pointBuffer, this.trailBuffer]) gl.deleteBuffer(b);

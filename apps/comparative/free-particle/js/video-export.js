@@ -34,7 +34,7 @@ export async function renderVideo({ snapshot, width = 2560, duration = 10, signa
   renderer.tabIndex = -1;
   Object.assign(renderer.style, { position: 'fixed', left: '-100000px', top: '0',
     width: '1px', height: '1px', visibility: 'hidden', border: '0', pointerEvents: 'none' });
-  renderer.src = new URL('../video-renderer.html?v=20260914-1', import.meta.url).href;
+  renderer.src = new URL('../video-renderer.html?v=20260928-3', import.meta.url).href;
   const canvas = document.createElement('canvas');
   canvas.className = 'fp-record-preview-canvas';
   canvas.setAttribute('aria-label', 'Video preview');
@@ -43,7 +43,8 @@ export async function renderVideo({ snapshot, width = 2560, duration = 10, signa
   const ctx = canvas.getContext('2d', { alpha: false, colorSpace: 'srgb' });
   const report = { width, height, fps: EXPORT_FPS, duration: total / EXPORT_FPS,
     frames: 0, codec, bitrate, start: snapshot.start, layout: snapshot.layout,
-    seed: snapshot.seed, initialTime: snapshot.state.time_fs };
+    seed: snapshot.seed, initialTime: snapshot.state.time_fs,
+    densityLegend: { reference: 'shared fixed density', frames: 0, firstFrame: null } };
   let api, output;
   try {
     document.body.append(renderer);
@@ -70,9 +71,13 @@ export async function renderVideo({ snapshot, width = 2560, duration = 10, signa
     for (let frame = 0; frame < total; frame++) {
       checkCancelled();
       const layers = api.renderFrame(frame, EXPORT_FPS);
+      if (layers.densityLegend) {
+        report.densityLegend.frames++;
+        report.densityLegend.firstFrame ??= frame;
+      }
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, width, height);
-      // Only these five canvases enter the video. No DOM capture or controls.
+      // The detector canvas also carries the density legend. No DOM or controls.
       for (const [name, area] of [['wave', 'wave'], ['particle', 'wave'], ['detector', 'wave'], ['y', 'y'], ['prob', 'prob']]) {
         const r = snapshot.layout[area];
         ctx.drawImage(layers[name], r.x * sx, r.y * sy, r.width * sx, r.height * sy);

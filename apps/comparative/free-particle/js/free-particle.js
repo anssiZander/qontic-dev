@@ -171,33 +171,11 @@ const FP_COLLAPSE_SPEED = 4;
 const FP_COLLAPSE_DURATION_MS = 950 / FP_COLLAPSE_SPEED;
 const FP_COLLAPSE_HOLD_MS = 450 / FP_COLLAPSE_SPEED;
 
-// Density uses the full relative-density range, without the phase view's
-// high exposure. Deep magenta is reserved for values nearest the peak.
-// Adjust the wave and both profiles here: [relative density, [red, green, blue]],
-// all values 0..1. Keep densities increasing; move a stop to change where its
-// color appears. Tones sampled from the supplied DoubleSlit reference: dark
-// teal, green, a subdued transition into red, then deep magenta. Keep the
-// transition dark to avoid introducing a bright yellow band.
-const FP_DENSITY_STOPS = [
-  [0.00, [0.000, 0.000, 0.000]],
-  [0.08, [0.040, 0.065, 0.100]],
-  [0.32, [0.080, 0.235, 0.240]],
-  [0.58, [0.024, 0.408, 0.153]],
-  [0.66, [0.196, 0.369, 0.051]],
-  [0.74, [0.427, 0.208, 0.051]],
-  [0.82, [0.569, 0.067, 0.039]],
-  [0.91, [0.592, 0.047, 0.106]],
-  [0.97, [0.549, 0.043, 0.239]],
-  [1.00, [0.506, 0.039, 0.314]],
-];
-const FP_DENSITY_PALETTE = Array.from({ length: FP_PALETTE_STEPS + 1 }, (_, i) => {
-  const density = i / FP_PALETTE_STEPS;
-  const hi = FP_DENSITY_STOPS.findIndex((stop, index) => index > 0 && density <= stop[0]);
-  const [loValue, loColor] = FP_DENSITY_STOPS[hi - 1];
-  const [hiValue, hiColor] = FP_DENSITY_STOPS[hi];
-  const blend = (density - loValue) / (hiValue - loValue);
-  return loColor.map((channel, c) => channel + (hiColor[c] - channel) * blend);
-});
+// Shared with Classical Limit; tune apps/shared/density-colors.js.
+const FP_DENSITY_COLORS = globalThis.QonticDensityColors;
+// A y marginal has different units from the 2D field. Convert it through a
+// fixed x reference width, never the current packet width or current peak.
+const FP_DENSITY_REFERENCE_Y_PEAK = Math.sqrt(2 * Math.PI) * 2.0;
 const FP_PHASE_DENSITY_PALETTE = Array.from({ length: FP_PALETTE_STEPS + 1 }, (_, i) => {
   const I = i / FP_PALETTE_STEPS;
   return [0.26, 0.13, 0.49].map((lo, c) =>
@@ -217,13 +195,44 @@ function fpWaveIntensity(rho) {
   return Math.sqrt(-Math.expm1(-20 * Math.max(0, rho)));
 }
 
-function fpDensityRGB(relativeDensity) {
-  return FP_DENSITY_PALETTE[Math.round(Math.max(0, Math.min(1, relativeDensity)) * FP_PALETTE_STEPS)];
+function fpDensityScale() {
+  // The analytic solver starts at unit peak for every initial width. Divide
+  // by that packet's initial integral to give it unit probability, then use
+  // the fixed scene-area unit shared by both apps. No frame-peak rescaling.
+  return FP_DENSITY_COLORS.FREE_PARTICLE_AREA_NM2
+    / (2 * Math.PI * fp.sigma0_nm * fpSigmaY0());
 }
 
-function fpDensityColor(relativeDensity) {
-  const rgb = fpDensityRGB(relativeDensity);
+function fpDensityRGB(referenceDensity) {
+  return FP_DENSITY_COLORS.color(referenceDensity);
+}
+
+function fpDensityColor(referenceDensity) {
+  const rgb = fpDensityRGB(referenceDensity);
   return `rgb(${rgb.map(v => Math.round(255 * v)).join(',')})`;
+}
+
+let fpDensityLegendCanvas = null;
+
+function fpDensityLegendVisible() {
+  return fp.displayMode === 'prob' && (fp.interpMode === 'collapse'
+    || (fp.interpMode === 'pilotwave' && fp.showPilotWave && !fp.bDetected));
+}
+
+function fpRenderDensityLegend() {
+  if (!fpDetCtx || !fpDensityLegendVisible()) return;
+  const W = fpDetCanvas.width / fpRenderScale, H = fpDetCanvas.height / fpRenderScale;
+  const width = FP_DENSITY_COLORS.LEGEND_WIDTH, height = FP_DENSITY_COLORS.LEGEND_HEIGHT;
+  const scale = Math.min(1.4, W / 1062, H / 220);
+  const pixels = Math.max(2, fpRenderScale * scale);
+  if (!fpDensityLegendCanvas || fpDensityLegendCanvas.width !== Math.round(width * pixels)) {
+    fpDensityLegendCanvas = FP_DENSITY_COLORS.paintLegend(document.createElement('canvas'), pixels);
+  }
+  // Paint over the scene on a layer already included in video exports. Keeping
+  // the key out of the wave snapshot prevents it from moving during collapse.
+  fpDetCtx.save();
+  fpDetCtx.drawImage(fpDensityLegendCanvas, 16 * scale, H - (height + 16) * scale, width * scale, height * scale);
+  fpDetCtx.restore();
 }
 
 function fpClearCollapse() {
@@ -455,19 +464,18 @@ function fpStepBohmian(dt_fs) {
   const xNew = x + (dt_fs / 6) * (k1.vx + 2 * k2.vx + 2 * k3.vx + k4.vx);
   const yNew = y + (dt_fs / 6) * (k1.vy + 2 * k2.vy + 2 * k3.vy + k4.vy);
 
-  // Wrap/clamp to domain
-  const clamped = Math.max(fp.xMin_nm, Math.min(fp.xMax_nm, xNew));
-  const yClamped = Math.max(fp.yMin_nm, Math.min(fp.yMax_nm, yNew));
-  fp.bPos_nm = clamped;
-  fp.bPosY_nm = yClamped;
-  fp.bPos_y = (yClamped - fp.yMin_nm) / (fp.yMax_nm - fp.yMin_nm);
+  // The analytic wave lives in open space. Trajectories also continue outside
+  // the picture; a viewport edge must neither clamp nor reflect a particle.
+  fp.bPos_nm = xNew;
+  fp.bPosY_nm = yNew;
+  fp.bPos_y = (yNew - fp.yMin_nm) / (fp.yMax_nm - fp.yMin_nm);
 
-  fp.bTrail.push({ x: clamped, y: yClamped, t: fp.time_fs });
+  fp.bTrail.push({ x: xNew, y: yNew, t: fp.time_fs });
   if (fp.bTrail.length > 2000) fp.bTrail.shift();
 
   // Check detector
-  const dx = Math.abs(clamped - fp.detectorX_nm);
-  if (dx <= fp.detectorW_nm) {
+  const dx = Math.abs(xNew - fp.detectorX_nm);
+  if (dx <= fp.detectorW_nm && yNew >= fp.yMin_nm && yNew <= fp.yMax_nm) {
     const expected = fpDetectorSectionProbabilities(fp.time_fs).secMass;
     fp.bDetected         = true;
     fp.bDetectedTime     = fp.time_fs;
@@ -574,11 +582,16 @@ function fpCaptureCollapse(image, probs) {
   let left = W - 1, right = 0, top = H - 1, bottom = 0;
   const xDensity = new Float64Array(W);
   const yDensity = new Float64Array(H);
+  const dx = (fp.xMax_nm - fp.xMin_nm) / (W - 1);
+  // Preserve the live profiles' units: x is the y=0 slice, y integrates over x.
+  for (let i = 0; i < W; i++) {
+    const psi = fpPsi(fp.xMin_nm + i * dx, fp.time_fs);
+    xDensity[i] = psi.re * psi.re + psi.im * psi.im;
+  }
   for (let j = 0; j < H; j++) {
     for (let i = 0; i < W; i++) {
       const rho = probs[j * W + i];
-      xDensity[i] += rho;
-      yDensity[j] += rho;
+      yDensity[j] += rho * dx;
       if (rho > FP_WAVE_AMPLITUDE_CUTOFF ** 2) {
         left = Math.min(left, i); right = Math.max(right, i);
         top = Math.min(top, j); bottom = Math.max(bottom, j);
@@ -590,6 +603,7 @@ function fpCaptureCollapse(image, probs) {
   feathered.width = W; feathered.height = H;
   fp._collapseVisual = {
     image, feathered, xDensity, yDensity,
+    densityScale: fpDensityScale(),
     xPeak: Math.max(1e-12, ...xDensity), yPeak: Math.max(1e-12, ...yDensity),
     source: { x: left / W, y: top / H, w: (right - left + 1) / W, h: (bottom - top + 1) / H },
   };
@@ -680,7 +694,7 @@ function fpRenderCollapse(ctx, W, H) {
 // Supersampling smooths the silhouette; a continuous gradient removes seams
 // between neighboring samples. Each profile canvas reuses its own layer.
 const fpProfileLayers = new WeakMap();
-function fpDrawDensityProfile(ctx, W, H, values, peak, axis, start = 0, span = axis === 'x' ? W : H) {
+function fpDrawDensityProfile(ctx, W, H, values, peak, colorScale, axis, start = 0, span = axis === 'x' ? W : H) {
   if (W <= 0 || H <= 0 || values.length < 2 || span <= 0) return;
   let layer = fpProfileLayers.get(ctx.canvas);
   if (!layer) {
@@ -709,7 +723,8 @@ function fpDrawDensityProfile(ctx, W, H, values, peak, axis, start = 0, span = a
     const position = start + fraction * span;
     const edge = baseline - density * amplitude;
     paint.lineTo(isX ? position : edge, isX ? edge : position);
-    gradient.addColorStop(fraction, fpDensityColor(density));
+    // Fit the silhouette to its panel, but keep color independent of its peak.
+    gradient.addColorStop(fraction, fpDensityColor(values[i] * colorScale));
   }
   paint.lineTo(isX ? start + span : baseline, isX ? baseline : start + span);
   paint.closePath();
@@ -724,7 +739,7 @@ function fpDrawDensityProfile(ctx, W, H, values, peak, axis, start = 0, span = a
 
 function fpRenderCollapseProjection(ctx, W, H, axis) {
   if (!fp._collapseVisual) return;
-  const { source, xDensity, yDensity, xPeak, yPeak } = fp._collapseVisual;
+  const { source, xDensity, yDensity, xPeak, yPeak, densityScale } = fp._collapseVisual;
   const frame = fpCollapseFrame(fpWaveCanvas.width / fpRenderScale, fpWaveCanvas.height / fpRenderScale);
   const isX = axis === 'x';
   const values = isX ? xDensity : yDensity;
@@ -742,9 +757,10 @@ function fpRenderCollapseProjection(ctx, W, H, axis) {
     const edge = Math.max(0, Math.min(1, (i - first) / (last - first) / 0.16,
       (last - i - 1) / (last - first) / 0.16));
     const feather = isX ? 1 : 1 - Math.min(1, frame.p * 4) * (1 - edge);
-    profile[i - first] = values[i] / peak * feather;
+    profile[i - first] = values[i] * feather;
   }
-  fpDrawDensityProfile(ctx, W, H, profile, 1, axis, start, span);
+  const colorScale = densityScale / (isX ? 1 : FP_DENSITY_REFERENCE_Y_PEAK);
+  fpDrawDensityProfile(ctx, W, H, profile, peak, colorScale, axis, start, span);
 }
 
 function fpRenderWave() {
@@ -794,6 +810,7 @@ function fpRenderWave() {
   const vals  = new Float32Array(off.width * off.height);
   const probs = new Float32Array(off.width * off.height); // always stores |psi|^2 for amplitude modulation
   const mode = fp.displayMode;
+  const densityScale = fpDensityScale();
 
   for (let j = 0; j < off.height; j++) {
     const y = fp.yMin_nm + (j / (off.height - 1)) * (fp.yMax_nm - fp.yMin_nm);
@@ -822,7 +839,7 @@ function fpRenderWave() {
       const v = vals[j * off.width + i];
       let r = 0, g = 0, b = 0, a = 255;
       if (fp.interpMode !== 'manyworlds' && (mode === 'phase' || mode === 'prob')) {
-        const rho = probs[j * off.width + i];
+        const rho = probs[j * off.width + i] * (mode === 'prob' ? densityScale : 1);
         const fade = Math.max(0, Math.min(1, (Math.sqrt(rho) - FP_WAVE_AMPLITUDE_CUTOFF) / FP_WAVE_AMPLITUDE_CUTOFF));
         const visibility = fade * fade * (3 - 2 * fade);
         if (mode === 'phase') {
@@ -836,7 +853,7 @@ function fpRenderWave() {
           g = ((1 - FP_PHASE_AMOUNT) * density[1] + FP_PHASE_AMOUNT * phase[1] * I) * 255 * visibility;
           b = ((1 - FP_PHASE_AMOUNT) * density[2] + FP_PHASE_AMOUNT * phase[2] * I) * 255 * visibility;
         } else {
-          const rgb = fpDensityRGB(rho / maxP2D);
+          const rgb = fpDensityRGB(rho);
           r = rgb[0] * 255 * visibility; g = rgb[1] * 255 * visibility; b = rgb[2] * 255 * visibility;
         }
       } else if (mode === 'phase') {
@@ -1118,7 +1135,7 @@ function fpRenderYProjection() {
   }
 
   if (fp.interpMode !== 'manyworlds') {
-    fpDrawDensityProfile(ctx, W, H, rhoY, maxRho, 'y');
+    fpDrawDensityProfile(ctx, W, H, rhoY, maxRho, fpDensityScale() / FP_DENSITY_REFERENCE_Y_PEAK, 'y');
   } else {
     for (let j = 0; j < H; j++) {
       const t = Math.max(0, Math.min(1, rhoY[j] / maxRho));
@@ -1413,7 +1430,7 @@ function fpRenderProbPanel() {
   const dxPix = W / N;
 
   if (fp.interpMode !== 'manyworlds') {
-    fpDrawDensityProfile(ctx, W, H, fp.prob, maxP, 'x');
+    fpDrawDensityProfile(ctx, W, H, fp.prob, maxP, fpDensityScale(), 'x');
   } else {
     for (let i = 0; i < N; i++) {
       const t = fp.prob[i] / maxP;
@@ -1537,6 +1554,7 @@ function fpRender() {
   fpRenderYProjection();
   fpRenderParticle();
   fpRenderDetector();
+  fpRenderDensityLegend();
   fpRenderProbPanel();
   if (fp.interpMode === 'manyworlds' && fp.mwFired && fp.mwWaitingForChoice) fpRenderMWGrid();
     fpUpdateMWStatus();
